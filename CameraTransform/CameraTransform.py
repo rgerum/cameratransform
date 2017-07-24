@@ -189,6 +189,40 @@ class CameraTransform():
         # else transform everything in one go
         return self._transCamToWorldFixedDimension(x, fixed, dimension)
 
+    def transCamToEarth(self, x, H=None, max_iter=100, max_distance=0.01):
+        result = []
+        for point in x:
+            last_point = None
+            next_z = H
+            for i in range(max_iter):
+                new_point = self._transCamToWorldFixedDimension(point[:, None], fixed=next_z, dimension=2)
+                alpha = np.acos(new_point[1]/(R_earth+H))
+                if last_point is not None and np.linalg.norm(new_point-last_point) < max_distance:
+                    result.append([new_point[0], R_earth*alpha, H])
+                    break
+                next_z = -np.sin(alpha)*(R_earth+H)
+                last_point = new_point
+            else:
+                result.append([new_point[0], R_earth * alpha, H])
+        return result
+
+    def transEarthToCam(self, x):
+        return self.transWorldToCam(self.transEarthToWorld(x))
+
+    def transWorldToEarth(self, x):
+        earth_center = np.array([0, 0, -R_earth])
+        r_eff = np.linalg.norm(x - earth_center, axis=0)
+        x[1] = np.acos(x[1] / r_eff) * r_eff
+        x[2] = r_eff
+        return x
+
+    def transEarthToWorld(self, x):
+        radius = x[2]
+        alpha = x[1] / radius
+        x[1] = np.cos(alpha) * radius
+        x[2] = -np.sin(alpha) * radius
+        return x
+
     def generateLUT(self, distance_start, distance_stop):
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
