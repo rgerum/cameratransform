@@ -282,3 +282,22 @@ class CameraTransform():
         points = np.array([[-10e3, distance, 0], [0, distance, 0], [+10e3, distance, 0]]).T
         points = self.transWorldToCam(points)
         return points
+
+    def getTopViewOfImage(self, im, extent, scaling=0.1, doplot=False):
+        xlim, ylim = extent[:2], extent[2:]
+        width = xlim[1]-xlim[0]
+        distance = ylim[1]-ylim[0]
+        P = self.C.copy()
+        f = scaling
+        xoff = -xlim[1]
+        yoff = ylim[0]
+        P = np.dot(P, np.array([[f, 0, 0, xoff], [0, f, 0, yoff], [0, 0, f, 0], [0, 0, 0, 1]]))
+        P[:, 2] = P[:, 2] * 0 + P[:, 3]
+        P = P[:, :3]
+        P = np.linalg.inv(P)
+        import cv2
+        im = cv2.warpPerspective(im, P, dsize=(int(width/f), int(distance/f)))[::-1, ::-1]
+        if doplot:
+            from matplotlib import pyplot as plt
+            plt.imshow(im, extent=[xlim[0], xlim[1], ylim[0], ylim[1]])
+        return im
