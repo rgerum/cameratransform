@@ -45,6 +45,8 @@ class CameraTransform():
     R = None
     C = None
 
+    R_earth = 6371e3
+
     def __init__(self, focal_length, sensor_size, image_size, observer_height=None, angel_to_horizon=None):
         """
         Init routine to setup calculation basics
@@ -76,6 +78,7 @@ class CameraTransform():
         roll = roll_angle * np.pi / 180
 
         # get the translation matrix and rotate it
+        self.height = height
         self.t = [0, 0, -height]
 
         self.R_X = np.array([[1, 0, 0],
@@ -236,3 +239,12 @@ class CameraTransform():
         p = fmin(error, [estimated_height * 0.5, estimated_angle])
         print("Optimisation1", p)
         return p
+
+    def distanceToHorizon(self):
+        return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.height)))
+
+    def getImageHorizon(self):
+        distance = self.distanceToHorizon()
+        points = np.array([[-10e3, distance, 0], [0, distance, 0], [+10e3, distance, 0]]).T
+        points = self.transWorldToCam(points)
+        return points
