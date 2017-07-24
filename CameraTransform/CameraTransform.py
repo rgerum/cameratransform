@@ -70,23 +70,26 @@ class CameraTransform():
         if observer_height is not None:
             self.initCameraMatrix(observer_height, angel_to_horizon)
 
-    def initCameraMatrix(self, height, tilt_angle, roll=0):
+    def initCameraMatrix(self, height, tilt_angle, roll_angle=0):
         # convert the angle to radians
         angle = tilt_angle * np.pi / 180
+        roll = roll_angle * np.pi / 180
 
         # get the translation matrix and rotate it
         self.t = [0, 0, -height]
-        self.t = np.dot(np.array([[1, 0, 0],
-                                  [0,  np.cos(angle), np.sin(angle)],
-                                  [0, -np.sin(angle), np.cos(angle)]]),
+
+        self.R_X = np.array([[1, 0, 0],
+                             [0,  np.cos(angle), np.sin(angle)],
+                             [0, -np.sin(angle), np.cos(angle)]])
+        self.R_Z = np.array([[ np.cos(roll), np.sin(roll), 0],
+                             [-np.sin(roll), np.cos(roll), 0],
+                             [            0,            0, 1]])
+
+        self.t = np.dot(self.R_X,
                         np.array([self.t]).T)
 
         # get the rotation-translation matrix with the rotation composed with the translation
-        self.R = np.array(
-            [[1,              0,             0, self.t[0]],
-             [0,  np.cos(angle), np.sin(angle), self.t[1]],
-             [0, -np.sin(angle), np.cos(angle), self.t[2]],
-             [0,              0,             0,         1]])
+        self.R = np.vstack((np.hstack((np.dot(self.R_Z, self.R_X), self.t)), [0, 0, 0, 1]))
 
         # compose the camera matrix with the rotation-translation matrix
         self.C = np.dot(self.C1, self.R)
