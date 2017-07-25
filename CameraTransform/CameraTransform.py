@@ -278,10 +278,29 @@ class CameraTransform():
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.height)))
 
     def getImageHorizon(self):
+        """
+        This function calculates the position of the horizon in the image sampled at the points x=0, x=im_width/2, x=im_width.
+        
+        :return: The points im camera image coordinates of the horizon in the format of [2xN]. 
+        """
+        # calculate the distance to the horizon and make a copy of the camera matrix
         distance = self.distanceToHorizon()
-        points = np.array([[-10e3, distance, 0], [0, distance, 0], [+10e3, distance, 0]]).T
-        points = self.transWorldToCam(points)
-        return points
+        P = self.C.copy()
+        # compose a mixed transformation, where we fix 3D_Y to distance, 3D_Z to 0
+        P[:, 1] = P[:, 1] * distance + P[:, 2] * 0 + P[:, 3]
+        # and bring 2D_Y to the other side to search for it, too
+        P[:, 2] = [0, -1, 0]
+        # to the unknown values are 3D_X, 2D_Y and 3D_Scale
+        P = P[:, :3]
+        # this means vectors in the left side of the equation have the shape of [2D_X, 0, 1]
+        x = np.array([[0, 0, 1], [self.im_width/2, 0, 1], [self.im_width, 0, 1]]).T
+        # solve
+        X = np.linalg.solve(P, x)
+        # enter the found 2D_Y values into the vector
+        x[1, :] = X[2, :]
+        x = x[:2, :]
+        # return the results
+        return x
 
     def getTopViewOfImage(self, im, extent, scaling=0.1, doplot=False):
         xlim, ylim = extent[:2], extent[2:]
