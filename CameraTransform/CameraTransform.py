@@ -243,6 +243,35 @@ class CameraTransform():
         x[2] = -np.sin(alpha) * radius
         return x
 
+    def transGPSToEarth(self, x):
+        x = x.copy()
+        # latitude, longitude, height
+        diff = np.array(self.cam_location - x[:2])
+        diff = np.dot(self.cam_heading_rotation_matrix, diff)
+        x[:2] = diff*np.pi/180*R_earth
+        return x
+
+    def transGPSToCam(self, x):
+        return self.transEarthToCam(self.transGPSToEarth(x))
+
+    def transCamToGPS(self, x, H=0):
+        return self.transEarthToGPS(self.transCamToEarth(x, H))
+
+    def transEarthToGPS(self, x):
+        x = x.copy()
+        x[:2] = x[:2]*180/np.pi/R_earth
+        x[:2] = self.cam_location - np.dot(np.linalg.inv(self.cam_heading_rotation_matrix), x[:2])
+        return x
+
+    def setCamHeading(self, angle):
+        angle = angle*np.pi/180
+        self.cam_heading = angle
+        self.cam_heading_rotation_matrix = np.array([[np.cos(angle), np.sin(angle)],
+                                                     [-np.sin(angle), np.cos(angle)]])
+
+    def setCamGPS(self, lat, lng):
+        self.cam_location = np.array([lat, lng])
+
     def generateLUT(self, distance_start, distance_stop):
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
@@ -333,6 +362,7 @@ class CameraTransform():
             return p
 
     def distanceToHorizon(self):
+        print("---", 2*self.height * np.tan(np.arccos(self.height/np.sqrt(self.height**2 + 2*self.height*self.R_earth))))
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.height)))
 
     def getImageHorizon(self):
