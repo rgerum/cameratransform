@@ -47,6 +47,15 @@ class CameraTransform():
 
     R_earth = 6371e3
 
+    cam_location = None
+    cam_heading = None
+    cam_heading_rotation_matrix = None
+
+    height = None
+    roll = None
+
+    fixed_horizon = None
+
     def __init__(self, focal_length, sensor_size, image_size, observer_height=None, angel_to_horizon=None):
         """
         Init routine to setup calculation basics
@@ -61,6 +70,9 @@ class CameraTransform():
         # store and convert arguments
         self.f = focal_length * 1e-3 # in m
         self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3 # in m
+        self.fov_h_angle = 2*np.arctan(self.sensor_width/(2*self.f))
+        self.fov_v_angle = 2*np.arctan(self.sensor_height/(2*self.f))
+        print("FOV", self.fov_h_angle*180/np.pi, self.fov_v_angle*180/np.pi)
         self.im_width, self.im_height = image_size
 
         # normalize the focal length by the sensor width and the image_width
@@ -72,10 +84,16 @@ class CameraTransform():
         if observer_height is not None:
             self.initCameraMatrix(observer_height, angel_to_horizon)
 
-    def initCameraMatrix(self, height, tilt_angle, roll_angle=0):
+    def initCameraMatrix(self, height, tilt_angle, roll_angle=None):
         # convert the angle to radians
         angle = tilt_angle * np.pi / 180
-        roll = roll_angle * np.pi / 180
+        if roll_angle is None:
+            if self.roll:
+                roll = self.roll
+            else:
+                roll = 0
+        else:
+            roll = roll_angle * np.pi / 180
 
         # get the translation matrix and rotate it
         self.height = height
@@ -210,6 +228,7 @@ class CameraTransform():
         return self.transWorldToCam(self.transEarthToWorld(x))
 
     def transWorldToEarth(self, x):
+        x = x.copy()
         earth_center = np.array([0, 0, -R_earth])
         r_eff = np.linalg.norm(x - earth_center, axis=0)
         x[1] = np.acos(x[1] / r_eff) * r_eff
@@ -217,6 +236,7 @@ class CameraTransform():
         return x
 
     def transEarthToWorld(self, x):
+        x = x.copy()
         radius = x[2]
         alpha = x[1] / radius
         x[1] = np.cos(alpha) * radius
@@ -244,7 +264,7 @@ class CameraTransform():
         self.y_lookup = fillNans(self.y_lookup)
         return self.y_lookup
 
-    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, estimated_height=30, estimated_angle=85, object_height=1, roll_angle=0):
+    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, estimated_height=30, estimated_angle=85, object_height=1):
         if lines is not None:
             y1 = [np.max([l.y1, l.y2]) for l in lines]
             y2 = [np.min([l.y1, l.y2]) for l in lines]
@@ -252,27 +272,65 @@ class CameraTransform():
             points_foot = np.vstack((x, y1))
             points_head = np.vstack((x, y2))
 
-        def error(p):
-            self.initCameraMatrix(p[0], p[1], roll_angle=roll_angle)
+        def cost():
             estimated_foot_3D = self.transCamToWorld(points_foot.copy(), Z=0)
             estimated_foot_3D[2, :] = object_height
             estimated_head = self.transWorldToCam(estimated_foot_3D)
             pixels = np.linalg.norm(points_head - estimated_head, axis=0)
             return np.mean(pixels ** 2)
 
-        def error2(p):
-            self.initCameraMatrix(p[0], p[1], roll_angle=roll_angle)
+        def cost2():
             estimated_foot_3D = self.transCamToWorld(points_foot.copy(), Z=0)
             estimated_head_3D = self.transCamToWorld(points_head.copy(), Y=estimated_foot_3D[1, :])
             heights = estimated_foot_3D[2, :] - estimated_head_3D[2, :]
             return np.std((heights - object_height) ** 2)
 
         print([estimated_height, estimated_angle])
-        p = fmin(error2, [estimated_height * 0.5, estimated_angle])
-        print("Optimisation2", p)
-        p = fmin(error, [estimated_height * 0.5, estimated_angle])
-        print("Optimisation1", p)
-        return p
+        return self._fit(cost, estimated_height=estimated_height, estimated_angle=estimated_angle)
+
+    def getAngleFromHorizonAndHeight(self, horizon, height):
+        angle = np.arccos(height / np.sqrt(height ** 2 + 2 * height * self.R_earth))
+        angle = angle + (horizon - self.im_height / 2) / self.im_height * self.fov_v_angle
+        return angle * 180 / np.pi
+
+    def fixHorizon(self, horizon):
+        m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
+        self.fixed_horizon = self.im_width / 2 * m + t
+        self.roll = -np.arctan(m)
+        if self.height is not None:
+            angle = self.getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
+            self.initCameraMatrix(self.height, angle)
+
+    def fitCamParametersFromLandmarks(self, marks, distances, estimated_height=30, estimated_angle=85, ):
+
+        def cost():
+            estimated_pos_3D = self.transCamToWorld(marks.copy(), Z=0)
+            return np.mean((distances-estimated_pos_3D[1, :])**2)
+
+        print([estimated_height, estimated_angle])
+        return self._fit(cost, estimated_height=estimated_height, estimated_angle=estimated_angle)
+
+    def _fit(self, function, estimated_height=30, estimated_angle=85):
+        if self.fixed_horizon:
+            def error(p):
+                angle = self.getAngleFromHorizonAndHeight(self.fixed_horizon, p[0])
+                self.initCameraMatrix(p[0], angle)
+                return function()
+
+            p = fmin(error, [estimated_height])
+            angle = self.getAngleFromHorizonAndHeight(self.fixed_horizon, p[0])
+            print("Optimisation2", p, angle)
+            self.initCameraMatrix(p[0], angle)
+            return [p[0], angle]
+        else:
+            def error(p):
+                self.initCameraMatrix(p[0], p[1])
+                return function()
+
+            p = fmin(error, [estimated_height, estimated_angle])
+            print("Optimisation2", p)
+            self.initCameraMatrix(p[0], p[1])
+            return p
 
     def distanceToHorizon(self):
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.height)))
