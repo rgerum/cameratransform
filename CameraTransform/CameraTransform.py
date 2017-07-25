@@ -322,10 +322,14 @@ class CameraTransform():
         angle = angle + (horizon - self.im_height / 2) / self.im_height * self.fov_v_angle
         return angle * 180 / np.pi
 
+    def fixRoll(self, roll):
+        self.roll = roll
+
     def fixHorizon(self, horizon):
         m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
         self.fixed_horizon = self.im_width / 2 * m + t
-        self.roll = -np.arctan(m)
+        if self.roll is None:
+            self.roll = -np.arctan(m)
         if self.height is not None:
             angle = self.getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
             self.initCameraMatrix(self.height, angle)
