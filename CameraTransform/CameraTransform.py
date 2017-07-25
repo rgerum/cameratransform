@@ -303,20 +303,39 @@ class CameraTransform():
         return x
 
     def getTopViewOfImage(self, im, extent, scaling=0.1, doplot=False):
+        """
+        Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
+        
+        :param im: The image of the camera. 
+        :param extent: The part of the 3D plane to show: [xmin, xmax, ymin, ymax]. The same format as the extent parameter in in plt.imshow.
+        :param scaling: How many pixels to use per meter. A smaller value gives a more detailed image, but takes more time to calculated.
+        :param doplot: Whether to plot the image directly, with the according extent settings.
+        :return: the transformed image
+        """
+
+        # split the extent
         xlim, ylim = extent[:2], extent[2:]
         width = xlim[1]-xlim[0]
         distance = ylim[1]-ylim[0]
+        # copy the camera matrix
         P = self.C.copy()
+        # set scaling and offset
         f = scaling
         xoff = -xlim[1]
         yoff = ylim[0]
+        # offset and scale the camera matrix
         P = np.dot(P, np.array([[f, 0, 0, xoff], [0, f, 0, yoff], [0, 0, f, 0], [0, 0, 0, 1]]))
+        # transform the camera matrix so that it projects on the z=0 plane (for details see transCamToWorld)
         P[:, 2] = P[:, 2] * 0 + P[:, 3]
         P = P[:, :3]
+        # invert the matrix
         P = np.linalg.inv(P)
+        # transform the image using OpenCV
         import cv2
         im = cv2.warpPerspective(im, P, dsize=(int(width/f), int(distance/f)))[::-1, ::-1]
+        # and plot the image if desired
         if doplot:
             from matplotlib import pyplot as plt
             plt.imshow(im, extent=[xlim[0], xlim[1], ylim[0], ylim[1]])
+        # return the image
         return im
