@@ -244,7 +244,7 @@ class CameraTransform():
         self.y_lookup = fillNans(self.y_lookup)
         return self.y_lookup
 
-    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, estimated_height=30, estimated_angle=85, object_height=1):
+    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, estimated_height=30, estimated_angle=85, object_height=1, roll_angle=0):
         if lines is not None:
             y1 = [np.max([l.y1, l.y2]) for l in lines]
             y2 = [np.min([l.y1, l.y2]) for l in lines]
@@ -253,7 +253,7 @@ class CameraTransform():
             points_head = np.vstack((x, y2))
 
         def error(p):
-            self.initCameraMatrix(p[0], p[1])
+            self.initCameraMatrix(p[0], p[1], roll_angle=roll_angle)
             estimated_foot_3D = self.transCamToWorld(points_foot.copy(), Z=0)
             estimated_foot_3D[2, :] = object_height
             estimated_head = self.transWorldToCam(estimated_foot_3D)
@@ -261,7 +261,7 @@ class CameraTransform():
             return np.mean(pixels ** 2)
 
         def error2(p):
-            self.initCameraMatrix(p[0], p[1])
+            self.initCameraMatrix(p[0], p[1], roll_angle=roll_angle)
             estimated_foot_3D = self.transCamToWorld(points_foot.copy(), Z=0)
             estimated_head_3D = self.transCamToWorld(points_head.copy(), Y=estimated_foot_3D[1, :])
             heights = estimated_foot_3D[2, :] - estimated_head_3D[2, :]
