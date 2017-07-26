@@ -58,6 +58,11 @@ class CameraTransform():
 
     fixed_horizon = None
 
+    estimated_height = 30
+    estimated_tilt = 85
+    estimated_heading = 0
+    estimated_roll = 0
+
     def __init__(self, focal_length, sensor_size, image_size, observer_height=None, angel_to_horizon=None):
         """
         Init routine to setup calculation basics
@@ -72,11 +77,8 @@ class CameraTransform():
         # store and convert arguments
         self.f = focal_length * 1e-3 # in m
         self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3 # in m
-        print("Ratio1", image_size[0]/image_size[1])
-        print("Ratio2", sensor_size[0]/sensor_size[1])
         self.fov_h_angle = 2*np.arctan(self.sensor_width/(2*self.f))
         self.fov_v_angle = 2*np.arctan(self.sensor_height/(2*self.f))
-        print("FOV", self.fov_h_angle*180/np.pi, self.fov_v_angle*180/np.pi)
         self.im_width, self.im_height = image_size
 
         # normalize the focal length by the sensor width and the image_width
@@ -86,18 +88,24 @@ class CameraTransform():
         self.C1 = np.array([[self.f, 0, self.im_width / 2, 0], [0, self.f, self.im_height / 2, 0], [0, 0, 1, 0]])
 
         if observer_height is not None:
-            self.initCameraMatrix(observer_height, angel_to_horizon)
+            self.height = observer_height
+            self.tilt = angel_to_horizon
+            self._initCameraMatrix()
 
-    def initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
+    def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
         # convert the angle to radians
         if tilt_angle is None:
             tilt_angle = self.tilt
+        else:
+            self.tilt = tilt_angle
         if height is None:
             height = self.height
+        else:
+            self.height = height
         angle = tilt_angle * np.pi / 180
         if roll_angle is None:
             if self.roll:
-                roll = self.roll
+                roll = self.roll * np.pi / 180
             else:
                 roll = 0
         else:
@@ -109,25 +117,24 @@ class CameraTransform():
             heading = 0
 
         # get the translation matrix and rotate it
-        self.height = height
-        self.tilt_angle = tilt_angle
-        self.t = [0, 0, -height]
+        self.t = np.array([[0, 0, -height]]).T
 
-        self.R_X = np.array([[1, 0, 0],
-                             [0,  np.cos(angle), np.sin(angle)],
-                             [0, -np.sin(angle), np.cos(angle)]])
-        self.R_Z = np.array([[ np.cos(roll), np.sin(roll), 0],
-                             [-np.sin(roll), np.cos(roll), 0],
-                             [            0,            0, 1]])
-        self.R_Z2 = np.array([[np.cos(heading), np.sin(heading), 0],
-                             [-np.sin(heading), np.cos(heading), 0],
-                             [0, 0, 1]])
+        # construct the rotation matrices for tilt, roll and heading
+        self.R_tilt = np.array([[1, 0, 0],
+                                [0,  np.cos(angle), np.sin(angle)],
+                                [0, -np.sin(angle), np.cos(angle)]])
+        self.R_roll = np.array([[+np.cos(roll), np.sin(roll), 0],
+                                [-np.sin(roll), np.cos(roll), 0],
+                                [            0,            0, 1]])
+        self.R_head = np.array([[+np.cos(heading), np.sin(heading), 0],
+                                [-np.sin(heading), np.cos(heading), 0],
+                                [0, 0, 1]])
 
-        self.t = np.dot(self.R_X,
-                        np.array([self.t]).T)
+        # rotate the translation around the tilt angle
+        self.t = np.dot(self.R_tilt, self.t)
 
         # get the rotation-translation matrix with the rotation composed with the translation
-        self.R = np.vstack((np.hstack((np.dot(np.dot(self.R_Z, self.R_X), self.R_Z2), self.t)), [0, 0, 0, 1]))
+        self.R = np.vstack((np.hstack((np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head), self.t)), [0, 0, 0, 1]))
 
         # compose the camera matrix with the rotation-translation matrix
         self.C = np.dot(self.C1, self.R)
@@ -310,7 +317,20 @@ class CameraTransform():
         self.y_lookup = fillNans(self.y_lookup)
         return self.y_lookup
 
-    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, estimated_height=30, estimated_angle=85, object_height=1, object_elevation=0):
+    def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, object_height=1, object_elevation=0):
+        """
+        Fit the camera parameters for given objects of equal heights. The foot positions are given in points_foot and the
+        heads are given in points_head. As an alternative the positions can be given as ClickPoints line objects in lines.
+        The height of each objects is given in object_height, and if the objects are not at sea level, an object_elevation
+        can be given.
+        
+        :param points_foot: The pixel positions of the feet of the objects in the image. 
+        :param points_head:  The pixel positions of the heads of the objects in the image. 
+        :param lines: An alternative for the points_foot and points_head arguments, ClickPoints lines can be directly given.
+        :param object_height: The height of the objects.
+        :param object_elevation: The elevation of the feet ot the objects.
+        :return: the fitted parameters.
+        """
         if lines is not None:
             y1 = [np.max([l.y1, l.y2]) for l in lines]
             y2 = [np.min([l.y1, l.y2]) for l in lines]
@@ -331,9 +351,9 @@ class CameraTransform():
             heights = estimated_foot_3D[2, :] - estimated_head_3D[2, :]
             return np.std((heights - object_height) ** 2)
 
-        return self._fit(cost, estimated_height=estimated_height, estimated_angle=estimated_angle)
+        return self._fit(cost)
 
-    def getAngleFromHorizonAndHeight(self, horizon=None, height=None):
+    def _getAngleFromHorizonAndHeight(self, horizon=None, height=None):
         if horizon is None:
             horizon = self.fixed_horizon
         if height is None:
@@ -343,18 +363,38 @@ class CameraTransform():
         return angle * 180 / np.pi
 
     def fixRoll(self, roll):
+        """
+        Set the roll parameter of the camera to a given value and hold it there in subsequent fitting functions.
+        
+        :param roll: The roll of the camera in degress. 
+        """
         self.roll = roll
 
     def fixHorizon(self, horizon):
+        """
+        Fix the horizon to go through the points given. This will adjust in subsequent fitting functions the tilt angle
+        to always match the horizon with these points. Also if no roll angle has been specified before, the roll angle is
+        fitted from the horizon.
+        
+        :param horizon: Pixel coordinates of points at the horizon in the shape of [2xN] 
+        """
         m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
         self.fixed_horizon = self.im_width / 2 * m + t
         if self.roll is None:
             self.roll = -np.arctan(m)
         if self.height is not None:
-            angle = self.getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
-            self.initCameraMatrix(self.height, angle)
+            self.tilt = self._getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
+            self._initCameraMatrix()
 
-    def fitCamParametersFromLandmarks(self, marks, distances, heading=None, estimated_height=30, estimated_angle=85, ):
+    def fitCamParametersFromLandmarks(self, marks, distances, heading=None):
+        """
+        Fit the camera parameters form objects of known distance to the camera.
+        
+        :param marks: The pixel positions of the objects in the image. In the shape of [2xN] 
+        :param distances: The distances of the mark points to the camera.
+        :param heading: Optional a heading angle in degrees of the objects. When given the heading of the camera will be fitted, too.
+        :return: the fitted parameters.
+        """
 
         def cost():
             estimated_pos_3D = self.transCamToWorld(marks.copy(), Z=0)
@@ -371,11 +411,11 @@ class CameraTransform():
                 estimated_pos_3D = self.transCamToWorld(marks.copy(), Z=0)
                 return np.mean(np.linalg.norm(estimated_pos_3D-marks_3D, axis=0)**2)
 
-        return self._fit(cost, estimated_height=estimated_height, estimated_angle=estimated_angle)
+        return self._fit(cost)
 
-    def _fit(self, cost, estimated_height=30, estimated_angle=85):
+    def _fit(self, cost):
         # define the fit parameters and their estimates
-        estimates = {"height": estimated_height, "tilt": estimated_angle, "roll": 0, "heading": 0}
+        estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll, "heading": self.estimated_heading}
         fit_parameters = list(estimates.keys())
 
         # remove known parameters from list
@@ -393,9 +433,9 @@ class CameraTransform():
                 setattr(self, key, value)
             # adjust the tilt angle if it is fixed by the horizon
             if self.fixed_horizon:
-                self.tilt = self.getAngleFromHorizonAndHeight()
+                self.tilt = self._getAngleFromHorizonAndHeight()
             # calculate the camera matrix
-            self.initCameraMatrix()
+            self._initCameraMatrix()
             # calculate the cost function
             return cost()
 
