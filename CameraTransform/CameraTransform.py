@@ -55,6 +55,7 @@ class CameraTransform():
     roll = None
     heading = 0
     tilt = None
+    tan_tilt = None
 
     fixed_horizon = None
 
@@ -115,6 +116,10 @@ class CameraTransform():
             heading = self.heading * np.pi / 180
         else:
             heading = 0
+
+        if self.tan_tilt:
+            angle = np.pi/2-np.arctan(self.tan_tilt)
+            self.tilt = angle*180/np.pi
 
         # get the translation matrix and rotate it
         self.t = np.array([[0, 0, -height]]).T
@@ -217,6 +222,10 @@ class CameraTransform():
             dimension = 2
 
         # reshape input x array to two dimensions
+        try:
+            x = np.array([[m.x, m.y] for m in x]).T
+        except AttributeError:
+            pass
         try:
             if len(x.shape) == 1:
                 x = x[:, None]
@@ -378,10 +387,19 @@ class CameraTransform():
         
         :param horizon: Pixel coordinates of points at the horizon in the shape of [2xN] 
         """
+        # if the horizon is given in ClickPoints markers, split them in x and y component
+        try:
+            horizon = np.array([[m.x, m.y] for m in horizon]).T
+        except AttributeError:
+            pass
+        # fit a line through the points
         m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
+        # calculate the center of the line
         self.fixed_horizon = self.im_width / 2 * m + t
+        # set the roll if it is not fixed yet
         if self.roll is None:
-            self.roll = -np.arctan(m)
+            self.roll = -np.arctan(m)*180/np.pi
+        # update the camera matrix if we already have a height
         if self.height is not None:
             self.tilt = self._getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
             self._initCameraMatrix()
@@ -395,6 +413,11 @@ class CameraTransform():
         :param heading: Optional a heading angle in degrees of the objects. When given the heading of the camera will be fitted, too.
         :return: the fitted parameters.
         """
+        # if the horizon is given in ClickPoints markers, split them in x and y component
+        try:
+            marks = np.array([[m.x, m.y] for m in marks]).T
+        except AttributeError:
+            pass
 
         def cost():
             estimated_pos_3D = self.transCamToWorld(marks.copy(), Z=0)
@@ -415,29 +438,34 @@ class CameraTransform():
 
     def _fit(self, cost):
         # define the fit parameters and their estimates
+        estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90-self.estimated_tilt)*np.pi/180), "roll": self.estimated_roll, "heading": self.estimated_heading}
         estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll, "heading": self.estimated_heading}
         fit_parameters = list(estimates.keys())
 
         # remove known parameters from list
-        if self.fixed_horizon:
-            fit_parameters.remove("tilt")
         if self.roll is not None:
             fit_parameters.remove("roll")
         if self.heading is not None:
             fit_parameters.remove("heading")
 
+        self.horizon_error = 0
         # define error function as a wrap around the cost function
         def error(p):
             # set the fit parameters
             for key, value in zip(fit_parameters, p):
                 setattr(self, key, value)
-            # adjust the tilt angle if it is fixed by the horizon
-            if self.fixed_horizon:
-                self.tilt = self._getAngleFromHorizonAndHeight()
             # calculate the camera matrix
             self._initCameraMatrix()
+
+            if self.fixed_horizon:
+                horizon = self.getImageHorizon()
+                m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
+                # calculate the center of the line
+                fixed_horizon2 = self.im_width / 2 * m + t
+                self.horizon_error = abs(self.fixed_horizon - fixed_horizon2)*0.01
+
             # calculate the cost function
-            return cost()
+            return cost()+self.horizon_error
 
         # minimize the unknown parameters with the given cost function
         p = fmin(error, [estimates[key] for key in fit_parameters])
@@ -445,6 +473,8 @@ class CameraTransform():
         error(p)
         # print the results and return them
         print({key: value for key, value in zip(fit_parameters, p)})
+        if "tan_tilt" in fit_parameters:
+            print("tilt", self.tilt)
         return p
 
     def distanceToHorizon(self):
