@@ -6,7 +6,7 @@ setup(name='CameraTransform',
       author='Richard Gerum',
       author_email='richard.gerum@fau.de',
       license='MIT',
-      packages=['cameratransform'],
+      packages=['CameraTransform'],
       install_requires=[
           'numpy',
           'scipy'
