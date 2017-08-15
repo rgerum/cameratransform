@@ -382,6 +382,14 @@ class CameraTransform():
         """
         self.roll = roll
 
+    def fixHeight(self, height):
+        """
+        Set the height parameter of the camera to a given value and hold it there in subsequent fitting functions.
+
+        :param height: The height of the camera in meters.
+        """
+        self.height = height
+
     def fixHorizon(self, horizon):
         """
         Fix the horizon to go through the points given. This will adjust in subsequent fitting functions the tilt angle
@@ -473,6 +481,8 @@ class CameraTransform():
             fit_parameters.remove("roll")
         if self.heading is not None:
             fit_parameters.remove("heading")
+        if self.height is not None:
+            fit_parameters.remove('height')
 
         self.horizon_error = 0
         # define error function as a wrap around the cost function
