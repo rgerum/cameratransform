@@ -528,7 +528,12 @@ class CameraTransform():
         # return the results
         return x
 
-    def getTopViewOfImage(self, im, extent, scaling=0.1, doplot=False):
+    def getImageExtend(self):
+        points = np.array([[0, 0], [0, self.im_height], [self.im_width, self.im_height], [self.im_width, 0]]).T
+        points = self.transCamToWorld(points, Z=0)
+        return points
+
+    def getTopViewOfImage(self, im, extent=None, scaling=None, doplot=False):
         """
         Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
         
@@ -538,11 +543,18 @@ class CameraTransform():
         :param doplot: Whether to plot the image directly, with the according extent settings.
         :return: the transformed image
         """
+        if extent is None:
+            x, y, z = self.getImageExtend()
+            extent = [min(-x), max(-x), min(y), max(y)]
+            print("extent", extent)
 
         # split the extent
         xlim, ylim = extent[:2], extent[2:]
         width = xlim[1]-xlim[0]
         distance = ylim[1]-ylim[0]
+        # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
+        if scaling is None:
+            scaling = (width*distance)/(self.im_width*self.im_height)*100
         # copy the camera matrix
         P = self.C.copy()
         # set scaling and offset
