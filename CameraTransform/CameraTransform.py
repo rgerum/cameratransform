@@ -305,25 +305,28 @@ class CameraTransform():
     def setCamGPS(self, lat, lng):
         self.cam_location = np.array([lat, lng])
 
-    def generateLUT(self, distance_start, distance_stop):
+    def generateLUT(self, undef_value=0):
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
 
-        :param distance_start: LUT start position in meter
-        :param distance_stop:  LUT stio position in meter
         :return: LUT, same length as image height
         """
-        self.y_lookup = np.zeros(self.im_height) + np.nan
+        horizon = self.getImageHorizon()
+        print("horizon", horizon[1])
+        y_stop = max([0, int(horizon[1][1])])
+        y_start = self.im_height
+        print(y_start, y_stop)
 
-        for i in range(distance_start, distance_stop):
-            rect = getRectangle(10, i)
-            rect = self.transWorldToCam(rect)
-            y = np.mean(np.array(rect)[1, :])
-            A = calcTrapezSize(rect)
-            if 0 < y < self.im_height:
-                self.y_lookup[int(y)] = A
+        self.y_lookup = np.zeros(self.im_height) + undef_value
 
-        self.y_lookup = fillNans(self.y_lookup)
+        x = self.im_width/2
+
+        for y in range(y_stop, y_start):
+            rect = getSquare(x, y)[:2, :]
+            rect = self.transCamToWorld(rect, Z=0)
+            A = calcQuadrilateralSize(rect)
+            self.y_lookup[y] = A
+
         return self.y_lookup
 
     def fitCamParametersFromObjects(self, points_foot=None, points_head=None, lines=None, object_height=1, object_elevation=0):
