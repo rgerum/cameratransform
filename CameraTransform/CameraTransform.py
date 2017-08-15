@@ -436,6 +436,29 @@ class CameraTransform():
 
         return self._fit(cost)
 
+    def fitCamParametersFromLengths(self, points, distances):
+        """
+        Fit the camera parameters form objects of known distance to the camera.
+
+        :param points: TODO 
+        :param distances: The distances of the mark points to the camera.
+        :return: the fitted parameters.
+        """
+        # if the horizon is given in ClickPoints markers, split them in x and y component
+        try:
+            points1 = np.array([[m.x1, m.y1] for m in points]).T
+            points2 = np.array([[m.x2, m.y2] for m in points]).T
+        except AttributeError:
+            points1, points2 = points
+
+        def cost():
+            p1 = self.transCamToWorld(points1, Z=0)
+            p2 = self.transCamToWorld(points2, Z=0)
+            calculated_dist = np.linalg.norm(p2-p1, axis=0)
+            return np.mean((distances - calculated_dist) ** 2)
+
+        return self._fit(cost)
+
     def _fit(self, cost):
         # define the fit parameters and their estimates
         estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90-self.estimated_tilt)*np.pi/180), "roll": self.estimated_roll, "heading": self.estimated_heading}
