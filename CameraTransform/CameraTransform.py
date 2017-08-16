@@ -450,6 +450,39 @@ class CameraTransform():
 
         return self._fit(cost)
 
+    def fitCamParametersFromPointCorrespondences(self, points2D, points3D):
+        """
+        Fit the camera parameters form objects of known distance to the camera.
+
+        :param points2D: The points in the camera image.
+        :param points3D: The corresponding points in the world coordinates. This list has to have the same order than 
+                         the points 2D list.
+        :return: the fitted parameters.
+        """
+        # if the points are given in ClickPoints markers, split them in x and y component
+        try:
+            points2D = np.array([[m.x, m.y] for m in points2D]).T
+        except AttributeError:
+            pass
+        try:
+            points3D = np.array([[-m.x, m.y, 0] for m in points3D]).T
+        except AttributeError:
+            pass
+
+        # fit the position of the camera, too
+        self.pos_x = None
+        self.pos_y = None
+
+        # define a cost function
+        def cost():
+            # project the 3D points to the camera
+            points3D_proj = self.transWorldToCam(points3D)
+            # and calculate the distances to their corresponding points in the camera image
+            return np.mean(np.linalg.norm(points3D_proj - points2D, axis=0))
+
+        # fit the camera matrix to the cost function
+        return self._fit(cost)
+
     def fitCamParametersFromLengths(self, points, distances):
         """
         Fit the camera parameters form objects of known distance to the camera.
