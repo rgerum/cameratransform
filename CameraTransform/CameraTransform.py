@@ -452,7 +452,7 @@ class CameraTransform():
 
     def fitCamParametersFromPointCorrespondences(self, points2D, points3D):
         """
-        Fit the camera parameters form objects of known distance to the camera.
+        Fit the camera parameters form points known in both coordinate systems, the camera and the world.
 
         :param points2D: The points in the camera image.
         :param points3D: The corresponding points in the world coordinates. This list has to have the same order than 
