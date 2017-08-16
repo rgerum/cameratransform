@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import minimize
+import json
 
 
 """ some helper functions """
@@ -67,7 +68,15 @@ class CameraTransform():
     estimated_heading = 0
     estimated_roll = 0
 
-    def __init__(self, focal_length, sensor_size, image_size, observer_height=None, angel_to_horizon=None):
+    f = None
+    sensor_width = None
+    sensor_height = None
+    fov_h_angle = None
+    fov_v_angle = None
+    im_width = None
+    im_height = None
+
+    def __init__(self, focal_length=None, sensor_size=None, image_size=None, observer_height=None, angel_to_horizon=None):
         """
         Init routine to setup calculation basics
 
@@ -79,22 +88,26 @@ class CameraTransform():
         """
 
         # store and convert arguments
-        self.f = focal_length * 1e-3 # in m
-        self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3 # in m
-        self.fov_h_angle = 2*np.arctan(self.sensor_width/(2*self.f))
-        self.fov_v_angle = 2*np.arctan(self.sensor_height/(2*self.f))
-        self.im_width, self.im_height = image_size
+        if focal_length:
+            self.f = focal_length * 1e-3 # in m
+            self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3 # in m
+            self.fov_h_angle = 2*np.arctan(self.sensor_width/(2*self.f))
+            self.fov_v_angle = 2*np.arctan(self.sensor_height/(2*self.f))
+            self.im_width, self.im_height = image_size
 
-        # normalize the focal length by the sensor width and the image_width
-        self.f = self.f / self.sensor_width * self.im_width
+            # normalize the focal length by the sensor width and the image_width
+            self.f = self.f / self.sensor_width * self.im_width
 
-        # compose the intrinsic camera matrix
-        self.C1 = np.array([[self.f, 0, self.im_width / 2, 0], [0, self.f, self.im_height / 2, 0], [0, 0, 1, 0]])
+            self._initIntrisicMatrix()
 
         if observer_height is not None:
             self.height = observer_height
             self.tilt = angel_to_horizon
             self._initCameraMatrix()
+
+    def _initIntrisicMatrix(self):
+        # compose the intrinsic camera matrix
+        self.C1 = np.array([[self.f, 0, self.im_width / 2, 0], [0, self.f, self.im_height / 2, 0], [0, 0, 1, 0]])
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
         # convert the angle to radians
@@ -630,3 +643,18 @@ class CameraTransform():
             plt.imshow(im, extent=[xlim[0], xlim[1], ylim[0], ylim[1]])
         # return the image
         return im
+
+    def save(self, filename):
+        keys = ["height", "roll", "heading", "tilt", "pos_x", "pos_y",
+                "f", "sensor_width", "sensor_height", "fov_h_angle", "fov_v_angle", "im_width", "im_height"]
+        export_dict = {key: getattr(self, key) for key in keys}
+        with open(filename, "w") as fp:
+            fp.write(json.dumps(export_dict))
+
+    def load(self, filename):
+        with open(filename, "r") as fp:
+            dict = json.loads(fp.read())
+        for key in dict:
+            setattr(self, key, dict[key])
+        self._initIntrisicMatrix()
+        self._initCameraMatrix()
