@@ -57,6 +57,9 @@ class CameraTransform():
     tilt = None
     tan_tilt = None
 
+    pos_x = 0
+    pos_y = 0
+
     fixed_horizon = None
 
     estimated_height = 30
@@ -122,7 +125,7 @@ class CameraTransform():
             self.tilt = angle*180/np.pi
 
         # get the translation matrix and rotate it
-        self.t = np.array([[0, 0, -height]]).T
+        self.t = np.array([[self.pos_x, self.pos_y, -height]]).T
 
         # construct the rotation matrices for tilt, roll and heading
         self.R_tilt = np.array([[1, 0, 0],
@@ -473,7 +476,7 @@ class CameraTransform():
     def _fit(self, cost):
         # define the fit parameters and their estimates
         estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90-self.estimated_tilt)*np.pi/180), "roll": self.estimated_roll, "heading": self.estimated_heading}
-        estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll, "heading": self.estimated_heading}
+        estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll, "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
         fit_parameters = list(estimates.keys())
 
         # remove known parameters from list
@@ -483,6 +486,10 @@ class CameraTransform():
             fit_parameters.remove("heading")
         if self.height is not None:
             fit_parameters.remove('height')
+        if self.pos_x is not None:
+            fit_parameters.remove("pos_x")
+        if self.pos_y is not None:
+            fit_parameters.remove("pos_y")
 
         self.horizon_error = 0
         # define error function as a wrap around the cost function
