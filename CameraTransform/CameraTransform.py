@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fmin
+from scipy.optimize import minimize
 
 
 """ some helper functions """
@@ -504,11 +504,11 @@ class CameraTransform():
             return cost()+self.horizon_error
 
         # minimize the unknown parameters with the given cost function
-        p = fmin(error, [estimates[key] for key in fit_parameters])
+        p = minimize(error, [estimates[key] for key in fit_parameters])
         # call a last time the error function to ensure that the camera matrix has been set properly
-        error(p)
+        error(p["x"])
         # print the results and return them
-        print({key: value for key, value in zip(fit_parameters, p)})
+        print({key: value for key, value in zip(fit_parameters, p["x"])})
         if "tan_tilt" in fit_parameters:
             print("tilt", self.tilt)
         return p
