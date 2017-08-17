@@ -263,14 +263,14 @@ class CameraTransform():
             next_z = H
             for i in range(max_iter):
                 new_point = self._transCamToWorldFixedDimension(point[:, None], fixed=next_z, dimension=2)
-                alpha = np.acos(new_point[1]/(R_earth+H))
+                alpha = np.acos(new_point[1]/(self.R_earth+H))
                 if last_point is not None and np.linalg.norm(new_point-last_point) < max_distance:
-                    result.append([new_point[0], R_earth*alpha, H])
+                    result.append([new_point[0], self.R_earth*alpha, H])
                     break
-                next_z = -np.sin(alpha)*(R_earth+H)
+                next_z = -np.sin(alpha)*(self.R_earth+H)
                 last_point = new_point
             else:
-                result.append([new_point[0], R_earth * alpha, H])
+                result.append([new_point[0], self.R_earth * alpha, H])
         return result
 
     def transEarthToCam(self, x):
@@ -278,7 +278,7 @@ class CameraTransform():
 
     def transWorldToEarth(self, x):
         x = x.copy()
-        earth_center = np.array([0, 0, -R_earth])
+        earth_center = np.array([0, 0, -self.R_earth])
         r_eff = np.linalg.norm(x - earth_center, axis=0)
         x[1] = np.acos(x[1] / r_eff) * r_eff
         x[2] = r_eff
@@ -297,7 +297,7 @@ class CameraTransform():
         # latitude, longitude, height
         diff = np.array(self.cam_location - x[:2])
         diff = np.dot(self.cam_heading_rotation_matrix, diff)
-        x[:2] = diff*np.pi/180*R_earth
+        x[:2] = diff*np.pi/180*self.R_earth
         return x
 
     def transGPSToCam(self, x):
@@ -308,7 +308,7 @@ class CameraTransform():
 
     def transEarthToGPS(self, x):
         x = x.copy()
-        x[:2] = x[:2]*180/np.pi/R_earth
+        x[:2] = x[:2]*180/np.pi/self.R_earth
         x[:2] = self.cam_location - np.dot(np.linalg.inv(self.cam_heading_rotation_matrix), x[:2])
         return x
 
