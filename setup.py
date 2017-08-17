@@ -11,4 +11,7 @@ setup(name='CameraTransform',
           'numpy',
           'scipy'
       ],
+      extras_require={
+        'projecting_top_view':  ["cv2", "matplotlib"]
+      }
       )
