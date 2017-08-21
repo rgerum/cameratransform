@@ -99,6 +99,10 @@ class CameraTransform:
 
     R_earth = 6371e3
 
+    lat = None
+    lon = None
+    gps_heading = None
+
     cam_location = None
     cam_heading = None
     cam_heading_rotation_matrix = None
@@ -321,23 +325,27 @@ class CameraTransform:
         return self._transCamToWorldFixedDimension(x, fixed, dimension)
 
     def transCamToEarth(self, x, H=None, max_iter=100, max_distance=0.01):
+        if H is None:
+            H = 0
+        r = self.R_earth + H
         result = []
         new_point = None
         alpha = 0
-        for point in x:
+        for index in range(x.shape[1]):
+            point = x[:, index]
             last_point = None
             next_z = H
             for i in range(max_iter):
-                new_point = self._transCamToWorldFixedDimension(point[:, None], fixed=next_z, dimension=2)
-                alpha = np.acos(new_point[1] / (self.R_earth + H))
+                new_point = self._transCamToWorldFixedDimension(point[:, None], fixed=next_z, dimension=2)[:, 0]
+                alpha = np.arctan(new_point[1] / r)
                 if last_point is not None and np.linalg.norm(new_point - last_point) < max_distance:
-                    result.append([new_point[0], self.R_earth * alpha, H])
+                    result.append([new_point[0], r * alpha, H])
                     break
-                next_z = -np.sin(alpha) * (self.R_earth + H)
+                next_z = -(r / np.cos(alpha) - r)
                 last_point = new_point
             else:
-                result.append([new_point[0], self.R_earth * alpha, H])
-        return result
+                result.append([new_point[0], r * alpha, H])
+        return np.array(result).T
 
     def transEarthToCam(self, x):
         return self.transWorldToCam(self.transEarthToWorld(x))
@@ -350,13 +358,12 @@ class CameraTransform:
         x[2] = r_eff
         return x
 
-    @staticmethod
-    def transEarthToWorld(x):
+    def transEarthToWorld(self, x):
         x = x.copy()
-        radius = x[2]
+        radius = x[2] + self.R_earth
         alpha = x[1] / radius
-        x[1] = np.cos(alpha) * radius
-        x[2] = -np.sin(alpha) * radius
+        x[1] = np.tan(alpha) * radius
+        x[2] = radius - radius * np.cos(alpha)
         return x
 
     def transGPSToEarth(self, x):
@@ -367,17 +374,88 @@ class CameraTransform:
         x[:2] = diff * np.pi / 180 * self.R_earth
         return x
 
+    def transGPSToWorld(self, x):
+        lat, lon, h = x
+        phi2 = lat * np.pi / 180
+        phi1 = self.lat * np.pi / 180
+        delta_lambda = (self.lon - lon) * np.pi / 180
+        # spherical law of cosines
+        distance = np.arccos(
+            np.sin(phi1) * np.sin(phi2) + np.cos(phi1) * np.cos(phi2) * np.cos(delta_lambda)) * self.R_earth
+        bearing = np.arctan2(np.sin(delta_lambda) * np.cos(phi2),
+                           np.cos(phi1) * np.sin(phi2) - np.sin(phi1) * np.cos(phi2) * np.cos(delta_lambda))
+        bearing = bearing + self.cam_heading
+        # distance and height correction
+        #r = self.R_earth + h
+        #alpha = distance / r
+        #d_world = r * np.sin(alpha)
+        #z_world = r * np.cos(alpha) - self.R_earth
+        #print("distances", distance, d_world)
+        #
+        x = distance * np.sin(bearing)
+        y = distance * np.cos(bearing)
+        return np.array([x, y, h])
+
     def transGPSToCam(self, x):
-        return self.transEarthToCam(self.transGPSToEarth(x))
+        x = self.transGPSToWorld(x)
+        return self.transWorldToCam(x)
+
+    def transWorldToGPS(self, x):
+        h = x[2]
+        dist, bearing = self.distanceBearing(x)
+        # correction for round earth
+        #alpha = np.arctan(dist/(self.R_earth + z))
+        #r = dist/np.sin(alpha)
+        #dist_earth = r * alpha
+        #h = r-self.R_earth
+        #print("Dist_erath", dist, dist_earth)
+        #print("Z", z, h)
+        #
+        lat, lon = self.moveGPS(self.cam_location[0], self.cam_location[1], dist,
+                                self.cam_heading * 180 / np.pi + bearing)
+        return np.array([lat, lon, h])
 
     def transCamToGPS(self, x, H=0):
-        return self.transEarthToGPS(self.transCamToEarth(x, H))
+        x = self.transCamToWorld(x, Z=H)
+        return self.transWorldToGPS(x)
 
-    def transEarthToGPS(self, x):
-        x = x.copy()
-        x[:2] = x[:2] * 180 / np.pi / self.R_earth
-        x[:2] = self.cam_location - np.dot(np.linalg.inv(self.cam_heading_rotation_matrix), x[:2])
-        return x
+    def distanceBearing(self, pos):
+        """ distance and bearing from a point to the camera 
+        
+        :param pos: point(s) in the world coordinates. In the shape of [3xN]
+        :return: distance (meters), bearing (degree)
+        """
+        # relative to camera foot point
+        x = pos[0] - self.pos_x
+        y = pos[1] - self.pos_y
+        # distance according to Pythagoras
+        dist = np.sqrt(x ** 2 + y ** 2)
+        # arcustangens for the angle
+        bearing = -np.arctan(x/y) * 180 / np.pi
+        return dist, bearing
+
+    def moveGPS(self, lat, lon, distance, bearing):
+        """
+        Move a gps point the given distance in the given direction.
+
+        :param lat: in degree
+        :param lon: in degree
+        :param distance: in meter
+        :param bearing: in degree
+        :return:
+        """
+
+        lat_rad = np.deg2rad(lat)
+        lon_rad = np.deg2rad(lon)
+        bearing_rad = np.deg2rad(bearing)
+
+        lat2 = np.arcsin(
+            np.sin(lat_rad) * np.cos(distance / self.R_earth) + np.cos(lat_rad) * np.sin(distance / self.R_earth) * np.cos(
+                bearing_rad))
+        lon2 = lon_rad + np.arctan2(np.sin(bearing_rad) * np.sin(distance / self.R_earth) * np.cos(lat_rad),
+                                    np.cos(distance / self.R_earth) - np.sin(lat_rad) * np.sin(lat2))
+
+        return np.rad2deg(lat2), np.rad2deg(lon2)
 
     def setCamHeading(self, angle):
         angle = angle * np.pi / 180
@@ -385,8 +463,10 @@ class CameraTransform:
         self.cam_heading_rotation_matrix = np.array([[np.cos(angle), np.sin(angle)],
                                                      [-np.sin(angle), np.cos(angle)]])
 
-    def setCamGPS(self, lat, lng):
-        self.cam_location = np.array([lat, lng])
+    def setCamGPS(self, lat, lon):
+        self.lat = lat
+        self.lon = lon
+        self.cam_location = np.array([lat, lon])
 
     def generateLUT(self, undef_value=0):
         """
