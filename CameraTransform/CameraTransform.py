@@ -1,3 +1,4 @@
+import numbers
 import numpy as np
 from scipy.optimize import minimize
 import json
@@ -59,7 +60,8 @@ class CameraTransform:
         Init routine to setup calculation basics
 
         :param focal_length:    focal length of the camera in mm
-        :param sensor_size:     sensor size in mm [width, height]
+        :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
+                                is inferred from the aspect ratio of the image
         :param image_size:      image size in mm [width, height]
         :param observer_height: observer elevation in m
         :param angel_to_horizon: angle between the z-axis and the horizon
@@ -67,14 +69,18 @@ class CameraTransform:
 
         # store and convert arguments
         if focal_length:
+            # convert focal length to meters
             self.f = focal_length * 1e-3  # in m
+            # splice image size
+            self.im_width, self.im_height = image_size
+            # if only the sensor width is given, calculate its height from the aspect ratio of the image
+            if isinstance(sensor_size, numbers.Number):
+                sensor_size = (sensor_size, sensor_size * self.im_height / self.im_width)
+            # split sensor size
             self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3  # in m
+            # and calculate field of view (fov) for both dimensions
             self.fov_h_angle = 2 * np.arctan(self.sensor_width / (2 * self.f))
             self.fov_v_angle = 2 * np.arctan(self.sensor_height / (2 * self.f))
-            self.im_width, self.im_height = image_size
-
-            # normalize the focal length by the sensor width and the image_width
-            self.f = self.f / self.sensor_width * self.im_width
 
             self._initIntrinsicMatrix()
 
@@ -84,8 +90,12 @@ class CameraTransform:
             self._initCameraMatrix()
 
     def _initIntrinsicMatrix(self):
+        # normalize the focal length by the sensor width and the image_width
+        self.f_normed = self.f / self.sensor_width * self.im_width
         # compose the intrinsic camera matrix
-        self.C1 = np.array([[self.f, 0, self.im_width / 2, 0], [0, self.f, self.im_height / 2, 0], [0, 0, 1, 0]])
+        self.C1 = np.array([[self.f_normed,             0,  self.im_width / 2, 0],
+                            [            0, self.f_normed, self.im_height / 2, 0],
+                            [            0,             0,                  1, 0]])
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
         # convert the angle to radians
