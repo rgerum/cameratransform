@@ -674,6 +674,7 @@ class CameraTransform:
 
         return self._fit(cost)
 
+    do_grid = False
     def _fit(self, cost):
         # define the fit parameters and their estimates
         #estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90 - self.estimated_tilt) * np.pi / 180),
@@ -722,7 +723,44 @@ class CameraTransform:
         print({key: value for key, value in zip(fit_parameters, p["x"])})
         if "tan_tilt" in fit_parameters:
             print("tilt", self.tilt)
+        if self.do_grid:
+            self.do_grid = False
+            self._grid(cost)
         return p
+
+    def _grid(self, cost):
+        fx = 1
+        fy = 1
+        height = self.height
+        tilt = self.tilt
+
+        from matplotlib import pyplot as plt
+        rangeH = np.arange(10, 200, 1)
+        rangeA = np.arange(0, 90, 1)
+        results = np.zeros((len(rangeH), len(rangeA)))
+        for i, h in enumerate(rangeH):
+            for j, a in enumerate(rangeA):
+                self.height = h
+                self.tilt = a
+                self._initCameraMatrix()
+                c = cost() ** 0.01
+                results[i, j] = c
+
+        # plt.figure(4)
+        plt.imshow(results.T[::-1, :],
+                   extent=[rangeH[0] * fx, rangeH[-1] * fx, rangeA[0] * fy, rangeA[-1] * fy])
+        plt.yticks(np.array([0, 15, 30, 45, 60, 75, 89]) * fy, [0, 15, 30, 45, 60, 75, 90])
+        plt.plot(height * fx, tilt * fy, 'r+')
+        plt.xlabel("Height (m)")
+        plt.ylabel("Tilt angle (deg)")
+        cb = plt.colorbar()
+        cb.set_label("Cost (a.u.)")
+        plt.tight_layout()
+        plt.savefig("Grid.png")
+        plt.show()
+
+        self.height = height
+        self.tilt = tilt
 
     def distanceToHorizon(self):
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.height)))
