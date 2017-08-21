@@ -605,7 +605,7 @@ class CameraTransform:
         points = self.transCamToWorld(points, Z=0)
         return points
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False):
+    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0):
         """
         Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
         
@@ -650,7 +650,7 @@ class CameraTransform:
         # invert the matrix
         P = np.linalg.inv(P)
         # transform the image using OpenCV
-        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)))[::-1, ::-1]
+        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value)[::-1, ::-1]
         # and plot the image if desired
         if do_plot:
             plt.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]])
