@@ -15,6 +15,79 @@ except ImportError:
     plt_installed = False
 
 
+def formatGPS(lat, lon, format=None, asLatex=False):
+    """ Formats a latiture, longitude pair in degress according to the format string.
+        The format string can contain a %s, to denote the letter symbol (N, S, W, E) and up to three number formaters (%d or %f), to
+        denote the degrees, minutes and seconds. To not lose precision, the last one can be float number.
+        
+        common formats are e.g.:
+            %2d° %2d' %6.3f\" %s - 70° 37'  4.980 S" (default)
+            %2d° %2d.3f %s - 70° 37.083 S
+            %2d - -70.618050°
+            
+        :param lat: the latitude in degrees
+        :param lon: the longitude in degrees
+        :param format: the format string
+        :param asLatex: weather to encode the degree symbol
+        :return: a tuple of the formatted values
+    """
+    import re
+    # default format
+    if format is None:
+        format = "%2d° %2d' %6.3f\" %s"
+    # try to split the format string into it's place holders
+    match = re.findall(r"(%[.\d]*[sdf])", format)
+    if len(match) == 0:
+        raise ValueError("no valid format place holder specified")
+
+    # try to find a %s to see if we have to use a letter symbol or a negative sign
+    use_letter = False
+    counter = 0
+    for entry in match:
+        if entry[-1] == "s":
+            use_letter = True
+        else:
+            counter += 1
+    if counter > 3:
+        raise ValueError("too many format strings, only 3 numbers are allowed")
+
+    result = []
+    for degs, letters in zip([lat, lon], ["NS", "EW"]):
+        # split sign
+        neg = degs < 0
+        degs = abs(degs)
+        # get minutes
+        mins = (degs*60) % 60
+        # get seconds
+        secs = (mins*60) % 60
+
+        # if no letter symbol is used, keep the sign
+        if not use_letter and neg:
+            degs = -degs
+
+        # array of values and empty array of fills
+        values = [degs, mins, secs]
+        fills = []
+        # gather the values to fill
+        for entry in match:
+            # the letter symbol
+            if entry[-1] == "s":
+                fills.append(letters[neg])
+            # one of the values
+            else:
+                fills.append(values.pop(0))
+        # format the string
+        string = format % tuple(fills)
+        # replace, if desired the degree sign
+        if asLatex:
+            string = string.replace("°", "\N{DEGREE SIGN}")
+        # append to the results
+        result.append(string)
+
+    # return the results
+    return result
+
+
 class CameraTransform:
     """
     CameraTransform class to calculate the position of objects from an image in 3D based
