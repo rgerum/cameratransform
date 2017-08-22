@@ -177,7 +177,11 @@ class CameraTransform:
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
         # convert the angle to radians
         if tilt_angle is None:
-            tilt_angle = self.tilt
+            if self.tilt is not None:
+                tilt_angle = self.tilt
+            else:
+                self.tilt = np.arctan(self.tan_tilt)*180/np.pi + 90
+                tilt_angle = self.tilt
         else:
             self.tilt = tilt_angle
         if height is None:
@@ -197,10 +201,6 @@ class CameraTransform:
             heading = self.heading * np.pi / 180
         else:
             heading = 0
-
-        if self.tan_tilt:
-            angle = np.pi / 2 - np.arctan(self.tan_tilt)
-            self.tilt = angle * 180 / np.pi
 
         # get the translation matrix and rotate it
         self.t = np.array([[self.pos_x, self.pos_y, -height]]).T
@@ -716,10 +716,11 @@ class CameraTransform:
     do_grid = False
     def _fit(self, cost):
         # define the fit parameters and their estimates
-        #estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90 - self.estimated_tilt) * np.pi / 180),
-        #             "roll": self.estimated_roll, "heading": self.estimated_heading}
+        #estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90 + self.estimated_tilt) * np.pi / 180),
+        #             "roll": self.estimated_roll, "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
         estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll,
                      "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
+        bounds = {"height": (1e-6, None), "tilt": (0, 180)}
         fit_parameters = list(estimates.keys())
 
         # remove known parameters from list
@@ -734,6 +735,8 @@ class CameraTransform:
         if self.pos_y is not None:
             fit_parameters.remove("pos_y")
 
+        bounds.update({key: None for key in fit_parameters if key not in bounds})
+
         self.horizon_error = 0
 
         # define error function as a wrap around the cost function
@@ -746,16 +749,19 @@ class CameraTransform:
 
             if self.fixed_horizon:
                 horizon = self.getImageHorizon()
-                m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
-                # calculate the center of the line
-                fixed_horizon2 = self.im_width / 2 * m + t
-                self.horizon_error = abs(self.fixed_horizon - fixed_horizon2) * 0.01
+                if np.isnan(horizon[1, :]).any():
+                    self.horizon_error = 99999999
+                else:
+                    m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
+                    # calculate the center of the line
+                    fixed_horizon2 = self.im_width / 2 * m + t
+                    self.horizon_error = abs(self.fixed_horizon - fixed_horizon2) * 0.01
 
             # calculate the cost function
             return cost() + self.horizon_error
 
         # minimize the unknown parameters with the given cost function
-        p = minimize(error, [estimates[key] for key in fit_parameters])
+        p = minimize(error, [estimates[key] for key in fit_parameters], bounds=[bounds[key]for key in fit_parameters])
         # call a last time the error function to ensure that the camera matrix has been set properly
         error(p["x"])
         # print the results and return them
