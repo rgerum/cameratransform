@@ -12,6 +12,7 @@ setup(name='CameraTransform',
           'scipy'
       ],
       extras_require={
-        'projecting_top_view':  ["cv2", "matplotlib"]
+        'projecting_top_view':  ["cv2", "matplotlib"],
+        'exif_extraction':  ["pillow", "requests"]
       }
       )
