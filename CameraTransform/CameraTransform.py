@@ -884,9 +884,25 @@ class CameraTransform:
         return x
 
     def getImageExtend(self):
-        points = np.array([[0, 0], [0, self.im_height], [self.im_width, self.im_height], [self.im_width, 0]]).T
-        points = self.transCamToWorld(points, Z=0)
-        return points
+        # get the horizon
+        horizon = self.getImageHorizon()
+        # test if it is in the image
+        if ((0 < horizon[1, :])*(horizon[1, :] < self.im_height)).any():
+            # scale it a bit down to only see meaningful image data (pixels near the horizon are sstretchedvery big)
+            horizon[1, :] = self.im_height-(self.im_height-horizon[1, :])*0.95
+            # add the lower edge of the image
+            points = np.array([[0, 0], [self.im_width, 0]]).T
+            # stack the points together
+            points = np.hstack((horizon, points))
+            # and project the points to the world
+            points = self.transCamToWorld(points, Z=0)
+            return points
+        else:
+            # get the corners of the image
+            points = np.array([[0, 0], [0, self.im_height], [self.im_width, self.im_height], [self.im_width, 0]]).T
+            # and project them to the world
+            points = self.transCamToWorld(points, Z=0)
+            return points
 
     def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0):
         """
@@ -896,7 +912,7 @@ class CameraTransform:
         :param extent: The part of the 3D plane to show: [x_min, x_max, y_min, y_max]. The same format as the extent 
                        parameter in in plt.imshow.
         :param scaling: How many pixels to use per meter. A smaller value gives a more detailed image, but takes more 
-                        time to calculated.
+                        time to calculate.
         :param do_plot: Whether to plot the image directly, with the according extent settings.
         :return: the transformed image
         """
@@ -918,7 +934,7 @@ class CameraTransform:
         distance = y_lim[1] - y_lim[0]
         # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
         if scaling is None:
-            scaling = (width * distance) / (self.im_width * self.im_height) * 100
+            scaling = np.sqrt((width * distance)) / np.sqrt((self.im_width * self.im_height))
         # copy the camera matrix
         P = self.C.copy()
         # set scaling and offset
