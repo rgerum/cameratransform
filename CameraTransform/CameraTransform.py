@@ -224,6 +224,8 @@ class CameraTransform:
 
         # compose the camera matrix with the rotation-translation matrix
         self.C = np.dot(self.C1, self.R)
+        # to get the x coordinate right, mirror the x direction
+        self.C[:, 0] = -self.C[:, 0]
 
     def _ensurePointFormat(self, x, dimensions=2):
         # also accept clickpoints markers
@@ -862,7 +864,7 @@ class CameraTransform:
         # guess the extend for the image
         if extent is None:
             x, y, z = self.getImageExtend()
-            extent = [min(-x), max(-x), min(y), max(y)]
+            extent = [min(x), max(x), min(y), max(y)]
             print("extent", extent)
 
         # split the extent
@@ -876,7 +878,7 @@ class CameraTransform:
         P = self.C.copy()
         # set scaling and offset
         f = scaling
-        x_off = -x_lim[1]
+        x_off = x_lim[0]
         y_off = y_lim[0]
         # offset and scale the camera matrix
         P = np.dot(P, np.array([[f, 0, 0, x_off], [0, f, 0, y_off], [0, 0, f, 0], [0, 0, 0, 1]]))
@@ -886,7 +888,7 @@ class CameraTransform:
         # invert the matrix
         P = np.linalg.inv(P)
         # transform the image using OpenCV
-        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value)[::-1, ::-1]
+        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value)[::-1, :]
         # and plot the image if desired
         if do_plot:
             plt.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]])
