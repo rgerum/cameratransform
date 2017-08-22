@@ -7,7 +7,7 @@ import os
 import shlex
 
 import mock
-MOCK_MODULES = ['numpy', 'scipy', 'scipy.optimize']
+MOCK_MODULES = ['numpy', 'scipy', 'scipy.optimize', 'numpy.core.multiarray']
 sys.modules.update((mod_name, mock.MagicMock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,

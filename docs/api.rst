@@ -1,5 +1,15 @@
 API
----
+===
 
-.. autoclass:: CameraTransform.CameraTransform
+.. currentmodule:: CameraTransform
+
+CameraTransform
+---------------
+
+.. autoclass:: CameraTransform
    :members:
+
+Helpers
+-------
+
+.. autofunction:: formatGPS
