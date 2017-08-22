@@ -225,6 +225,35 @@ class CameraTransform:
         # compose the camera matrix with the rotation-translation matrix
         self.C = np.dot(self.C1, self.R)
 
+    def _ensurePointFormat(self, x, dimensions=2):
+        # also accept clickpoints markers
+        if dimensions == 2:
+            try:
+                x = np.array([[m.x, m.y] for m in x]).T
+            except AttributeError:
+                pass
+        elif dimensions == 3:
+            try:
+                x = np.array([[m.x, m.y, 0] for m in x]).T
+            except AttributeError:
+                pass
+
+        # make a copy so that we don't change the original data
+        x = x.copy()
+
+        # reshape input x array to two dimensions
+        try:
+            if len(x.shape) == 1:
+                x = x[:, None]
+        except AttributeError:
+            x = np.array([x]).T
+
+        # test if the first dimension of the array is long enough
+        assert x.shape[0] == dimensions, "Input array has to be of the shape [%dxN] or [%d]" % (dimensions, dimensions)
+
+        # return the process array
+        return x
+
     def transWorldToCam(self, x):
         """
         Transform from 3D world coordinates to 2D camera coordinates.
@@ -234,11 +263,8 @@ class CameraTransform:
         """
 
         # reshape input x array to two dimensions
-        try:
-            if len(x.shape) == 1:
-                x = x[:, None]
-        except AttributeError:
-            x = np.array([x]).T
+        x = self._ensurePointFormat(x, dimensions=3)
+
         # add a 1 as a 3rd dimension for the projective coordinates
         x = np.vstack((x, np.ones(x.shape[1])))
 
@@ -306,15 +332,7 @@ class CameraTransform:
             dimension = 2
 
         # reshape input x array to two dimensions
-        try:
-            x = np.array([[m.x, m.y] for m in x]).T
-        except AttributeError:
-            pass
-        try:
-            if len(x.shape) == 1:
-                x = x[:, None]
-        except AttributeError:
-            x = np.array([x]).T
+        x = self._ensurePointFormat(x, dimensions=2)
 
         # if the fixed value is a list, we have to transform each coordinate separately
         if not isinstance(fixed, int) and not isinstance(fixed, float):
@@ -325,6 +343,9 @@ class CameraTransform:
         return self._transCamToWorldFixedDimension(x, fixed, dimension)
 
     def transCamToEarth(self, x, H=None, max_iter=100, max_distance=0.01):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=2)
+
         if H is None:
             H = 0
         r = self.R_earth + H
@@ -348,9 +369,15 @@ class CameraTransform:
         return np.array(result).T
 
     def transEarthToCam(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         return self.transWorldToCam(self.transEarthToWorld(x))
 
     def transWorldToEarth(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         x = x.copy()
         earth_center = np.array([0, 0, -self.R_earth])
         r_eff = np.linalg.norm(x - earth_center, axis=0)
@@ -359,6 +386,9 @@ class CameraTransform:
         return x
 
     def transEarthToWorld(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         x = x.copy()
         radius = x[2] + self.R_earth
         alpha = x[1] / radius
@@ -367,6 +397,9 @@ class CameraTransform:
         return x
 
     def transGPSToEarth(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         x = x.copy()
         # latitude, longitude, height
         diff = np.array(self.cam_location - x[:2])
@@ -375,6 +408,9 @@ class CameraTransform:
         return x
 
     def transGPSToWorld(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         lat, lon, h = x
         phi2 = lat * np.pi / 180
         phi1 = self.lat * np.pi / 180
@@ -397,10 +433,16 @@ class CameraTransform:
         return np.array([x, y, h])
 
     def transGPSToCam(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         x = self.transGPSToWorld(x)
         return self.transWorldToCam(x)
 
     def transWorldToGPS(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
         h = x[2]
         dist, bearing = self.distanceBearing(x)
         # correction for round earth
@@ -416,6 +458,9 @@ class CameraTransform:
         return np.array([lat, lon, h])
 
     def transCamToGPS(self, x, H=0):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=2)
+
         x = self.transCamToWorld(x, Z=H)
         return self.transWorldToGPS(x)
 
@@ -559,6 +604,8 @@ class CameraTransform:
         :param height: The height of the camera in meters.
         """
         self.height = height
+        if self.fixed_horizon:
+            self._fit(lambda: 0)
 
     def fixHorizon(self, horizon):
         """
@@ -568,11 +615,8 @@ class CameraTransform:
         
         :param horizon: Pixel coordinates of points at the horizon in the shape of [2xN] 
         """
-        # if the horizon is given in ClickPoints markers, split them in x and y component
-        try:
-            horizon = np.array([[m.x, m.y] for m in horizon]).T
-        except AttributeError:
-            pass
+        # reshape input x array to two dimensions
+        horizon = self._ensurePointFormat(horizon, dimensions=2)
         # fit a line through the points
         m, t = np.polyfit(horizon[0, :], horizon[1, :], deg=1)
         # calculate the center of the line
@@ -595,14 +639,9 @@ class CameraTransform:
                         fitted, too.
         :return: the fitted parameters.
         """
-        # if the horizon is given in ClickPoints markers, split them in x and y component
-        try:
-            marks = np.array([[m.x, m.y] for m in marks]).T
-        except AttributeError:
-            pass
 
         def cost():
-            estimated_pos_3D = self.transCamToWorld(marks.copy(), Z=0)
+            estimated_pos_3D = self.transCamToWorld(marks, Z=0)
             return np.mean((distances - estimated_pos_3D[1, :]) ** 2)
 
         if heading is not None:
