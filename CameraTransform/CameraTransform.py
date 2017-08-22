@@ -21,14 +21,21 @@ def formatGPS(lat, lon, format=None, asLatex=False):
         denote the degrees, minutes and seconds. To not lose precision, the last one can be float number.
         
         common formats are e.g.:
-            %2d° %2d' %6.3f\" %s - 70° 37'  4.980 S" (default)
-            %2d° %2d.3f %s - 70° 37.083 S
-            %2d - -70.618050°
+        
+           +--------------------------------+--------------------------------------+
+           | format                         | output                               |
+           +================================+===================+==================+
+           | %2d° %2d' %6.3f" %s (default)  | 70° 37'  4.980" S | 8°  9' 26.280" W |
+           +--------------------------------+-------------------+------------------+
+           | %2d° %2d.3f %s                 | 70° 37.083 S      | 8°  9.438 W      |
+           +--------------------------------+-------------------+------------------+
+           | %2d°                           | -70.618050°       | -8.157300°       |
+           +--------------------------------+-------------------+------------------+
             
         :param lat: the latitude in degrees
         :param lon: the longitude in degrees
         :param format: the format string
-        :param asLatex: weather to encode the degree symbol
+        :param asLatex: whether to encode the degree symbol
         :return: a tuple of the formatted values
     """
     import re
@@ -57,9 +64,9 @@ def formatGPS(lat, lon, format=None, asLatex=False):
         neg = degs < 0
         degs = abs(degs)
         # get minutes
-        mins = (degs*60) % 60
+        mins = (degs * 60) % 60
         # get seconds
-        secs = (mins*60) % 60
+        secs = (mins * 60) % 60
 
         # if no letter symbol is used, keep the sign
         if not use_letter and neg:
@@ -179,7 +186,7 @@ class CameraTransform:
             if self.tilt is not None:
                 tilt_angle = self.tilt
             else:
-                self.tilt = np.arctan(self.tan_tilt)*180/np.pi + 90
+                self.tilt = np.arctan(self.tan_tilt) * 180 / np.pi + 90
                 tilt_angle = self.tilt
         else:
             self.tilt = tilt_angle
@@ -426,7 +433,7 @@ class CameraTransform:
         distance = np.arccos(
             np.sin(phi1) * np.sin(phi2) + np.cos(phi1) * np.cos(phi2) * np.cos(delta_lambda)) * self.R_earth
         bearing = np.arctan2(np.sin(delta_lambda) * np.cos(phi2),
-                           np.cos(phi1) * np.sin(phi2) - np.sin(phi1) * np.cos(phi2) * np.cos(delta_lambda))
+                             np.cos(phi1) * np.sin(phi2) - np.sin(phi1) * np.cos(phi2) * np.cos(delta_lambda))
         bearing = bearing + self.cam_heading
         # distance and height correction
         #r = self.R_earth + h
@@ -502,7 +509,7 @@ class CameraTransform:
         # distance according to Pythagoras
         dist = np.sqrt(x ** 2 + y ** 2)
         # arcustangens for the angle
-        bearing = -np.arctan(x/y) * 180 / np.pi
+        bearing = -np.arctan(x / y) * 180 / np.pi
         return dist, bearing
 
     def moveGPS(self, lat, lon, distance, bearing):
@@ -521,8 +528,8 @@ class CameraTransform:
         bearing_rad = np.deg2rad(bearing)
 
         lat2 = np.arcsin(
-            np.sin(lat_rad) * np.cos(distance / self.R_earth) + np.cos(lat_rad) * np.sin(distance / self.R_earth) * np.cos(
-                bearing_rad))
+            np.sin(lat_rad) * np.cos(distance / self.R_earth) +
+            np.cos(lat_rad) * np.sin(distance / self.R_earth) * np.cos(bearing_rad))
         lon2 = lon_rad + np.arctan2(np.sin(bearing_rad) * np.sin(distance / self.R_earth) * np.cos(lat_rad),
                                     np.cos(distance / self.R_earth) - np.sin(lat_rad) * np.sin(lat2))
 
@@ -545,6 +552,7 @@ class CameraTransform:
 
         :return: LUT, same length as image height
         """
+
         def get_square(x, y):
             p0 = [x - 0.5, y - 0.5, 0]
             p1 = [x + 0.5, y - 0.5, 0]
@@ -740,6 +748,7 @@ class CameraTransform:
         return self._fit(cost)
 
     do_grid = False
+
     def _fit(self, cost):
         # define the fit parameters and their estimates
         #estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90 + self.estimated_tilt) * np.pi / 180),
