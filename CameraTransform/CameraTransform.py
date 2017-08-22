@@ -92,6 +92,13 @@ class CameraTransform:
     """
     CameraTransform class to calculate the position of objects from an image in 3D based
     on camera intrinsic parameters and observer position
+    
+    :param focal_length:    focal length of the camera in mm
+    :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
+                            is inferred from the aspect ratio of the image
+    :param image_size:      image size in mm [width, height]
+    :param observer_height: observer elevation in m
+    :param angel_to_horizon: angle between the z-axis and the horizon
     """
     t = None
     R = None
@@ -135,16 +142,6 @@ class CameraTransform:
 
     def __init__(self, focal_length=None, sensor_size=None, image_size=None, observer_height=None,
                  angel_to_horizon=None):
-        """
-        Init routine to setup calculation basics
-
-        :param focal_length:    focal length of the camera in mm
-        :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
-                                is inferred from the aspect ratio of the image
-        :param image_size:      image size in mm [width, height]
-        :param observer_height: observer elevation in m
-        :param angel_to_horizon: angle between the z-axis and the horizon
-        """
 
         # store and convert arguments
         if focal_length:
@@ -412,6 +409,12 @@ class CameraTransform:
         return x
 
     def transGPSToWorld(self, x):
+        """
+        Transform from (lat, lon, height) coordinates to 3D world coordinates.
+
+        :param x: a point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
+        :return: a list of projected points
+        """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
 
@@ -437,6 +440,12 @@ class CameraTransform:
         return np.array([x, y, h])
 
     def transGPSToCam(self, x):
+        """
+        Transform 2D camera coordinates to (lat, lon, height) coordinates to 2D camera coordinates.
+
+        :param x: a point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
+        :return: a list of projected points
+        """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
 
@@ -444,6 +453,12 @@ class CameraTransform:
         return self.transWorldToCam(x)
 
     def transWorldToGPS(self, x):
+        """
+        Transform 3D world coordinates to (lat, lon, height) coordinates.
+
+        :param x: a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
+        :return: a list of projected points
+        """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
 
@@ -462,6 +477,13 @@ class CameraTransform:
         return np.array([lat, lon, h])
 
     def transCamToGPS(self, x, H=0):
+        """
+        Transform 2D camera coordinates to (lat, lon, height) coordinates.
+
+        :param x: a point in camera coordinates [x, y], or an array of camera points in the shape of [2xN]
+        :param H: specify the height the gps points should have. (default=0)
+        :return: a list of projected points
+        """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=2)
 
@@ -491,7 +513,7 @@ class CameraTransform:
         :param lon: in degree
         :param distance: in meter
         :param bearing: in degree
-        :return:
+        :return: the tuple of lat and lon
         """
 
         lat_rad = np.deg2rad(lat)
@@ -783,6 +805,7 @@ class CameraTransform:
         print({key: value for key, value in zip(fit_parameters, p["x"])})
         if "tan_tilt" in fit_parameters:
             print("tilt", self.tilt)
+        # display a parameter grid, if desired
         if self.do_grid:
             self.do_grid = False
             self._grid(cost)
@@ -909,6 +932,11 @@ class CameraTransform:
         return im
 
     def save(self, filename):
+        """
+        Save the camera parameters to a file that can be loaded with :py:meth:`~.CameraTransform.load`. 
+        
+        :param filename: The filename where to save the parameters 
+        """
         keys = ["height", "roll", "heading", "tilt", "pos_x", "pos_y",
                 "f", "sensor_width", "sensor_height", "fov_h_angle", "fov_v_angle", "im_width", "im_height"]
         export_dict = {key: getattr(self, key) for key in keys}
@@ -916,6 +944,11 @@ class CameraTransform:
             fp.write(json.dumps(export_dict))
 
     def load(self, filename):
+        """
+        Load the camera parameters from a file that was saved before with :py:meth:`~.CameraTransform.save`. 
+
+        :param filename: The filename from which to load the parameters 
+        """
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
         for key in variables:
