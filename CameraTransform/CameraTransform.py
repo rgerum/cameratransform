@@ -131,6 +131,8 @@ class CameraTransform:
     im_width = None
     im_height = None
 
+    use_fit_bounds = None
+
     def __init__(self, focal_length=None, sensor_size=None, image_size=None, observer_height=None,
                  angel_to_horizon=None):
         """
@@ -737,7 +739,18 @@ class CameraTransform:
         if self.pos_y is not None:
             fit_parameters.remove("pos_y")
 
-        bounds.update({key: None for key in fit_parameters if key not in bounds})
+        # if use_fit_bounds is undefined, use bounds only for low dimension fits
+        if self.use_fit_bounds is None:
+            fit_bounds = len(fit_parameters) <= 2
+        else:
+            fit_bounds = self.use_fit_bounds
+        # if we want to fit with bounds prepare the bounds list
+        if fit_bounds:
+            bounds.update({key: (None, None) for key in fit_parameters if key not in bounds})
+            bounds = [bounds[key] for key in fit_parameters]
+        # if not, set it to None
+        else:
+            bounds = None
 
         self.horizon_error = 0
 
@@ -763,7 +776,7 @@ class CameraTransform:
             return cost() + self.horizon_error
 
         # minimize the unknown parameters with the given cost function
-        p = minimize(error, [estimates[key] for key in fit_parameters], bounds=[bounds[key]for key in fit_parameters])
+        p = minimize(error, [estimates[key] for key in fit_parameters], bounds=bounds)
         # call a last time the error function to ensure that the camera matrix has been set properly
         error(p["x"])
         # print the results and return them
