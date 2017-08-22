@@ -95,6 +95,86 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     return result
 
 
+def _getSensorFromDatabase(model):
+    """
+    Get the sensor size from the given model from the database at: https://github.com/openMVG/CameraSensorSizeDatabase
+
+    :param model: the model name as received from the exif data
+    :return: a tuple (sensor_width, sensor_height) or None
+    """
+    import requests
+
+    url = "https://raw.githubusercontent.com/openMVG/CameraSensorSizeDatabase/master/sensor_database_detailed.csv"
+
+    database_filename = "sensor_database_detailed.csv"
+    # download the database if it is not there
+    if not os.path.exists(database_filename):
+        with open(database_filename, "w") as fp:
+            print("Downloading database from:", url)
+            r = requests.get(url)
+            fp.write(r.text)
+    # load the database
+    with open(database_filename, "r") as fp:
+        data = fp.readlines()
+
+    # format the name
+    model = model.replace(" ", ";", 1)
+    name = model + ";"
+    # try to find it
+    for line in data:
+        if line.startswith(name):
+            # extract the sensor dimensions
+            line = line.split(";")
+            sensor_size = (float(line[3]), float(line[4]))
+            return sensor_size
+    # no sensor size found
+    return None
+
+
+def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=True):
+    """
+    Try to extract the intrinsic camera parameters from the exif information.
+
+    :param filename: the filename of the image to load. 
+    :param verbose: whether to print the output.
+    :param sensor_from_database: whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
+    :return: focal_length, sensor_size, image_size
+    """
+    from PIL import Image
+    from PIL.ExifTags import TAGS
+
+    def get_exif(fn):
+        ret = {}
+        i = Image.open(fn)
+        info = i._getexif()
+        for tag, value in info.items():
+            decoded = TAGS.get(tag, tag)
+            ret[decoded] = value
+        return ret
+
+    # read the exif information of the file
+    exif = get_exif(filename)
+    # get the focal length
+    f = exif["FocalLength"][0] / exif["FocalLength"][1]
+    # get the sensor size, either from a database
+    if sensor_from_database:
+        sensor_size = _getSensorFromDatabase(exif["Model"])
+    # or from the exif information
+    if not sensor_size or sensor_size is None:
+        sensor_size = (
+        exif["ExifImageWidth"] / (exif["FocalPlaneXResolution"][0] / exif["FocalPlaneXResolution"][1]) * 25.4,
+        exif["ExifImageHeight"] / (exif["FocalPlaneYResolution"][0] / exif["FocalPlaneYResolution"][1]) * 25.4)
+    # get the image size
+    image_size = (exif["ExifImageWidth"], exif["ExifImageHeight"])
+    # print the output if desired
+    if verbose:
+        print("Intrinsic parameters for '%s':" % exif["Model"])
+        print("   focal length: %.1f mm" % f)
+        print("   sensor size: %.1f mm × %.1f mm" % sensor_size)
+        print("   image size: %d × %d Pixels" % image_size)
+    return f, sensor_size, image_size
+
+
 class CameraTransform:
     """
     CameraTransform class to calculate the position of objects from an image in 3D based

@@ -13,3 +13,5 @@ Helpers
 -------
 
 .. autofunction:: formatGPS
+
+.. autofunction:: getCameraParametersFromExif

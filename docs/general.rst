@@ -10,6 +10,10 @@ First of all to use the `CameraTransform` package, you need to find the intrinsi
 - the ``sensor size`` of the camera in mm
 - and the ``image size`` of the camera in pixels
 
+If you have a jpeg image with exif information, you can try to get these parameters by the function
+:py:func:`CameraTransform.getCameraParametersFromExif`. If this data is not present in the exif information, you have to
+specify the parameters by hand.
+
 The focal length can be found in the exif data of jpeg images. It is not fixed for most cameras, because it depends on
 the zoom factor of the objective.
 
