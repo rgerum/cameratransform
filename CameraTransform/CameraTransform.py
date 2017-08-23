@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import division, print_function
 import numbers
 import numpy as np
 from scipy.optimize import minimize
