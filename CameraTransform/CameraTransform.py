@@ -33,10 +33,10 @@ def formatGPS(lat, lon, format=None, asLatex=False):
            | %2d°                           | -70.618050°       | -8.157300°       |
            +--------------------------------+-------------------+------------------+
             
-        :param lat: the latitude in degrees
-        :param lon: the longitude in degrees
-        :param format: the format string
-        :param asLatex: whether to encode the degree symbol
+        :param number lat: the latitude in degrees
+        :param number lon: the longitude in degrees
+        :param string format: the format string
+        :param bool asLatex: whether to encode the degree symbol
         :return: a tuple of the formatted values
     """
     import re
@@ -100,7 +100,7 @@ def _getSensorFromDatabase(model):
     """
     Get the sensor size from the given model from the database at: https://github.com/openMVG/CameraSensorSizeDatabase
 
-    :param model: the model name as received from the exif data
+    :param string model: the model name as received from the exif data
     :return: a tuple (sensor_width, sensor_height) or None
     """
     import requests
@@ -136,9 +136,9 @@ def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=Tr
     """
     Try to extract the intrinsic camera parameters from the exif information.
 
-    :param filename: the filename of the image to load. 
-    :param verbose: whether to print the output.
-    :param sensor_from_database: whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
+    :param string filename: the filename of the image to load. 
+    :param bool verbose: whether to print the output.
+    :param bool sensor_from_database: whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
     :return: focal_length, sensor_size, image_size
     """
     from PIL import Image
@@ -176,17 +176,65 @@ def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=Tr
     return f, sensor_size, image_size
 
 
+def MapTransform(image_size, scale=1, rotation=0, offset=None):
+    """
+    Create a top view :py:class:`~.CameraTransform`  object with the provided affine transformations.
+    
+    :param image_size: a tuple (im_width, im_height) or a numpy array representing the image
+    :type image_size: tuple, array
+    :param number scale:  the scale to apply to the image, e.g. how many pixels are one meter
+    :param number rotation: a rotation of the image in degrees
+    :param tuple offset: a tuple (x, y) as an offset for the map  
+    :return: a :py:class:`~.CameraTransform` object with the transformation
+    """
+    try:
+        shape, im = image_size.shape, image_size
+        image_size = (shape[1], shape[0])
+    except AttributeError:
+        im = None
+
+    cam = CameraTransform(focal_length=1, sensor_size=image_size,
+                           image_size=image_size)
+    cam.height = scale
+    cam.tilt = 0
+    cam.roll = rotation
+    cam.pos_x = image_size[0] / 2 * scale
+    cam.pos_y = -image_size[1] / 2 * scale
+    if offset is not None:
+        cam.pos_x += offset[0]
+        cam.pos_y += offset[1]
+    cam._initCameraMatrix()
+    return cam
+
+
+def LoadTransform(filename):
+    """
+    Create a :py:class:`~.CameraTransform` object from the parameters stored in a file.
+    
+    :param string filename: the filename to load.
+    :return: a :py:class:`~.CameraTransform` object with the parameters from the file.
+    """
+    # initialize empty camera
+    cam = CameraTransform()
+    # load the parameters from file
+    cam.load(filename)
+    # return the camera
+    return cam
+
+
 class CameraTransform:
     """
     CameraTransform class to calculate the position of objects from an image in 3D based
     on camera intrinsic parameters and observer position
     
-    :param focal_length:    focal length of the camera in mm
+    :param number focal_length:    focal length of the camera in mm
     :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
-                            is inferred from the aspect ratio of the image
+                            is inferred from the aspect ratio of the image                        
+    :type sensor_size: tuple or number
     :param image_size:      image size in mm [width, height]
-    :param observer_height: observer elevation in m
-    :param angel_to_horizon: angle between the z-axis and the horizon
+    :type image_size: tuple or ndarray
+    :param float observer_height: observer elevation in m
+    :param float angel_to_horizon: angle between the z-axis and the horizon
     """
     t = None
     R = None
@@ -316,16 +364,10 @@ class CameraTransform:
 
     def _ensurePointFormat(self, x, dimensions=2):
         # also accept clickpoints markers
-        if dimensions == 2:
-            try:
-                x = np.array([[m.x, m.y] for m in x]).T
-            except AttributeError:
-                pass
-        elif dimensions == 3:
-            try:
-                x = np.array([[m.x, m.y, 0] for m in x]).T
-            except AttributeError:
-                pass
+        try:
+            x = np.array([[m.x, m.y] for m in x]).T
+        except (AttributeError, TypeError):
+            pass
 
         # make a copy so that we don't change the original data
         x = x.copy()
@@ -337,6 +379,10 @@ class CameraTransform:
         except AttributeError:
             x = np.array([x]).T
 
+        # fill third dimension with zeros if none is present
+        if dimensions == 3 and x.shape[0] == 2:
+            x = np.vstack((x, np.zeros(x.shape[1], dtype=x.dtype)))
+
         # test if the first dimension of the array is long enough
         assert x.shape[0] == dimensions, "Input array has to be of the shape [%dxN] or [%d]" % (dimensions, dimensions)
 
@@ -347,7 +393,7 @@ class CameraTransform:
         """
         Transform from 3D world coordinates to 2D camera coordinates.
 
-        :param x: a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
+        :param ndarray x: a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
         :return: a list of projected points
         """
 
@@ -581,7 +627,7 @@ class CameraTransform:
     def distanceBearing(self, pos):
         """ distance and bearing from a point to the camera 
         
-        :param pos: point(s) in the world coordinates. In the shape of [3xN]
+        :param array pos: point(s) in the world coordinates. In the shape of [3xN]
         :return: distance (meters), bearing (degree)
         """
         # relative to camera foot point
@@ -597,11 +643,12 @@ class CameraTransform:
         """
         Move a gps point the given distance in the given direction.
 
-        :param lat: in degree
-        :param lon: in degree
-        :param distance: in meter
-        :param bearing: in degree
+        :param number lat: in degree
+        :param number lon: in degree
+        :param number distance: in meter
+        :param number bearing: in degree
         :return: the tuple of lat and lon
+        :rtype: tuple
         """
 
         lat_rad = np.deg2rad(lat)
@@ -794,6 +841,7 @@ class CameraTransform:
         # fit the position of the camera, too
         self.pos_x = None
         self.pos_y = None
+        self.heading = None
 
         # define a cost function
         def cost():
@@ -837,6 +885,7 @@ class CameraTransform:
         estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll,
                      "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
         bounds = {"height": (1e-6, None), "tilt": (0, 180)}
+
         fit_parameters = list(estimates.keys())
 
         # remove known parameters from list
@@ -1009,6 +1058,13 @@ class CameraTransform:
             extent = [min(x), max(x), min(y), max(y)]
             print("extent", extent)
 
+        # check if we want a transparent background
+        if border_value == "transparent":
+            border_value = 0
+            # if we have an RGB image, add an alpha channel
+            if im.shape[2] == 3:
+                im = np.dstack((im, np.ones(im.shape[:2], dtype=im.dtype) * 255))
+
         # split the extent
         x_lim, y_lim = extent[:2], extent[2:]
         width = x_lim[1] - x_lim[0]
@@ -1030,7 +1086,7 @@ class CameraTransform:
         # invert the matrix
         P = np.linalg.inv(P)
         # transform the image using OpenCV
-        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value)[::-1, :]
+        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)[::-1, :]
         # and plot the image if desired
         if do_plot:
             plt.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]])
@@ -1053,7 +1109,7 @@ class CameraTransform:
         """
         Load the camera parameters from a file that was saved before with :py:meth:`~.CameraTransform.save`. 
 
-        :param filename: The filename from which to load the parameters 
+         filename: The filename from which to load the parameters 
         """
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
@@ -1061,3 +1117,51 @@ class CameraTransform:
             setattr(self, key, variables[key])
         self._initIntrinsicMatrix()
         self._initCameraMatrix()
+
+    def plotPointCorrespondence(self, im_cam, im_map, cam_map, points_cam, points_map):
+        points_cam = self._ensurePointFormat(points_cam, dimensions=2)
+        points_map = self._ensurePointFormat(points_map, dimensions=3)
+
+        ax1 = plt.subplot(131)
+        ax2 = plt.subplot(132)
+        ax3 = plt.subplot(133, sharex=ax2, sharey=ax2)
+
+        # plot the camera image points
+        for i, p in enumerate(points_cam.T):
+            # into the camera image
+            plt.sca(ax1)
+            plt.plot(p[0], p[1], 'bo')
+            plt.text(p[0], p[1], i)
+            # and the map image
+            plt.sca(ax2)
+            p = self.transCamToWorld(p, Z=0)
+            plt.plot(p[0], p[1], 'bo')
+            plt.text(p[0], p[1], i)
+        # plot the map points
+        for i, p0 in enumerate(points_map.T):
+            # into the camera image
+            plt.sca(ax1)
+            p = self.transWorldToCam([p0[0], p0[1], 0])
+            plt.plot(p[0], p[1], 'r+')
+            plt.text(p[0], p[1], i)
+            # and into the map image
+            plt.sca(ax2)
+            plt.plot(p0[0], p0[1], 'r+')
+            plt.text(p0[0], p0[1], i)
+            # and into the map image
+            plt.sca(ax3)
+            plt.plot(p0[0], p0[1], 'r+')
+            plt.text(p0[0], p0[1], i)
+
+        # plot the camera image
+        plt.sca(ax1)
+        plt.imshow(im_cam)
+
+        # and the map image
+        plt.sca(ax2)
+        cam_map.getTopViewOfImage(im_map, do_plot=True)
+        self.getTopViewOfImage(im_cam, do_plot=True, border_value="transparent")
+
+        # and the map image
+        plt.sca(ax3)
+        cam_map.getTopViewOfImage(im_map, do_plot=True)
