@@ -307,6 +307,22 @@ class CameraTransform:
             self.tilt = angel_to_horizon
             self._initCameraMatrix()
 
+    def __str__(self):
+        string = "CameraTransform(\n"
+        string += "  intrinsic:\n"
+        string += "    f:\t\t%.1f mm\n    sensor:\t%.2f×%.2f mm\n    image:\t%d×%d px\n" % (
+        self.f * 1e3, self.sensor_width * 1e3, self.sensor_height * 1e3, self.im_width, self.im_height)
+        string += "  position:\n"
+        string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (self.pos_x, self.pos_y, self.height)
+        string += "  orientation:\n"
+        string += "    tilt:\t\t%f°\n    roll:\t\t%f°\n    heading:\t%f°\n)" % (self.tilt, self.roll, self.heading)
+        return string
+        string = "CameraTransform"
+        string += "  f = %.1fmm sensor = %.2f×%.2fmm  image = %d×%dpx" % (self.f*1e3, self.sensor_width*1e3, self.sensor_height*1e3, self.im_width, self.im_height)
+        string += "  (x = %f y = %f h = %f)" % (self.pos_x, self.pos_y, self.height)
+        string += "  (tilt = %f° roll = %f° heading = %f°)" % (self.tilt, self.roll, self.heading)
+        return string
+
     def _initIntrinsicMatrix(self):
         # normalize the focal length by the sensor width and the image_width
         self.f_normed = self.f / self.sensor_width * self.im_width
