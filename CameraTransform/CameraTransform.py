@@ -232,7 +232,7 @@ class CameraTransform:
     :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
                             is inferred from the aspect ratio of the image                        
     :type sensor_size: tuple or number
-    :param image_size:      image size in mm [width, height]
+    :param image_size:      image size in mm [width, height] or a numpy array representing the image
     :type image_size: tuple or ndarray
     :param float observer_height: observer elevation in m
     :param float angel_to_horizon: angle between the z-axis and the horizon
@@ -285,6 +285,11 @@ class CameraTransform:
             # convert focal length to meters
             self.f = focal_length * 1e-3  # in m
             # splice image size
+            try:
+                shape, im = image_size.shape, image_size
+                image_size = (shape[1], shape[0])
+            except AttributeError:
+                im = None
             self.im_width, self.im_height = image_size
             # if only the sensor width is given, calculate its height from the aspect ratio of the image
             if isinstance(sensor_size, numbers.Number):
