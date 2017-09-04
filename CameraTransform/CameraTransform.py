@@ -4,6 +4,7 @@ import numbers
 import numpy as np
 from scipy.optimize import minimize
 import json
+import os
 
 try:
     import cv2
@@ -34,12 +35,46 @@ def formatGPS(lat, lon, format=None, asLatex=False):
            | %2d°                           | -70.618050°       | -8.157300°       |
            +--------------------------------+-------------------+------------------+
             
-        :param number lat: the latitude in degrees
-        :param number lon: the longitude in degrees
-        :param string format: the format string
-        :param bool asLatex: whether to encode the degree symbol
-        :return: a tuple of the formatted values
-    """
+        Parameters
+        ----------
+        lat: number
+            the latitude in degrees
+        lon: number
+            the longitude in degrees
+        format: string 
+            the format string
+        asLatex: bool
+            whether to encode the degree symbol
+        
+        Returns
+        -------
+        lat: string
+            the formatted latitude
+        lon: string
+            the formatted longitude
+        
+        Examples
+        --------
+        
+        >>> import CameraTransform as ct
+
+        Convert a coordinate pair to a formatted string:
+
+        >>> lat, lon = ct.formatGPS(-70.61805, -8.1573)
+        >>> print(lat)
+        70° 37'  4.980" S
+        >>> print(lon)
+         8°  9' 26.280" W
+         
+        or with a different format:
+         
+        >>> lat, lon = ct.formatGPS(-70.61805, -8.1573, format="%2d° %2d.3f %s")
+        >>> print(lat)
+        70° 37.3f S
+        >>> print(lon)
+         8°  9.3f W
+        
+        """
     import re
     # default format
     if format is None:
@@ -101,8 +136,15 @@ def _getSensorFromDatabase(model):
     """
     Get the sensor size from the given model from the database at: https://github.com/openMVG/CameraSensorSizeDatabase
 
-    :param string model: the model name as received from the exif data
-    :return: a tuple (sensor_width, sensor_height) or None
+    Parameters
+    ----------
+    model: string
+        the model name as received from the exif data
+    
+    Returns
+    -------
+    sensor_size: tuple
+        (sensor_width, sensor_height) in mm or None
     """
     import requests
 
@@ -136,11 +178,43 @@ def _getSensorFromDatabase(model):
 def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=True):
     """
     Try to extract the intrinsic camera parameters from the exif information.
-
-    :param string filename: the filename of the image to load. 
-    :param bool verbose: whether to print the output.
-    :param bool sensor_from_database: whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
-    :return: focal_length, sensor_size, image_size
+    
+    Parameters
+    ----------
+    filename: basestring
+        the filename of the image to load. 
+    verbose: bool
+         whether to print the output.
+    sensor_from_database: bool
+        whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
+        
+    Returns
+    -------
+    focal_length: number
+        the extracted focal length in mm
+    sensor_size: tuple
+        (width, height) of the camera sensor in mm
+    image_size: tuple
+        (width, height) of the image in pixel
+        
+    Examples
+    --------
+        
+    >>> import CameraTransform as ct
+    
+    Supply the image filename to print the results:
+    
+    >>> ct.getCameraParametersFromExif("Image.jpg", verbose=True)
+    Intrinsic parameters for 'Canon EOS 50D':
+       focal length: 400.0 mm
+       sensor size: 22.3 mm × 14.9 mm
+       image size: 4752 × 3168 Pixels
+       
+    Or use the resulting parameters to initialize a CameraTransform instance:
+    
+    >>> focal_length, sensor_size, image_size = ct.getCameraParametersFromExif("Image.jpg")
+    >>> cam = ct.CameraTransform(focal_length, sensor_size, image_size)
+    
     """
     from PIL import Image
     from PIL.ExifTags import TAGS
@@ -181,12 +255,21 @@ def MapTransform(image_size, scale=1, rotation=0, offset=None):
     """
     Create a top view :py:class:`~.CameraTransform`  object with the provided affine transformations.
     
-    :param image_size: a tuple (im_width, im_height) or a numpy array representing the image
-    :type image_size: tuple, array
-    :param number scale:  the scale to apply to the image, e.g. how many pixels are one meter
-    :param number rotation: a rotation of the image in degrees
-    :param tuple offset: a tuple (x, y) as an offset for the map  
-    :return: a :py:class:`~.CameraTransform` object with the transformation
+    Parameters
+    ----------
+    image_size: tuple, ndarray
+        a tuple (im_width, im_height) or a numpy array representing the image
+    scale: number, optional
+        the scale to apply to the image, e.g. how many pixels are one meter. Default=0.
+    rotation: number, optional
+        a rotation of the image in degrees. Default=0
+    offset: tuple
+        a tuple (x, y) as an offset for the map
+        
+    Returns
+    -------
+    transform: :py:class:`~.CameraTransform`
+        object with the transformation
     """
     try:
         shape, im = image_size.shape, image_size
@@ -212,8 +295,17 @@ def LoadTransform(filename):
     """
     Create a :py:class:`~.CameraTransform` object from the parameters stored in a file.
     
-    :param string filename: the filename to load.
-    :return: a :py:class:`~.CameraTransform` object with the parameters from the file.
+    See also: :py:meth:`~.CameraTransform.save`, :py:meth:`~.CameraTransform.load`.
+    
+    Parameters
+    ----------
+    filename: string
+        the filename to load.
+
+    Returns
+    -------
+    transform: :py:class:`~.CameraTransform`
+        object with the parameters from the file.
     """
     # initialize empty camera
     cam = CameraTransform()
@@ -228,14 +320,19 @@ class CameraTransform:
     CameraTransform class to calculate the position of objects from an image in 3D based
     on camera intrinsic parameters and observer position
     
-    :param number focal_length:    focal length of the camera in mm
-    :param sensor_size:     sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
-                            is inferred from the aspect ratio of the image                        
-    :type sensor_size: tuple or number
-    :param image_size:      image size in mm [width, height] or a numpy array representing the image
-    :type image_size: tuple or ndarray
-    :param float observer_height: observer elevation in m
-    :param float angel_to_horizon: angle between the z-axis and the horizon
+    Parameters
+    ----------
+    focal_length: number
+        focal length of the camera in mm
+    sensor_size: tuple or number
+        sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
+        is inferred from the aspect ratio of the image                        
+    image_size: tuple or ndarray
+        image size in mm [width, height] or a numpy array representing the image
+    observer_height: number
+        observer elevation in m
+    angel_to_horizon: number
+        angle between the z-axis and the horizon    
     """
     t = None
     R = None
@@ -415,10 +512,16 @@ class CameraTransform:
         """
         Transform from 3D world coordinates to 2D camera coordinates.
 
-        :param ndarray x: a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
-        :return: a list of projected points
-        """
+        Parameters
+        ----------
+        x: ndarray, list of clickpoints.Marker
+            a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
 
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
+        """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
 
@@ -462,15 +565,25 @@ class CameraTransform:
         """
         Transform from 2D camera coordinates to 3D world coordinates. One of the 3D values has to be fixed. 
         This can be specified by supplying one of the three X, Y, Z.
-        
-        :param x: a point in camera coordinates [x, y], or an array of camera points in the shape of [2xN]
-        :param X: when given project the camera points to world coordinates with their X value set to this parameter. 
-                  Can be a single value or a list.
-        :param Y: when given project the camera points to world coordinates with their Y value set to this parameter. 
-                  Can be a single value or a list.
-        :param Z: when given project the camera points to world coordinates with their Z value set to this parameter.
-                  Can be a single value or a list.
-        :return: a list of projected points
+
+        Parameters
+        ----------
+        x: ndarray, list of clickpoints.Marker
+            a point in camera coordinates [x, y], or an array of camera points in the shape of [2xN]
+        X: number, list, optional
+            when given project the camera points to world coordinates with their X value set to this parameter. 
+            Can be a single value or a list.
+        Y: number, list, optional
+            when given project the camera points to world coordinates with their Y value set to this parameter. 
+            Can be a single value or a list.
+        Z: numer, list, optional
+            when given project the camera points to world coordinates with their Z value set to this parameter.
+            Can be a single value or a list.
+
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
         """
 
         # test whether the input is good
@@ -568,8 +681,15 @@ class CameraTransform:
         """
         Transform from (lat, lon, height) coordinates to 3D world coordinates.
 
-        :param x: a point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
-        :return: a list of projected points
+        Parameters
+        ----------
+        x: ndarray
+             point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
+
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
         """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
@@ -599,8 +719,15 @@ class CameraTransform:
         """
         Transform 2D camera coordinates to (lat, lon, height) coordinates to 2D camera coordinates.
 
-        :param x: a point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
-        :return: a list of projected points
+        Parameters
+        ----------
+        x: ndarray
+             point in gps coordinates [lat, lon, height], or an array of gps points in the shape of [3xN]
+
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
         """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
@@ -611,9 +738,16 @@ class CameraTransform:
     def transWorldToGPS(self, x):
         """
         Transform 3D world coordinates to (lat, lon, height) coordinates.
+        
+        Parameters
+        ----------
+        x: ndarray, list of clickpoints.Marker
+            a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
 
-        :param x: a point in world coordinates [x, y, z], or an array of world points in the shape of [3xN]
-        :return: a list of projected points
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
         """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=3)
@@ -635,10 +769,18 @@ class CameraTransform:
     def transCamToGPS(self, x, H=0):
         """
         Transform 2D camera coordinates to (lat, lon, height) coordinates.
+        
+        Parameters
+        ----------
+        x: ndarray, list of clickpoints.Marker
+            a point in camera coordinates [x, y], or an array of camera points in the shape of [2xN]
+        H: number
+            specify the height the gps points should have. (default=0)
 
-        :param x: a point in camera coordinates [x, y], or an array of camera points in the shape of [2xN]
-        :param H: specify the height the gps points should have. (default=0)
-        :return: a list of projected points
+        Returns
+        -------
+        points: ndarray
+            a list of projected points
         """
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=2)
@@ -647,10 +789,20 @@ class CameraTransform:
         return self.transWorldToGPS(x)
 
     def distanceBearing(self, pos):
-        """ distance and bearing from a point to the camera 
+        """
+        Distance and bearing from a point in world coordinates to the camera.
         
-        :param array pos: point(s) in the world coordinates. In the shape of [3xN]
-        :return: distance (meters), bearing (degree)
+        Parameters
+        ----------
+        pos: ndarray
+            point(s) in the world coordinates. In the shape of [3] or [3xN]
+
+        Returns
+        -------
+        distance: number, ndarray
+            distance of the objects to the camera (meters).
+        bearing: number, ndarray
+            angle of the camera to the objects(degree).
         """
         # relative to camera foot point
         x = pos[0] - self.pos_x
@@ -665,12 +817,23 @@ class CameraTransform:
         """
         Move a gps point the given distance in the given direction.
 
-        :param number lat: in degree
-        :param number lon: in degree
-        :param number distance: in meter
-        :param number bearing: in degree
-        :return: the tuple of lat and lon
-        :rtype: tuple
+        Parameters
+        ----------
+        lat: number, ndarray
+            latitude in degree
+        lon: number, ndarray
+            longitude in degree
+        distance: number, ndarray
+            distance in meter which to move the point
+        bearing: number, ndarray
+            direction in which to move (degree)
+            
+        Returns
+        -------
+        lat: number, ndarray
+            the latitude of the resulting point
+        lon: number, ndarray
+            the longitude of the resulting point
         """
 
         lat_rad = np.deg2rad(lat)
@@ -699,8 +862,16 @@ class CameraTransform:
     def generateLUT(self, undef_value=0):
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
+        
+        Parameters
+        ----------
+        undef_value: number, optional
+            what values undefined positions should have, default=0
 
-        :return: LUT, same length as image height
+        Returns
+        -------
+        LUT: ndarray
+            same length as image height
         """
 
         def get_square(x, y):
@@ -740,13 +911,25 @@ class CameraTransform:
         lines. The height of each objects is given in object_height, and if the objects are not at sea level, an 
         object_elevation can be given.
         
-        :param points_foot: The pixel positions of the feet of the objects in the image. 
-        :param points_head:  The pixel positions of the heads of the objects in the image. 
-        :param lines: An alternative for the points_foot and points_head arguments, ClickPoints lines can be directly 
-                      given.
-        :param object_height: The height of the objects.
-        :param object_elevation: The elevation of the feet ot the objects.
-        :return: the fitted parameters.
+        For an example see: `Fit from object heights <fit_heights.html>`_
+        
+        Parameters
+        ----------
+        points_foot: ndarray
+            The pixel positions of the feet of the objects in the image. 
+        points_head: ndarray
+            The pixel positions of the heads of the objects in the image. 
+        lines: list of clickpoints.Line 
+            An alternative for the points_foot and points_head arguments, ClickPoints lines can be directly given.
+        object_height: number, optional
+            The height of the objects. Default = 1m
+        object_elevation: number, optional
+            The elevation of the feet ot the objects.
+            
+        Returns
+        -------
+        p: list
+            the fitted parameters.
         """
         if lines is not None:
             y1 = [np.max([l.y1, l.y2]) for l in lines]
@@ -777,7 +960,10 @@ class CameraTransform:
         """
         Set the roll parameter of the camera to a given value and hold it there in subsequent fitting functions.
         
-        :param roll: The roll of the camera in degree. 
+        Parameters
+        ----------
+        roll: number
+            The roll of the camera in degree. 
         """
         self.roll = roll
 
@@ -817,11 +1003,19 @@ class CameraTransform:
         """
         Fit the camera parameters form objects of known distance to the camera.
         
-        :param marks: The pixel positions of the objects in the image. In the shape of [2xN] 
-        :param distances: The distances of the mark points to the camera.
-        :param heading: Optional a heading angle in degrees of the objects. When given the heading of the camera will be
-                        fitted, too.
-        :return: the fitted parameters.
+        Parameters
+        ----------
+        marks: ndarray, list of clickpoints.Marker
+            The pixel positions of the objects in the image. In the shape of [2xN] 
+        distances: list of numbers
+            The distances of the mark points to the camera.
+        heading: list of numbers, optional
+            Optional a heading angle in degrees of the objects. When given the heading of the camera will be fitted, too.
+            
+        Returns
+        -------
+        p: list
+            the fitted parameters.
         """
 
         def cost():
@@ -841,24 +1035,33 @@ class CameraTransform:
 
         return self._fit(cost)
 
-    def fitCamParametersFromPointCorrespondences(self, points2D, points3D):
+    def fitCamParametersFromPointCorrespondences(self, points2D, points3D, cam2=None):
         """
         Fit the camera parameters form points known in both coordinate systems, the camera and the world.
+        
+        For an example see: `Fit from object heights <fit_satellite.html>`_
 
-        :param points2D: The points in the camera image.
-        :param points3D: The corresponding points in the world coordinates. This list has to have the same order than 
-                         the points 2D list.
-        :return: the fitted parameters.
+        Parameters
+        ----------
+        points2D: ndarray, list of clickpoints.Marker
+            The points in the camera image.
+        points3D: ndarray, list of clickpoints.Marker
+            The corresponding points, either in world coordinates. Or in coordinates of the camera cam2. This list has 
+            to have the same order than the points 2D list.
+        cam2: :py:class:`~.CameraTransform`, optional
+             The camera that specifies the transform for the points3D.
+        
+        Returns
+        -------
+        p: list
+            the fitted parameters.
         """
         # if the points are given in ClickPoints markers, split them in x and y component
-        try:
-            points2D = np.array([[m.x, m.y] for m in points2D]).T
-        except AttributeError:
-            pass
-        try:
-            points3D = np.array([[-m.x, m.y, 0] for m in points3D]).T
-        except AttributeError:
-            pass
+        points2D = self._ensurePointFormat(points2D, dimensions=2)
+        if cam2 is not None:
+            points3D = cam2.transCamToWorld(points3D, Z=0)
+        else:
+            points3D = self._ensurePointFormat(points3D, dimensions=3)
 
         # fit the position of the camera, too
         self.pos_x = None
@@ -875,18 +1078,28 @@ class CameraTransform:
         # fit the camera matrix to the cost function
         return self._fit(cost)
 
-    def fitCamParametersFromLengths(self, points, distances):
+    def fitCamParametersFromLengths(self, points1, points2, distances):
         """
         Fit the camera parameters form objects of known distance to the camera.
 
-        :param points: TODO 
-        :param distances: The distances of the mark points to the camera.
-        :return: the fitted parameters.
+        Parameters
+        ----------
+        points1: ndarray
+            start points of the distances
+        points2: ndarray
+            end points of the distances
+        distances: ndarray
+            The distances of the mark points to the camera.
+            
+        Returns
+        -------
+        p: list
+            the fitted parameters.
         """
         # if the horizon is given in ClickPoints markers, split them in x and y component
         try:
-            points1 = np.array([[m.x1, m.y1] for m in points]).T
-            points2 = np.array([[m.x2, m.y2] for m in points]).T
+            points1 = np.array([[m.x1, m.y1] for m in points1]).T
+            points2 = np.array([[m.x2, m.y2] for m in points2]).T
         except AttributeError:
             points1, points2 = points
 
@@ -1060,7 +1273,10 @@ class CameraTransform:
         """
         Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
         
-        :param im: The image of the camera. 
+        Parameters
+        ----------
+        im: ndarray
+            The image of the camera. 
         :param extent: The part of the 3D plane to show: [x_min, x_max, y_min, y_max]. The same format as the extent 
                        parameter in in plt.imshow.
         :param scaling: How many pixels to use per meter. A smaller value gives a more detailed image, but takes more 
@@ -1129,9 +1345,14 @@ class CameraTransform:
 
     def load(self, filename):
         """
-        Load the camera parameters from a file that was saved before with :py:meth:`~.CameraTransform.save`. 
-
-         filename: The filename from which to load the parameters 
+        Load the camera parameters from a file that was saved before with :py:meth:`~.CameraTransform.save`.
+         
+        See also: :py:func:`CameraTransform.LoadTransform`.
+        
+        Parameters
+        ----------
+        filename: str
+            The filename from which to load the parameters 
         """
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
@@ -1142,11 +1363,11 @@ class CameraTransform:
 
     def plotPointCorrespondence(self, im_cam, im_map, cam_map, points_cam, points_map):
         points_cam = self._ensurePointFormat(points_cam, dimensions=2)
-        points_map = self._ensurePointFormat(points_map, dimensions=3)
+        points_map = self._ensurePointFormat(points_map, dimensions=2)
 
         ax1 = plt.subplot(131)
         ax2 = plt.subplot(132)
-        ax3 = plt.subplot(133, sharex=ax2, sharey=ax2)
+        ax3 = plt.subplot(133)
 
         # plot the camera image points
         for i, p in enumerate(points_cam.T):
@@ -1161,19 +1382,20 @@ class CameraTransform:
             plt.text(p[0], p[1], i)
         # plot the map points
         for i, p0 in enumerate(points_map.T):
-            # into the camera image
-            plt.sca(ax1)
-            p = self.transWorldToCam([p0[0], p0[1], 0])
-            plt.plot(p[0], p[1], 'r+')
-            plt.text(p[0], p[1], i)
-            # and into the map image
-            plt.sca(ax2)
-            plt.plot(p0[0], p0[1], 'r+')
-            plt.text(p0[0], p0[1], i)
             # and into the map image
             plt.sca(ax3)
             plt.plot(p0[0], p0[1], 'r+')
             plt.text(p0[0], p0[1], i)
+            # and into the map image
+            p0 = cam_map.transCamToWorld(p0, Z=0)
+            plt.sca(ax2)
+            plt.plot(p0[0], p0[1], 'r+')
+            plt.text(p0[0], p0[1], i)
+            # into the camera image
+            plt.sca(ax1)
+            p = self.transWorldToCam(p0)
+            plt.plot(p[0], p[1], 'r+')
+            plt.text(p[0], p[1], i)
 
         # plot the camera image
         plt.sca(ax1)
@@ -1186,4 +1408,28 @@ class CameraTransform:
 
         # and the map image
         plt.sca(ax3)
-        cam_map.getTopViewOfImage(im_map, do_plot=True)
+        plt.imshow(im_map)
+
+    def plotImageAndTopView(self, im_cam, *args):
+        ax1 = plt.subplot(121)
+        ax2 = plt.subplot(122)
+
+        for p in args:
+            # into the camera image
+            p = self._ensurePointFormat(p, dimensions=2)
+            plt.sca(ax1)
+            plt.plot(p[0], p[1], 'bo')
+            # and the map image
+            plt.sca(ax2)
+            p = self.transCamToWorld(p, Z=0)
+            plt.plot(p[0], p[1], 'bo')
+            for i, p0 in enumerate(p.T):
+                plt.text(p0[0], p0[1], i)
+
+        # plot the camera image
+        plt.sca(ax1)
+        plt.imshow(im_cam)
+
+        # and the map image
+        plt.sca(ax2)
+        self.getTopViewOfImage(im_cam, do_plot=True, border_value="transparent")
