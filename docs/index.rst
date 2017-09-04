@@ -12,6 +12,7 @@ the camera space to the world space and back.
 
    installation
    general
+   fitting
    api
 
 
