@@ -12,6 +12,7 @@ build/*
 
 */_*
 *.ipynb_checkpoints*
+*.hypothesis*
 syntax: regexp
 
 .directory
