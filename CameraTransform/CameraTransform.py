@@ -87,10 +87,20 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     # try to find a %s to see if we have to use a letter symbol or a negative sign
     use_letter = False
     counter = 0
+    fmt_degs = None
+    fmt_mins = None
+    fmt_sec = None
     for entry in match:
         if entry[-1] == "s":
             use_letter = True
         else:
+            # store the formats of the degrees, minutes and seconds
+            if counter == 0:
+                fmt_degs = entry
+            elif counter == 1:
+                fmt_mins = entry
+            elif counter == 2:
+                fmt_sec = entry
             counter += 1
     if counter > 3:
         raise ValueError("too many format strings, only 3 numbers are allowed")
@@ -104,6 +114,15 @@ def formatGPS(lat, lon, format=None, asLatex=False):
         mins = (degs * 60) % 60
         # get seconds
         secs = (mins * 60) % 60
+
+        # if the seconds are rounded up to 60, increase mins
+        if fmt_sec is not None and fmt_sec % secs == fmt_sec % 60:
+            mins += 1
+            secs = 0
+        # if the mins are rounded up to 60 increase degs
+        if fmt_mins is not None and fmt_mins % mins == fmt_mins % 60:
+            degs += 1
+            mins = 0
 
         # if no letter symbol is used, keep the sign
         if not use_letter and neg:
@@ -482,9 +501,11 @@ class CameraTransform:
         self.C[:, 0] = -self.C[:, 0]
 
     def _ensurePointFormat(self, x, dimensions=2):
+        self.input_type = "array"
         # also accept clickpoints markers
         try:
             x = np.array([[m.x, m.y] for m in x]).T
+            self.input_type = "clickpoints"
         except (AttributeError, TypeError):
             pass
 
@@ -495,8 +516,10 @@ class CameraTransform:
         try:
             if len(x.shape) == 1:
                 x = x[:, None]
+                self.input_type = "array1"
         except AttributeError:
             x = np.array([x]).T
+            self.input_type = "list1"
 
         # fill third dimension with zeros if none is present
         if dimensions == 3 and x.shape[0] == 2:
@@ -507,6 +530,14 @@ class CameraTransform:
 
         # return the process array
         return x
+
+    def _ensureOutputPointFormat(self, p):
+        if self.input_type == "list1":
+            return [p[0, 0], p[1, 0]]
+        if self.input_type == "array1":
+            return p[:, 0]
+        return p
+
 
     def transWorldToCam(self, x):
         """
@@ -532,7 +563,7 @@ class CameraTransform:
         X = np.dot(self.C, x)
         # rescale it so the lowest component is again 1
         X = X[:2] / X[2]
-        return X
+        return self._ensureOutputPointFormat(X)
 
     def _transCamToWorldFixedDimension(self, x, fixed, dimension):
         # add a 1 as a 3rd dimension for the projective coordinates
@@ -606,11 +637,11 @@ class CameraTransform:
 
         # if the fixed value is a list, we have to transform each coordinate separately
         if not isinstance(fixed, int) and not isinstance(fixed, float):
-            return np.array(
+            return self._ensureOutputPointFormat(np.array(
                 [self._transCamToWorldFixedDimension(x[:, i:i + 1], fixed=fixed[i], dimension=dimension) for i in
-                 range(x.shape[1])])[:, :, 0].T
+                 range(x.shape[1])])[:, :, 0].T)
         # else transform everything in one go
-        return self._transCamToWorldFixedDimension(x, fixed, dimension)
+        return self._ensureOutputPointFormat(self._transCamToWorldFixedDimension(x, fixed, dimension))
 
     def transCamToEarth(self, x, H=None, max_iter=100, max_distance=0.01):
         # reshape input x array to two dimensions
@@ -974,7 +1005,21 @@ class CameraTransform:
         :param height: The height of the camera in meters.
         """
         self.height = height
-        if self.fixed_horizon:
+        if self.tilt is not None:
+            self._initCameraMatrix()
+        elif self.fixed_horizon:
+            self._fit(lambda: 0)
+
+    def fixTilt(self, tilt):
+        """
+        Set the tilt parameter of the camera to a given value and hold it there in subsequent fitting functions.
+
+        :param tilt: The tilt angle of the camera in degrees.
+        """
+        self.tilt = tilt
+        if self.height is not None:
+            self._initCameraMatrix()
+        elif self.fixed_horizon:
             self._fit(lambda: 0)
 
     def fixHorizon(self, horizon):

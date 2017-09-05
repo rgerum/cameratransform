@@ -1,5 +1,5 @@
 numpy
 scipy
-pytest
 pytest-cov
+hypothesis
 bbcs-tools
