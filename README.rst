@@ -2,7 +2,7 @@ CameraTransform
 ===============
 
 
-|Coverage| |DOC|_ |Python36| |License|_ 
+|Coverage|_ |DOC|_ |Python36| |License|_
 
 .. |Coverage| image:: https://coveralls.io/repos/bitbucket/fabry_biophysics/cameratransform/badge.svg?branch=main
 .. _Coverage: https://coveralls.io/bitbucket/fabry_biophysics/cameratransform?branch=main
