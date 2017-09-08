@@ -565,6 +565,17 @@ class CameraTransform:
         X = X[:2] / X[2]
         return self._ensureOutputPointFormat(X)
 
+    def _isBehindCamera(self, x):
+        # reshape input x array to two dimensions
+        x = self._ensurePointFormat(x, dimensions=3)
+
+        # add a 1 as a 3rd dimension for the projective coordinates
+        x = np.vstack((x, np.ones(x.shape[1])))
+
+        # multiply it with the camera matrix
+        X = np.dot(self.C, x)
+        return X[2] > 0
+
     def _transCamToWorldFixedDimension(self, x, fixed, dimension):
         # add a 1 as a 3rd dimension for the projective coordinates
         x = np.vstack((x, np.ones(x.shape[1])))
@@ -817,6 +828,10 @@ class CameraTransform:
         x = self._ensurePointFormat(x, dimensions=2)
 
         x = self.transCamToWorld(x, Z=H)
+        # set points that are behind the camera to nan
+        behind = self._isBehindCamera(x)
+        x[0, behind] = np.nan
+        x[1, behind] = np.nan
         return self.transWorldToGPS(x)
 
     def distanceBearing(self, pos):
@@ -1123,16 +1138,14 @@ class CameraTransform:
         # fit the camera matrix to the cost function
         return self._fit(cost)
 
-    def fitCamParametersFromLengths(self, points1, points2, distances):
+    def fitCamParametersFromLengths(self, points, distances):
         """
         Fit the camera parameters form objects of known distance to the camera.
 
         Parameters
         ----------
-        points1: ndarray
-            start points of the distances
-        points2: ndarray
-            end points of the distances
+        points: tuple(ndarray, ndarray)
+            start points of the distances and end points of the distances
         distances: ndarray
             The distances of the mark points to the camera.
             
@@ -1143,8 +1156,8 @@ class CameraTransform:
         """
         # if the horizon is given in ClickPoints markers, split them in x and y component
         try:
-            points1 = np.array([[m.x1, m.y1] for m in points1]).T
-            points2 = np.array([[m.x2, m.y2] for m in points2]).T
+            points1 = np.array([[m.x1, m.y1] for m in points]).T
+            points2 = np.array([[m.x2, m.y2] for m in points]).T
         except AttributeError:
             points1, points2 = points
 
