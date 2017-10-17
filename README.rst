@@ -17,3 +17,5 @@ CameraTransform
 
 
 CameraTransform is a python package which can be used to fit camera transformations and apply them to project points from the camera space to the world space and back.
+
+For installation and usage please refere to the `Documentation <http://cameratransform.readthedocs.org/>`_.
