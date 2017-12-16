@@ -382,6 +382,8 @@ class CameraTransform:
     estimated_tilt = 85
     estimated_heading = 0
     estimated_roll = 0
+    estimated_x = 0
+    estimated_y = 0
 
     f = None
     sensor_width = None
@@ -1176,7 +1178,7 @@ class CameraTransform:
         #estimates = {"height": self.estimated_height, "tan_tilt": np.tan((90 + self.estimated_tilt) * np.pi / 180),
         #             "roll": self.estimated_roll, "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
         estimates = {"height": self.estimated_height, "tilt": self.estimated_tilt, "roll": self.estimated_roll,
-                     "heading": self.estimated_heading, "pos_x": 0, "pos_y": 0}
+                     "heading": self.estimated_heading, "pos_x": self.estimated_x, "pos_y": self.estimated_y}
         bounds = {"height": (1e-6, None), "tilt": (0, 180)}
 
         fit_parameters = list(estimates.keys())
