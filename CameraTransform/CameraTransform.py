@@ -302,7 +302,7 @@ def MapTransform(image_size, scale=1, rotation=0, offset=None):
     cam.tilt = 0
     cam.roll = rotation
     cam.pos_x = image_size[0] / 2 * scale
-    cam.pos_y = -image_size[1] / 2 * scale
+    cam.pos_y = image_size[1] / 2 * scale
     if offset is not None:
         cam.pos_x += offset[0]
         cam.pos_y += offset[1]
@@ -476,7 +476,7 @@ class CameraTransform:
             heading = 0
 
         # get the translation matrix and rotate it
-        self.t = np.array([[self.pos_x, self.pos_y, -height]]).T
+        self.t = np.array([[self.pos_x, -self.pos_y, -height]]).T
 
         # construct the rotation matrices for tilt, roll and heading
         self.R_tilt = np.array([[1, 0, 0],
@@ -490,7 +490,7 @@ class CameraTransform:
                                 [0, 0, 1]])
 
         # rotate the translation around the tilt angle
-        self.t = np.dot(self.R_tilt, self.t)
+        self.t = np.dot(self.R_tilt, np.dot(self.R_head, self.t))
 
         # get the rotation-translation matrix with the rotation composed with the translation
         self.R = np.vstack((np.hstack((np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head), self.t)), [0, 0, 0, 1]))
