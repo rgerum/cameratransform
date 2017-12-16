@@ -1329,7 +1329,7 @@ class CameraTransform:
             points = self.transCamToWorld(points, Z=0)
             return points
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0):
+    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0, axes=None, alpha=1):
         """
         Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
         
@@ -1387,7 +1387,9 @@ class CameraTransform:
         im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)[::-1, :]
         # and plot the image if desired
         if do_plot:
-            plt.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]])
+            if axes is None:
+                axes = plt.gca()
+            axes.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]], alpha=alpha)
         # return the image
         return im
 
