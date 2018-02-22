@@ -277,7 +277,7 @@ def MapTransform(image_size, scale=1, rotation=0, offset=None):
     Parameters
     ----------
     image_size: tuple, ndarray
-        a tuple (im_width, im_height) or a numpy array representing the image
+        a tuple (im_width, im_height) or a numpy array representing the image in pixel
     scale: number, optional
         the scale to apply to the image, e.g. how many pixels are one meter. Default=0.
     rotation: number, optional
@@ -347,7 +347,7 @@ class CameraTransform:
         sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
         is inferred from the aspect ratio of the image                        
     image_size: tuple or ndarray
-        image size in mm [width, height] or a numpy array representing the image
+        image size in pixel [width, height] or a numpy array representing the image
     observer_height: number
         observer elevation in m
     angel_to_horizon: number
