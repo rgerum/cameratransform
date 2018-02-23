@@ -1393,6 +1393,79 @@ class CameraTransform:
         # return the image
         return im
 
+    def projectImageToCam(self, im, cam, extent=None, do_plot=False, border_value=0, axes=None, alpha=1):
+        """
+        Transform the given image of the given camera to an image in this camera.
+
+        Parameters
+        ----------
+        im: ndarray
+            The image to transform.
+        cam: Camera
+            The camera with which the image was taken.
+        :param extent: the size the projected image should have: [x_min, x_max, y_min, y_max]. It defaults to the image size of the camera.
+        :param do_plot: Whether to plot the image directly, with the according extent settings.
+        :return: the transformed image
+        """
+        # check the dependencies
+        if not cv2_installed:
+            raise ImportError("package cv2 has to be installed to use this function.")
+        if do_plot and not plt_installed:
+            raise ImportError("package matplotlib has to be installed to be able to plot the image.")
+
+        # guess the extend for the image
+        if extent is None:
+            extent = [0, self.im_width, 0, self.im_height]
+
+        # check if we want a transparent background
+        if border_value == "transparent":
+            border_value = 0
+            # if we have an RGB image, add an alpha channel
+            if im.shape[2] == 3:
+                im = np.dstack((im, np.ones(im.shape[:2], dtype=im.dtype) * 255))
+
+        # split the extent
+        x_lim, y_lim = extent[:2], extent[2:]
+        width = x_lim[1] - x_lim[0]
+        distance = y_lim[1] - y_lim[0]
+        # copy the camera matrix
+        P = self.C.copy()
+        # set scaling and offset
+        f = 1
+        x_off = x_lim[0]
+        y_off = y_lim[0]
+        # offset and scale the camera matrix
+        P = np.dot(P, np.array([[f, 0, 0, x_off], [0, f, 0, y_off], [0, 0, f, 0], [0, 0, 0, 1]]))
+        # transform the camera matrix so that it projects on the z=0 plane (for details see transCamToWorld)
+        P[:, 2] = P[:, 2] * 0 + P[:, 3]
+        P = P[:, :3]
+
+        # copy the camera matrix
+        P2 = cam.C.copy()
+        # set scaling and offset
+        f = 1
+        x_off = x_lim[0]
+        y_off = y_lim[0]
+        # offset and scale the camera matrix
+        P2 = np.dot(P2, np.array([[f, 0, 0, x_off], [0, f, 0, y_off], [0, 0, f, 0], [0, 0, 0, 1]]))
+        # transform the camera matrix so that it projects on the z=0 plane (for details see transCamToWorld)
+        P2[:, 2] = P2[:, 2] * 0 + P2[:, 3]
+        P2 = P2[:, :3]
+        # invert the matrix
+        P2 = np.linalg.inv(P2)
+
+        P = np.dot(P, P2)
+        # transform the image using OpenCV
+        im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value,
+                                 borderMode=cv2.BORDER_TRANSPARENT)
+        # and plot the image if desired
+        if do_plot:
+            if axes is None:
+                axes = plt.gca()
+            axes.imshow(im, extent=[x_lim[0], x_lim[1], y_lim[1], y_lim[0]], alpha=alpha)
+        # return the image
+        return im
+
     def save(self, filename):
         """
         Save the camera parameters to a file that can be loaded with :py:meth:`~.CameraTransform.load`. 
