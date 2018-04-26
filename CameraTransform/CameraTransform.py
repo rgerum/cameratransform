@@ -1097,7 +1097,8 @@ class CameraTransform:
 
         return self._fit(cost)
 
-    def fitCamParametersFromPointCorrespondences(self, points2D, points3D, cam2=None):
+    def fitCamParametersFromPointCorrespondences(self, points2D, points3D, cam2=None,
+                                                 fit_pos=False, fit_heading=False, fit_roll=False, fit_tilt=False):
         """
         Fit the camera parameters form points known in both coordinate systems, the camera and the world.
         
@@ -1112,7 +1113,11 @@ class CameraTransform:
             to have the same order than the points 2D list.
         cam2: :py:class:`~.CameraTransform`, optional
              The camera that specifies the transform for the points3D.
-        
+        fit_pos: bool
+            Whether to fit the Position of the camera or not.
+        fit_heading: bool
+            Whether to fit the heading of the camera or not.
+
         Returns
         -------
         p: list
@@ -1125,10 +1130,22 @@ class CameraTransform:
         else:
             points3D = self._ensurePointFormat(points3D, dimensions=3)
 
-        # fit the position of the camera, too
-        self.pos_x = None
-        self.pos_y = None
-        self.heading = None
+        if fit_pos:
+            # fit the position of the camera, too
+            self.__setNone__("pos_x", None)
+            self.__setNone__("pos_y", None)
+
+        if fit_roll:
+            # fit the camera roll
+            self.roll = None
+
+        if fit_tilt:
+            # fit the camera titl
+            self.tilt = None
+
+        if fit_heading:
+            # fit the heading of the camera
+            self.heading = None
 
         # define a cost function
         def cost():
@@ -1186,6 +1203,8 @@ class CameraTransform:
         # remove known parameters from list
         if self.roll is not None:
             fit_parameters.remove("roll")
+        if self.tilt is not None:
+            fit_parameters.remove("tilt")
         if self.heading is not None:
             fit_parameters.remove("heading")
         if self.height is not None:
