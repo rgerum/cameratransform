@@ -1688,3 +1688,13 @@ class CameraTransform:
         # and the map image
         plt.sca(ax2)
         self.getTopViewOfImage(im_cam, do_plot=True, border_value="transparent")
+
+
+    def undistortLens(self, im):
+        xx, yy = np.meshgrid(np.arange(self.im_height)-self.im_height/2, np.arange(self.im_width)-self.im_width/2)
+        rr = np.linalg.norm([xx,yy],axis=0)
+        phi = np.arctan2(yy, xx)
+        rr = self.a*rr**4 + self.b*rr**3 + self.c*rr**2 + rr
+        xx = rr*np.cos(phi)
+        yy = rr*np.sin(phi)
+        cv2.convertMaps()
