@@ -1414,7 +1414,8 @@ class CameraTransform:
             points = self.transCamToWorld(points, Z=0)
             return points
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0, axes=None, alpha=1):
+    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0, axes=None, alpha=1,
+                          log=None):
         """
         Transform the given image of the camera to a top view, e.g. project it on the 3D plane and display a birds view.
         
@@ -1427,6 +1428,7 @@ class CameraTransform:
         :param scaling: How many pixels to use per meter. A smaller value gives a more detailed image, but takes more 
                         time to calculate.
         :param do_plot: Whether to plot the image directly, with the according extent settings.
+        :param log: [None, "x", "y", "both"] Perform log-polar projection of the top-view image.
         :return: the transformed image
         """
         # check the dependencies
@@ -1469,7 +1471,40 @@ class CameraTransform:
         # invert the matrix
         P = np.linalg.inv(P)
         # transform the image using OpenCV
+        im0 = im.copy()
         im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)[::-1, :]
+        # if necessary perform log trafo
+        if log is not None:
+            y_lim = np.array(y_lim)
+            x_lim = np.array(x_lim)
+            # center of polar trafo
+            center = (-x_lim[0]/f, y_lim[1]/f)
+
+            # initialize grid
+            xx, yy = np.meshgrid(np.arange(int(width/f)) ,np.arange(int(distance/f)))
+            # calculate distances
+            d = np.linalg.norm([xx-center[0],yy-center[1]], axis=0)
+            # minimal distance from cross section of camere viewing angle with z=0 plane
+            min_d = self.height*np.tan((self.tilt-self.fov_v_angle*90/np.pi)*np.pi/180)/f
+            # maximal distance from limits
+            max_d = np.amax(((y_lim[:,None]/f-center[1])**2+(x_lim[:,None]/f-center[0])**2)**0.5)
+            
+            log_d = min_d * (max_d/min_d)**((d-min_d)/(max_d-min_d))
+
+            phi = np.arctan2(yy-center[1], xx-center[0])
+            if log == "x":
+                map_x = center[0] + log_d*np.cos(phi)
+                map_y = center[1] + d*np.sin(phi)
+            elif log == "y":
+                map_x = center[0] + d*np.cos(phi)
+                map_y = center[1] + log_d*np.sin(phi)
+            elif log == "both":
+                map_x = center[0] + log_d*np.cos(phi)
+                map_y = center[1] + log_d*np.sin(phi)
+            else:
+                raise ValueError("%s is not a valid log-projection!"%log)
+
+            im = cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32), interpolation=cv2.INTER_NEAREST, borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)
         # and plot the image if desired
         if do_plot:
             if axes is None:
