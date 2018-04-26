@@ -334,6 +334,31 @@ def LoadTransform(filename):
     return cam
 
 
+TYPE_DEFAULT = 0
+TYPE_USER_SET = 1
+TYPE_FIT = 1
+TYPE_ESTIMATE = 2
+TYPE_NONE = 2
+
+
+class CameraParameter(float):
+    def __new__(self, value, **kwargs):
+        if value is None:
+            value = 0
+            kwargs.update("type", TYPE_NONE)
+        return float.__new__(self, value, **kwargs)
+
+    def __init__(self, value, **kwargs):
+        if value is None:
+            value = 0
+            kwargs.update("type", TYPE_NONE)
+        float.__init__(value)
+        self.fixed = kwargs.get("fixed", False)
+        self.type = kwargs.get("type", TYPE_DEFAULT)
+        self.borders = kwargs.get("borders", (None, None))
+
+
+
 class CameraTransform:
     """
     CameraTransform class to calculate the position of objects from an image in 3D based
@@ -359,71 +384,112 @@ class CameraTransform:
 
     R_earth = 6371e3
 
-    lat = None
-    lon = None
-    gps_heading = None
+    lat = CameraParameter(None)
+    lon = CameraParameter(None)
+    # gps_heading = None
 
-    cam_location = None
-    cam_heading = None
-    cam_heading_rotation_matrix = None
+    # cam_location = None
+    # cam_heading = None
+    # cam_heading_rotation_matrix = None
 
-    height = None
-    roll = None
-    heading = 0
-    tilt = None
-    tan_tilt = None
+    height = CameraParameter(0.)
+    roll = CameraParameter(0.)
+    heading = CameraParameter(0.)
+    tilt = CameraParameter(0.)
+    tan_tilt = CameraParameter(0)
 
-    pos_x = 0
-    pos_y = 0
+    pos_x = CameraParameter(0.)
+    pos_y = CameraParameter(0.)
 
     fixed_horizon = None
 
-    estimated_height = 30
-    estimated_tilt = 85
-    estimated_heading = 0
-    estimated_roll = 0
-    estimated_x = 0
-    estimated_y = 0
+    # estimated_height = 30
+    # estimated_tilt = 85
+    # estimated_heading = 0
+    # estimated_roll = 0
+    # estimated_x = 0
+    # estimated_y = 0
 
-    f = None
-    sensor_width = None
-    sensor_height = None
-    fov_h_angle = None
-    fov_v_angle = None
-    im_width = None
-    im_height = None
+    f = CameraParameter(None)
+    f_normed = CameraParameter(None)
+    sensor_width = CameraParameter(None)
+    sensor_height = CameraParameter(None)
+    fov_h_angle = CameraParameter(None)
+    fov_v_angle = CameraParameter(None)
+    im_width = CameraParameter(None)
+    im_height = CameraParameter(None)
 
     use_fit_bounds = None
 
+    # a = None
+    # b = None
+    # c = None
+
     def __init__(self, focal_length=None, sensor_size=None, image_size=None, observer_height=None,
-                 angel_to_horizon=None):
+                 angel_to_horizon=None, a=None, b=None, c=None):
 
         # store and convert arguments
         if focal_length:
             # convert focal length to meters
-            self.f = focal_length * 1e-3  # in m
+            self.__setNoChange__("f", focal_length * 1e-3)  # in m
             # splice image size
             try:
                 shape, im = image_size.shape, image_size
                 image_size = (shape[1], shape[0])
             except AttributeError:
                 im = None
-            self.im_width, self.im_height = image_size
+            w, h = image_size
+            self.__setDefault__("im_width", w)
+            self.__setDefault__("im_height", h)
             # if only the sensor width is given, calculate its height from the aspect ratio of the image
             if isinstance(sensor_size, numbers.Number):
                 sensor_size = (sensor_size, sensor_size * self.im_height / self.im_width)
             # split sensor size
-            self.sensor_width, self.sensor_height = np.array(sensor_size) * 1e-3  # in m
+            sw, sh = np.array(sensor_size) * 1e-3
+            self.__setDefault__("sensor_width", sw)
+            self.__setDefault__("sensor_height", sh)
             # and calculate field of view (fov) for both dimensions
-            self.fov_h_angle = 2 * np.arctan(self.sensor_width / (2 * self.f))
-            self.fov_v_angle = 2 * np.arctan(self.sensor_height / (2 * self.f))
+            self.__setDefault__("fov_h_angle", 2 * np.arctan(self.sensor_width / (2 * self.f)))
+            self.__setDefault__("fov_v_angle", 2 * np.arctan(self.sensor_height / (2 * self.f)))
 
             self._initIntrinsicMatrix()
 
         if observer_height is not None:
-            self.height = observer_height
-            self.tilt = angel_to_horizon
+            self.__setNoChange__("height", observer_height)
+            self.__setNoChange__("tilt", angel_to_horizon)
             self._initCameraMatrix()
+
+        # self.a = float(a)
+        # self.b = float(b)
+        # self.c = float(c)
+
+    def __setNoChange__(self, key, value):
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setFit__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_FIT
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setDefault__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_DEFAULT
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setNone__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_NONE
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setEstimate__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_ESTIMATE
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setattr__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_USER_SET
+        super(CameraTransform, self).__setattr__(key, value)
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -443,7 +509,7 @@ class CameraTransform:
 
     def _initIntrinsicMatrix(self):
         # normalize the focal length by the sensor width and the image_width
-        self.f_normed = self.f / self.sensor_width * self.im_width
+        self.__setNoChange__("f_normed", self.f / self.sensor_width * self.im_width)
         # compose the intrinsic camera matrix
         self.C1 = np.array([[self.f_normed,             0,  self.im_width / 2, 0],
                             [            0, self.f_normed, self.im_height / 2, 0],
@@ -455,10 +521,10 @@ class CameraTransform:
             if self.tilt is not None:
                 tilt_angle = self.tilt
             else:
-                self.tilt = np.arctan(self.tan_tilt) * 180 / np.pi + 90
+                self.__setDefault__("tilt", np.arctan(self.tan_tilt) * 180 / np.pi + 90)
                 tilt_angle = self.tilt
         else:
-            self.tilt = tilt_angle
+            self.__setDefault__("tilt", tilt_angle)
         if height is None:
             height = self.height
         else:
@@ -1013,7 +1079,7 @@ class CameraTransform:
         roll: number
             The roll of the camera in degree. 
         """
-        self.roll = roll
+        self.__setFixed__("roll", roll)
 
     def fixHeight(self, height):
         """
@@ -1021,7 +1087,7 @@ class CameraTransform:
 
         :param height: The height of the camera in meters.
         """
-        self.height = height
+        self.__setFixed__("height", height)
         if self.tilt is not None:
             self._initCameraMatrix()
         elif self.fixed_horizon:
@@ -1033,7 +1099,7 @@ class CameraTransform:
 
         :param tilt: The tilt angle of the camera in degrees.
         """
-        self.tilt = tilt
+        self.__setFixed__("tilt", tilt)
         if self.height is not None:
             self._initCameraMatrix()
         elif self.fixed_horizon:
@@ -1055,10 +1121,10 @@ class CameraTransform:
         self.fixed_horizon = self.im_width / 2 * m + t
         # set the roll if it is not fixed yet
         if self.roll is None:
-            self.roll = -np.arctan(m) * 180 / np.pi
+            self.__setFixed__("roll", -np.arctan(m) * 180 / np.pi)
         # update the camera matrix if we already have a height
         if self.height is not None:
-            self.tilt = self._getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height)
+            self.__setFixed__("tilt", self._getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height))
             self._initCameraMatrix()
 
     def fitCamParametersFromLandmarks(self, marks, distances, heading=None):
@@ -1085,7 +1151,7 @@ class CameraTransform:
             return np.mean((distances - estimated_pos_3D[1, :]) ** 2)
 
         if heading is not None:
-            self.heading = None
+            self.__setNone__("heading", None)
             marks_3D = []
             for dist, head in zip(distances, heading):
                 marks_3D.append(np.array([np.sin(head * np.pi / 180) * dist, np.cos(head * np.pi / 180) * dist, 0]))
