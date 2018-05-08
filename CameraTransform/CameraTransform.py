@@ -345,13 +345,13 @@ class CameraParameter(float):
     def __new__(self, value, **kwargs):
         if value is None:
             value = 0
-            kwargs.update("type", TYPE_NONE)
-        return float.__new__(self, value, **kwargs)
+            kwargs.update({"type": TYPE_NONE})
+        return float.__new__(self, value)
 
     def __init__(self, value, **kwargs):
         if value is None:
             value = 0
-            kwargs.update("type", TYPE_NONE)
+            kwargs.update({"type": TYPE_NONE})
         float.__init__(value)
         self.fixed = kwargs.get("fixed", False)
         self.type = kwargs.get("type", TYPE_DEFAULT)
@@ -386,11 +386,11 @@ class CameraTransform:
 
     lat = CameraParameter(None)
     lon = CameraParameter(None)
-    # gps_heading = None
+    gps_heading = None
 
-    # cam_location = None
-    # cam_heading = None
-    # cam_heading_rotation_matrix = None
+    cam_location = None
+    cam_heading = None
+    cam_heading_rotation_matrix = None
 
     height = CameraParameter(0.)
     roll = CameraParameter(0.)
@@ -403,12 +403,12 @@ class CameraTransform:
 
     fixed_horizon = None
 
-    # estimated_height = 30
-    # estimated_tilt = 85
-    # estimated_heading = 0
-    # estimated_roll = 0
-    # estimated_x = 0
-    # estimated_y = 0
+    estimated_height = 30
+    estimated_tilt = 85
+    estimated_heading = 0
+    estimated_roll = 0
+    estimated_x = 0
+    estimated_y = 0
 
     f = CameraParameter(None)
     f_normed = CameraParameter(None)
@@ -421,9 +421,9 @@ class CameraTransform:
 
     use_fit_bounds = None
 
-    # a = None
-    # b = None
-    # c = None
+    a = None
+    b = None
+    c = None
 
     def __init__(self, focal_length=None, sensor_size=None, image_size=None, observer_height=None,
                  angel_to_horizon=None, a=None, b=None, c=None):
@@ -459,9 +459,10 @@ class CameraTransform:
             self.__setNoChange__("tilt", angel_to_horizon)
             self._initCameraMatrix()
 
-        # self.a = float(a)
-        # self.b = float(b)
-        # self.c = float(c)
+        self.a = float(a) if a is not None else 0.
+        self.b = float(b) if b is not None else 0.
+        self.c = float(c) if c is not None else 0.
+        self.d = 1.-self.a-self.b-self.c
 
     def __setNoChange__(self, key, value):
         super(CameraTransform, self).__setattr__(key, value)
@@ -469,6 +470,11 @@ class CameraTransform:
     def __setFit__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
             self.__getattribute__(key).type = TYPE_FIT
+        super(CameraTransform, self).__setattr__(key, value)
+
+    def __setFixed__(self, key, value):
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            self.__getattribute__(key).type = TYPE_USER_SET
         super(CameraTransform, self).__setattr__(key, value)
 
     def __setDefault__(self, key, value):
@@ -487,9 +493,10 @@ class CameraTransform:
         super(CameraTransform, self).__setattr__(key, value)
 
     def __setattr__(self, key, value):
+        super(CameraTransform, self).__setattr__(key, value)
         if isinstance(self.__getattribute__(key), CameraParameter):
             self.__getattribute__(key).type = TYPE_USER_SET
-        super(CameraTransform, self).__setattr__(key, value)
+
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -714,6 +721,14 @@ class CameraTransform:
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=2)
 
+        # perform radial lense correction
+        center = np.array([self.im_width/2.,
+                           self.im_height/2.])[:,None]
+        r = np.linalg.norm(x-center, axis=0)
+        phi = np.arctan2(x[1], x[0])
+        r_src = self.a*r**4 + self.b*r**3 + self.c*r**2 + self.d*r
+        x = np.array([r_src*np.cos(phi), r*np.sin(phi)]) + center
+
         # if the fixed value is a list, we have to transform each coordinate separately
         if not isinstance(fixed, int) and not isinstance(fixed, float):
             return self._ensureOutputPointFormat(np.array(
@@ -725,6 +740,14 @@ class CameraTransform:
     def transCamToEarth(self, x, H=None, max_iter=100, max_distance=0.01):
         # reshape input x array to two dimensions
         x = self._ensurePointFormat(x, dimensions=2)
+
+        # perform radial lense correction
+        center = np.array([self.im_width/2.,
+                           self.im_height/2.])
+        r = np.linalg.norm(x-center, axis=0)
+        phi = np.arctan2(x[1], x[0])
+        r_src = self.a*r**4 + self.b*r**3 + self.c*r**2 + self.d*r
+        x = np.array([r_src*np.cos(phi), r*np.sin(phi)]) + center
 
         if H is None:
             H = 0
@@ -1690,11 +1713,11 @@ class CameraTransform:
         self.getTopViewOfImage(im_cam, do_plot=True, border_value="transparent")
 
 
-    def undistortLens(self, im):
-        xx, yy = np.meshgrid(np.arange(self.im_height)-self.im_height/2, np.arange(self.im_width)-self.im_width/2)
-        rr = np.linalg.norm([xx,yy],axis=0)
-        phi = np.arctan2(yy, xx)
-        rr = self.a*rr**4 + self.b*rr**3 + self.c*rr**2 + rr
-        xx = rr*np.cos(phi)
-        yy = rr*np.sin(phi)
-        cv2.convertMaps()
+    # def undistortLens(self, im):
+    #     xx, yy = np.meshgrid(np.arange(self.im_height)-self.im_height/2, np.arange(self.im_width)-self.im_width/2)
+    #     rr = np.linalg.norm([xx,yy],axis=0)
+    #     phi = np.arctan2(yy, xx)
+    #     rr = self.a*rr**4 + self.b*rr**3 + self.c*rr**2 + rr
+    #     xx = rr*np.cos(phi)
+    #     yy = rr*np.sin(phi)
+    #     cv2.convertMaps()
