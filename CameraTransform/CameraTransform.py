@@ -1495,6 +1495,29 @@ class CameraTransform:
         P = np.linalg.inv(P)
         # transform the image using OpenCV
         im0 = im.copy()
+
+        # ##### lens distortion
+        # y_lim = np.array(y_lim)
+        # x_lim = np.array(x_lim)
+        # # center of polar trafo
+        # center = (-x_lim[0] / f, y_lim[1] / f)
+        #
+        # # initialize grid
+        # xx, yy = np.meshgrid(np.arange(int(width / f)), np.arange(int(distance / f)))
+        # # calculate distances
+        # d = np.linalg.norm([xx - center[0], yy - center[1]], axis=0)
+        # d *= 1./(max(self.im_width, self.im_height)/2.)
+        # d = self.a*d**4 + self.b*d**3 + self.c*d**2 + self.d*d
+        # d *= (max(self.im_width, self.im_height)/2.)
+        #
+        # phi = np.arctan2(yy - center[1], xx - center[0])
+        #
+        # map_x = center[0] + d * np.cos(phi)
+        # map_y = center[1] + d * np.sin(phi)
+        # # im = cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32), interpolation=cv2.INTER_NEAREST,
+        # #                borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)
+        # ##### end of lens distortion
+
         im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)[::-1, :]
         # if necessary perform log trafo
         if log is not None:
