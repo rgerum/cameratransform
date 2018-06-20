@@ -336,16 +336,15 @@ def LoadTransform(filename):
 
 TYPE_DEFAULT = 0
 TYPE_USER_SET = 1
-TYPE_FIT = 1
-TYPE_ESTIMATE = 2
-TYPE_NONE = 2
+TYPE_FIT = 2
+TYPE_ESTIMATE = 3
+TYPE_NONE = 0
 
 
 class CameraParameter(float):
-    def __new__(self, value, **kwargs):
+    def __new__(self, value, type=None, **kwargs):
         if value is None:
             value = 0
-            kwargs.update({"type": TYPE_NONE})
         return float.__new__(self, value)
 
     def __init__(self, value, **kwargs):
@@ -356,6 +355,10 @@ class CameraParameter(float):
         self.fixed = kwargs.get("fixed", False)
         self.type = kwargs.get("type", TYPE_DEFAULT)
         self.borders = kwargs.get("borders", (None, None))
+
+    def isNone(self):
+        return self.type == TYPE_NONE
+
 
 
 
@@ -384,14 +387,14 @@ class CameraTransform:
 
     R_earth = 6371e3
 
-    lat = CameraParameter(None)
-    lon = CameraParameter(None)
     gps_heading = None
 
     cam_location = None
     cam_heading = None
     cam_heading_rotation_matrix = None
 
+    lat = CameraParameter(None)
+    lon = CameraParameter(None)
     height = CameraParameter(0.)
     roll = CameraParameter(0.)
     heading = CameraParameter(0.)
@@ -400,6 +403,15 @@ class CameraTransform:
 
     pos_x = CameraParameter(0.)
     pos_y = CameraParameter(0.)
+
+    f = CameraParameter(None)
+    f_normed = CameraParameter(None)
+    sensor_width = CameraParameter(None)
+    sensor_height = CameraParameter(None)
+    fov_h_angle = CameraParameter(None)
+    fov_v_angle = CameraParameter(None)
+    im_width = CameraParameter(None)
+    im_height = CameraParameter(None)
 
     fixed_horizon = None
 
@@ -410,14 +422,6 @@ class CameraTransform:
     estimated_x = 0
     estimated_y = 0
 
-    f = CameraParameter(None)
-    f_normed = CameraParameter(None)
-    sensor_width = CameraParameter(None)
-    sensor_height = CameraParameter(None)
-    fov_h_angle = CameraParameter(None)
-    fov_v_angle = CameraParameter(None)
-    im_width = CameraParameter(None)
-    im_height = CameraParameter(None)
 
     use_fit_bounds = None
 
@@ -464,39 +468,65 @@ class CameraTransform:
         self.c = float(c) if c is not None else 0.
         self.d = 1.-self.a-self.b-self.c
 
+        self.lens_map = None
+        self.cylindrical_map = None
+        self.equirectangular_map = None
+
     def __setNoChange__(self, key, value):
-        super(CameraTransform, self).__setattr__(key, value)
+        if isinstance(self.__getattribute__(key), CameraParameter):
+            old_type = self.__getattribute__(key).type
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=old_type))
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setFit__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_FIT
-        super(CameraTransform, self).__setattr__(key, value)
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_FIT))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setFixed__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_USER_SET
-        super(CameraTransform, self).__setattr__(key, value)
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_USER_SET))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setDefault__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_DEFAULT
-        super(CameraTransform, self).__setattr__(key, value)
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_DEFAULT))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setNone__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_NONE
-        super(CameraTransform, self).__setattr__(key, value)
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_NONE))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setEstimate__(self, key, value):
         if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_ESTIMATE
-        super(CameraTransform, self).__setattr__(key, value)
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_ESTIMATE))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value))
 
     def __setattr__(self, key, value):
-        super(CameraTransform, self).__setattr__(key, value)
-        if isinstance(self.__getattribute__(key), CameraParameter):
-            self.__getattribute__(key).type = TYPE_USER_SET
+        if not hasattr(self, key):
+            super(CameraTransform, self).__setattr__(key, value)
+        elif isinstance(self.__getattribute__(key), CameraParameter):
+            super(CameraTransform, self).__setattr__(key, CameraParameter(value, type=TYPE_USER_SET))
+            self._reset_maps_()
+        else:
+            super(CameraTransform, self).__setattr__(key, value)
 
+    def _reset_maps_(self):
+        self.lens_map = None
+        self.cylindrical_map = None
+        self.equirectangular_map = None
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -525,11 +555,12 @@ class CameraTransform:
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
         # convert the angle to radians
         if tilt_angle is None:
-            if self.tilt is not None:
+            if not self.tilt.isNone():
                 tilt_angle = self.tilt
             else:
                 self.__setDefault__("tilt", np.arctan(self.tan_tilt) * 180 / np.pi + 90)
                 tilt_angle = self.tilt
+
         else:
             self.__setDefault__("tilt", tilt_angle)
         if height is None:
@@ -538,14 +569,14 @@ class CameraTransform:
             self.height = height
         angle = tilt_angle * np.pi / 180
         if roll_angle is None:
-            if self.roll:
+            if not self.roll.isNone():
                 roll = self.roll * np.pi / 180
             else:
                 roll = 0
         else:
             roll = roll_angle * np.pi / 180
 
-        if self.heading:
+        if not self.heading.isNone():
             heading = self.heading * np.pi / 180
         else:
             heading = 0
@@ -1143,10 +1174,10 @@ class CameraTransform:
         # calculate the center of the line
         self.fixed_horizon = self.im_width / 2 * m + t
         # set the roll if it is not fixed yet
-        if self.roll is None:
+        if self.roll.isNone():
             self.__setFixed__("roll", -np.arctan(m) * 180 / np.pi)
         # update the camera matrix if we already have a height
-        if self.height is not None:
+        if self.height is None:
             self.__setFixed__("tilt", self._getAngleFromHorizonAndHeight(self.im_width / 2 * m + t, self.height))
             self._initCameraMatrix()
 
@@ -1437,6 +1468,119 @@ class CameraTransform:
             points = self.transCamToWorld(points, Z=0)
             return points
 
+    def undistortImage(self, im):
+
+        if self.lens_map is None:
+            # center of polar trafo
+            if len(im.shape) > 2:
+                h, w, _= im.shape
+            else:
+                h, w = im.shape
+            center = (w / 2., h/2.)
+
+            # initialize grid
+            # xx, yy = np.meshgrid(np.arange(int(width / f)),
+            #                      np.arange(int(distance / f)))
+            xx, yy = np.meshgrid(np.arange(int(w)),
+                                 np.arange(int(h)))
+
+            xx = xx-center[0]
+            yy = yy-center[1]
+            # calculate distances
+            d = np.linalg.norm([xx, yy], axis=0)
+            d *= 1./(max(self.im_width, self.im_height)/2.)
+            d = self.a*d**4 + self.b*d**3 + self.c*d**2 + self.d*d
+            d *= (max(self.im_width, self.im_height)/2.)
+
+            phi = np.arctan2(yy, xx)
+
+            map_x = center[0] + d * np.cos(phi)
+            map_y = center[1] + d * np.sin(phi)
+
+            self.lens_map = [map_x, map_y]
+
+        map_x, map_y = self.lens_map
+        return cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32),
+                         interpolation=cv2.INTER_NEAREST,
+                         borderValue=0, borderMode=cv2.BORDER_TRANSPARENT)
+
+    def getCylindricalProjection(self, im, extent=None):
+        im = self.undistortImage(im)
+
+        if self.cylindrical_map is None:
+            # center of polar trafo
+            if len(im.shape) > 2:
+                h, w, _= im.shape
+            else:
+                h, w = im.shape
+            center = (w / 2., h/2.)
+
+            # initialize grid
+            xx, yy = np.meshgrid(np.arange(int(w)),
+                                 np.arange(int(h)))
+            xx = xx-center[0]
+
+            xx *= self.sensor_width/w
+            # calculate distances
+            d = (xx**2+self.f**2)**0.5
+
+            phi = np.arctan2(xx, self.f)
+            min_phi = np.amin(phi)
+            max_phi = np.amax(phi)
+
+            max_x = np.amax(xx)
+            min_x = np.amin(xx)
+
+            map_x = (phi-min_phi)*w/(max_phi-min_phi)
+            map_y = yy
+
+            self.cylindrical_map = [map_x, map_y]
+
+        map_x, map_y = self.cylindrical_map
+        return cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32),
+                         interpolation=cv2.INTER_NEAREST,
+                         borderValue=0, borderMode=cv2.BORDER_TRANSPARENT)
+
+    def getEquirectangularProjection(self, im, extent=None):
+
+        im = self.undistortImage(im)
+        if self.equirectangular_map is None:
+            # center of polar trafo
+            if len(im.shape) > 2:
+                h, w, _= im.shape
+            else:
+                h, w = im.shape
+            center = (w / 2., h/2.)
+
+            # initialize grid
+            xx, yy = np.meshgrid(np.arange(int(w)),
+                                 np.arange(int(h)))
+            xx = xx-center[0]
+
+            xx *= self.sensor_width/w
+            d = (xx**2+self.f**2)**0.5
+
+            phi = np.arctan2(xx, self.f)
+            min_phi = np.amin(phi)
+            max_phi = np.amax(phi)
+
+            theta = np.arctan2(yy, self.f)
+            min_theta = np.amin(theta)
+            max_theta = np.amax(theta)
+
+            max_x = np.amax(xx)
+            min_x = np.amin(xx)
+
+            map_x = (phi-min_phi)*w/(max_phi-min_phi)
+            map_y = (theta-min_theta)*h/(max_theta-min_theta)
+
+            self.equirectangular_map = [map_x, map_y]
+
+        map_x, map_y = self.cylindrical_map
+        return cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32),
+                         interpolation=cv2.INTER_NEAREST,
+                         borderValue=0, borderMode=cv2.BORDER_TRANSPARENT)
+
     def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, border_value=0, axes=None, alpha=1,
                           log=None):
         """
@@ -1497,26 +1641,7 @@ class CameraTransform:
         im0 = im.copy()
 
         # ##### lens distortion
-        # y_lim = np.array(y_lim)
-        # x_lim = np.array(x_lim)
-        # # center of polar trafo
-        # center = (-x_lim[0] / f, y_lim[1] / f)
-        #
-        # # initialize grid
-        # xx, yy = np.meshgrid(np.arange(int(width / f)), np.arange(int(distance / f)))
-        # # calculate distances
-        # d = np.linalg.norm([xx - center[0], yy - center[1]], axis=0)
-        # d *= 1./(max(self.im_width, self.im_height)/2.)
-        # d = self.a*d**4 + self.b*d**3 + self.c*d**2 + self.d*d
-        # d *= (max(self.im_width, self.im_height)/2.)
-        #
-        # phi = np.arctan2(yy - center[1], xx - center[0])
-        #
-        # map_x = center[0] + d * np.cos(phi)
-        # map_y = center[1] + d * np.sin(phi)
-        # # im = cv2.remap(im, map_x.astype(np.float32), map_y.astype(np.float32), interpolation=cv2.INTER_NEAREST,
-        # #                borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)
-        # ##### end of lens distortion
+        im = self.undistortImage(im)
 
         im = cv2.warpPerspective(im, P, dsize=(int(width / f), int(distance / f)), borderValue=border_value, borderMode=cv2.BORDER_TRANSPARENT)[::-1, :]
         # if necessary perform log trafo
@@ -1734,13 +1859,3 @@ class CameraTransform:
         # and the map image
         plt.sca(ax2)
         self.getTopViewOfImage(im_cam, do_plot=True, border_value="transparent")
-
-
-    # def undistortLens(self, im):
-    #     xx, yy = np.meshgrid(np.arange(self.im_height)-self.im_height/2, np.arange(self.im_width)-self.im_width/2)
-    #     rr = np.linalg.norm([xx,yy],axis=0)
-    #     phi = np.arctan2(yy, xx)
-    #     rr = self.a*rr**4 + self.b*rr**3 + self.c*rr**2 + rr
-    #     xx = rr*np.cos(phi)
-    #     yy = rr*np.sin(phi)
-    #     cv2.convertMaps()
