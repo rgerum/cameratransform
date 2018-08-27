@@ -1,6 +1,6 @@
 import numpy as np
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_INTRINSIC
-
+import json
 
 class CameraProjection(ClassWithParameterSet):
     C1 = None
@@ -44,6 +44,19 @@ class CameraProjection(ClassWithParameterSet):
 
     def getInvertedTransformation(self):  # CameraImage -> CameraWorld
         pass
+
+    def save(self, filename):
+        keys = self.parameters.parameters.keys()
+        export_dict = {key: getattr(self, key) for key in keys}
+        with open(filename, "w") as fp:
+            fp.write(json.dumps(export_dict))
+
+    def load(self, filename):
+        with open(filename, "r") as fp:
+            variables = json.loads(fp.read())
+        for key in variables:
+            setattr(self, key, variables[key])
+
 
 
 class RectilinearProjection(CameraProjection):

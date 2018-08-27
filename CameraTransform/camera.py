@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import cv2
 from scipy.optimize import minimize
 from .parameter_set import ParameterSet, ClassWithParameterSet
+from .projection import RectilinearProjection
+from .spatial import SpatialOrientation
+import json
 
 
 class CameraGroup(ClassWithParameterSet):
@@ -201,3 +204,20 @@ class Camera(ClassWithParameterSet):
         if do_plot:
             plt.imshow(image, extent=self.last_extent)  # , alpha=1)
         return image
+
+    def save(self, filename):
+        keys = self.parameters.parameters.keys()
+        export_dict = {key: getattr(self, key) for key in keys}
+        with open(filename, "w") as fp:
+            fp.write(json.dumps(export_dict))
+
+    def load(self, filename):
+        with open(filename, "r") as fp:
+            variables = json.loads(fp.read())
+        for key in variables:
+            setattr(self, key, variables[key])
+
+def load_camera(filename):
+    cam = Camera(RectilinearProjection(), SpatialOrientation())
+    cam.load(filename)
+    return cam

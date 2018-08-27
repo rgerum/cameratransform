@@ -1,5 +1,6 @@
 import numpy as np
 from .parameter_set import ParameterSet, Parameter, ClassWithParameterSet, TYPE_EXTRINSIC1, TYPE_EXTRINSIC2
+import json
 
 
 class SpatialOrientation(ClassWithParameterSet):
@@ -105,3 +106,15 @@ class SpatialOrientation(ClassWithParameterSet):
 
     def spaceFromCamera(self, points, direction=False):
         return self.transformInvertedPoints(points, direction)
+
+    def save(self, filename):
+        keys = self.parameters.parameters.keys()
+        export_dict = {key: getattr(self, key) for key in keys}
+        with open(filename, "w") as fp:
+            fp.write(json.dumps(export_dict))
+
+    def load(self, filename):
+        with open(filename, "r") as fp:
+            variables = json.loads(fp.read())
+        for key in variables:
+            setattr(self, key, variables[key])
