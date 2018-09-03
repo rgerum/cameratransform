@@ -104,7 +104,7 @@ class RectilinearProjection(CameraProjection):
         return transformed_points
 
 
-class CylindricProjection(CameraProjection):
+class CylindricalProjection(CameraProjection):
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
@@ -130,7 +130,7 @@ class CylindricProjection(CameraProjection):
         # ensure that the points are provided as an array
         points = np.array(points)
         # transform the points
-        transformed_points = np.array([self.focallength_px * np.arctan(points[..., 0] / points[..., 2]) + self.offset_x,
+        transformed_points = np.array([self.focallength_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.offset_x,
                                        -self.focallength_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]], axis=-1) + self.offset_y]).T
         # ignore points that are behind the camera
         transformed_points[points[..., 2] > 0] = np.nan
