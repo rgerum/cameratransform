@@ -1,10 +1,11 @@
 import unittest
 import CameraTransform as ct
 import numpy as np
-from hypothesis import given, strategies as st
+from hypothesis import given, reproduce_failure, strategies as st
 from hypothesis.extra import numpy as st_np
 
-points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(2, 2), st.integers(0, 100)), elements=st.floats(0, 10000))
+points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(1, 100), st.integers(2, 2)), elements=st.floats(0, 2448))
+
 
 class TestTransforms(unittest.TestCase):
 
@@ -15,42 +16,26 @@ class TestTransforms(unittest.TestCase):
         image_size = (3264, 2448)
 
         # initialize the camera
-        cam = ct.CameraTransform(f, sensor_size, image_size)
+        cam = ct.Camera(ct.RectilinearProjection(f, image_size[1], image_size[0], sensor_size[1], sensor_size[0]),
+                        ct.SpatialOrientation())
 
-    @given(points, st.floats(-3, 3), st.floats(0.1, 10), st.floats(0.01, 90-0.01))
-    def test_transWorldToCam(self, p, Z, height, tilt):
+    @given(points, st.floats(-3, 3), st.floats(0.1, 10), st.floats(0.01, 90-0.01), st.one_of(st.just(ct.RectilinearProjection),
+                                                                                             st.just(ct.CylindricalProjection),
+                                                                                             st.just(ct.EquirectangularProjection)))
+    def test_transWorldToCam(self, p, Z, height, tilt, projection):
         # setup the camera
-        cam = ct.CameraTransform(6.2, (6.17, 4.55), (3264, 2448))
+        cam = ct.Camera(projection(6.2, 2448, 3264, 4.55, 6.17), ct.SpatialOrientation())
         # set the parameters
-        cam.fixHeight(height)
-        cam.fixTilt(tilt)
+        cam.elevation_m = height
+        cam.tilt_deg = tilt
         # transform point
-        p1 = cam.transCamToWorld(p, Z=Z)
-        p2 = cam.transWorldToCam(p1)
+        p1 = cam.spaceFromImage(p, Z=Z)
+        p2 = cam.imageFromSpace(p1)
+        # points behind the camera are allowed to be nan
+        p[np.isnan(p2)] = np.nan
         np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
                                                          "the original point.")
 
-    @given(points, st.floats(-3, 3), st.floats(0.1, 10), st.floats(0.01, 90 - 0.01))
-    def test_transGPSToCam(self, p, Z, height, tilt):
-        # setup the camera
-        cam = ct.CameraTransform(43.0, (42.55, 27.20), (3072, 2048))
-        # set the parameters
-        cam.fixHeight(26.400)
-        cam.fixTilt(87.788)
-        cam.fixRoll(-1.10577)
-        cam.setCamHeading(0)
-        cam.setCamGPS(-70.61805, -8.1573)
-        # transform point
-        p1 = cam.transCamToGPS(p)
-        p2 = cam.transGPSToCam(p1)
-        # iterate over points
-        for i in range(p.shape[1]):
-            # test if they are not none
-            if not np.isnan(p2[:, i]).any():
-                # then they should be valid
-                self.assertTrue(np.allclose(p[:, i], p2[:, i], rtol=0.1, atol=0.1),
-                                "Transforming from camera to gps and back doesn't return the original point. %s %s" %
-                                (str(p[:, i]), str(p2[:, i])))
 
 if __name__ == '__main__':
     unittest.main()
