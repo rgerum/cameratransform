@@ -8,10 +8,22 @@ from hypothesis.extra import numpy as st_np
 import uuid
 
 import mock
-MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
-sys.modules.update((mod_name, mock.MagicMock()) for mod_name in MOCK_MODULES)
 
-import CameraTransform as ct
+while True:
+    # try to import CameraTransform
+    try:
+        import CameraTransform as ct
+    # if an import error occurs
+    except ImportError as err:
+        # get the module name from the error message
+        name = str(err).split("'")[1]
+        print("Mock:", name)
+        # and mock it
+        sys.modules.update((mod_name, mock.MagicMock()) for mod_name in [name])
+        # then try again to import it
+        continue
+    else:
+        break
 
 #print("path", os.path.dirname(__file__))
 #print("path", os.getcwd())
