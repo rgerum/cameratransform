@@ -17,4 +17,3 @@ pipelines:
           - pip install -e . --no-dependencies
           - py.test --cov=CameraTransform
           - python coveralls.py
-
