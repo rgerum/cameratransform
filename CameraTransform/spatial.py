@@ -88,15 +88,11 @@ class SpatialOrientation(ClassWithParameterSet):
         self.C_inv = np.linalg.inv(self.C)
 
     def transformPoints(self, points):  # transform Space -> Camera
-        if self.C is None:
-            self._initCameraMatrix()
         points = np.array(points)
         points = np.hstack((points, points[..., 0:1]*0+1))
         return np.dot(points, self.C.T)[..., :-1]
 
     def transformInvertedPoints(self, points, direction=False):  # transform Space -> Camera
-        if self.C is None:
-            self._initCameraMatrix()
         points = np.array(points)
         points = np.hstack((points, points[..., 0:1]*0+(1-direction)))
         return np.dot(points, self.C_inv.T)[..., :-1]
@@ -117,4 +113,4 @@ class SpatialOrientation(ClassWithParameterSet):
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
         for key in variables:
-            setattr(self, key, variables[key])
+            setattr(self.parameters, key, variables[key])

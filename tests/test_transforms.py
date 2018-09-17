@@ -73,7 +73,26 @@ class TestTransforms(unittest.TestCase):
             cam.save(filename)
             cam2 = ct.load_camera(filename)
             for key in cam.parameters.parameters:
-                assert(getattr(cam, key) == getattr(cam2, key))
+                self.assertAlmostEqual(getattr(cam, key), getattr(cam2, key), 3)
+
+            cam.projection.save(filename)
+            cam2.focallength = 999
+            cam2.projection.load(filename)
+            for key in cam.parameters.parameters:
+                self.assertAlmostEqual(getattr(cam, key), getattr(cam2, key), 3)
+
+            cam.orientation.save(filename)
+            cam2.elevation_m = 9
+            cam2.heading_deg = 9
+            cam2.tilt_deg = 9
+            cam2.roll_deg = 9
+            cam2.orientation.load(filename)
+            for key in cam.orientation.parameters.parameters:
+                self.assertAlmostEqual(getattr(cam, key), getattr(cam2, key), 3)
+
+    @given(ct_st.camera())
+    def test_print(self, cam):
+        print(cam)
 
     @given(ct_st.camera_image_points(), st.floats(0, 100))
     def test_transWorldToCam(self, params, Z):
