@@ -120,15 +120,14 @@ class CylindricalProjection(CameraProjection):
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
         points = np.array(points)
-        # set z=1 and solve the other equations for x and y
-        z = np.ones(points[..., 0].shape)
-        x = z*np.tan((points[..., 0]-self.offset_x)/self.focallength_px)
-        y = np.sqrt(x**2+z**2)*(points[..., 1] - self.offset_y)/self.focallength_px
+        # set r=1 and solve the other equations for x and y
+        r = 1
+        alpha = (points[..., 0] - self.offset_x) / self.focallength_px
+        x = np.sin(alpha) * r
+        z = np.cos(alpha) * r
+        y = r * (points[..., 1] - self.offset_y) / self.focallength_px
         # compose the ray
         ray = np.array([x, y, z]).T
-        # norm the ray if desired
-        if normed:
-            ray /= np.linalg.norm(ray, axis=-1)
         # return the rey
         return -ray
 
@@ -163,15 +162,14 @@ class EquirectangularProjection(CameraProjection):
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
         points = np.array(points)
-        # set z=1 and solve the other equations for x and y
-        z = np.ones(points[..., 0].shape)
-        x = z*np.tan((points[..., 0]-self.offset_x)/self.focallength_px)
-        y = np.sqrt(x**2+z**2)*np.tan((points[..., 1] - self.offset_y)/self.focallength_px)
+        # set r=1 and solve the other equations for x and y
+        r = 1
+        alpha = (points[..., 0] - self.offset_x) / self.focallength_px
+        x = np.sin(alpha) * r
+        z = np.cos(alpha) * r
+        y = r * np.tan((points[..., 1] - self.offset_y)/self.focallength_px)
         # compose the ray
         ray = np.array([x, y, z]).T
-        # norm the ray if desired
-        if normed:
-            ray /= np.linalg.norm(ray, axis=-1)
         # return the rey
         return -ray
 
