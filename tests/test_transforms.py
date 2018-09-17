@@ -1,3 +1,7 @@
+# to prevent matplotlib from trying to import tkinter
+import matplotlib
+matplotlib.use('agg')
+
 import unittest
 import numpy as np
 import sys
@@ -25,12 +29,11 @@ while True:
     else:
         break
 
-#print("path", os.path.dirname(__file__))
-#print("path", os.getcwd())
 sys.path.insert(0, os.path.dirname(__file__))
 import strategies as ct_st
 
 points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(1, 100), st.integers(2, 2)), elements=st.floats(0, 2448))
+
 
 class TempFile:
     def __enter__(self):
