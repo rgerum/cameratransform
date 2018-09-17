@@ -4,9 +4,6 @@ from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_
 
 
 class CameraProjection(ClassWithParameterSet):
-    C1 = None
-    C1_inv = None
-
     focallength_px = 0
     offset_x = 0
     offset_y = 0
@@ -42,12 +39,6 @@ class CameraProjection(ClassWithParameterSet):
         self.offset_x = self.parameters.image_width_px / 2
         self.offset_y = self.parameters.image_height_px / 2
 
-    def getTransformation(self):  # CameraWorld -> CameraImage
-        pass
-
-    def getInvertedTransformation(self):  # CameraImage -> CameraWorld
-        pass
-
     def save(self, filename):
         keys = self.parameters.parameters.keys()
         export_dict = {key: getattr(self, key) for key in keys}
@@ -62,23 +53,6 @@ class CameraProjection(ClassWithParameterSet):
 
 
 class RectilinearProjection(CameraProjection):
-    def _initIntrinsicMatrix(self):
-        CameraProjection._initIntrinsicMatrix(self)
-        # compose the intrinsic camera matrix
-        self.C1 = np.array([[self.focallength_px, 0, self.offset_x],
-                            [0, self.focallength_px, self.offset_y],
-                            [0, 0, 1]])
-        self.C1_inv = np.linalg.inv(self.C1)
-
-    def getTransformation(self):  # CameraWorld -> CameraImage
-        if self.C1 is None:
-            self._initIntrinsicMatrix()
-        return self.C1
-
-    def getInvertedTransformation(self):  # CameraImage -> CameraWorld
-        if self.C1_inv is None:
-            self._initIntrinsicMatrix()
-        return self.C1_inv
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array

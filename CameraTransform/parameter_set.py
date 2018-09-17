@@ -69,9 +69,8 @@ class ParameterSet(object):
             parameter_obj = self.parameters[key]
             parameter_obj.value = value
             parameter_obj.state = STATE_USER_SET
-            if parameter_obj.callback is not None:
-                parameter_obj.callback()
-        return object.__setattr__(self, key, value)
+        else:
+            return object.__setattr__(self, key, value)
 
     def get_fit_parameters(self):
         fit_param_names = []
@@ -110,22 +109,3 @@ class ClassWithParameterSet(object):
         if self.parameters is not None and key in self.parameters.parameters:
             return setattr(self.parameters, key, value)
         return object.__setattr__(self, key, value)
-"""
-def test():
-    print("bla")
-
-k1 = None; k2=None; k3=None
-parameters = ParameterSet(
-            # the intrinsic parameters
-            k1=Parameter(k1, type=TYPE_DISTORTION, callback=test),
-            k2=Parameter(k2, type=TYPE_DISTORTION),
-            k3=Parameter(k3, type=TYPE_DISTORTION),
-        )
-
-print(parameters.k1, parameters.defaults.k1)
-parameters.defaults.k1 = 50
-parameters.defaults.k1 = 30
-parameters.k1 = 30
-parameters.defaults.k1 = 99
-print(parameters.k1, parameters.defaults.k1)
-"""
