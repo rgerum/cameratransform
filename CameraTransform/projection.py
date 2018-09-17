@@ -1,6 +1,7 @@
+import json
 import numpy as np
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_INTRINSIC
-import json
+
 
 class CameraProjection(ClassWithParameterSet):
     C1 = None
@@ -30,8 +31,8 @@ class CameraProjection(ClassWithParameterSet):
         string = ""
         string += "  intrinsic (%s):\n" % type(self).__name__
         string += "    f:\t\t%.1f mm\n    sensor:\t%.2f×%.2f mm\n    image:\t%d×%d px\n" % (
-            self.parameters.focallength_mm, self.parameters.sensor_width_mm, self.parameters.sensor_height_mm, self.parameters.image_width_px,
-            self.parameters.image_height_px)
+            self.parameters.focallength_mm, self.parameters.sensor_width_mm, self.parameters.sensor_height_mm,
+            self.parameters.image_width_px, self.parameters.image_height_px)
         return string
 
     def _initIntrinsicMatrix(self):
@@ -60,7 +61,6 @@ class CameraProjection(ClassWithParameterSet):
             setattr(self, key, variables[key])
 
 
-
 class RectilinearProjection(CameraProjection):
     def _initIntrinsicMatrix(self):
         CameraProjection._initIntrinsicMatrix(self)
@@ -70,12 +70,12 @@ class RectilinearProjection(CameraProjection):
                             [0, 0, 1]])
         self.C1_inv = np.linalg.inv(self.C1)
 
-    def getTransformation(self):   # CameraWorld -> CameraImage
+    def getTransformation(self):  # CameraWorld -> CameraImage
         if self.C1 is None:
             self._initIntrinsicMatrix()
         return self.C1
 
-    def getInvertedTransformation(self):   # CameraImage -> CameraWorld
+    def getInvertedTransformation(self):  # CameraImage -> CameraWorld
         if self.C1_inv is None:
             self._initIntrinsicMatrix()
         return self.C1_inv
@@ -86,7 +86,7 @@ class RectilinearProjection(CameraProjection):
         # set z=focallenth and solve the other equations for x and y
         ray = np.array([points[..., 0] - self.offset_x,
                         points[..., 1] - self.offset_y,
-                        np.zeros(points[..., 1].shape)+self.focallength_px]).T
+                        np.zeros(points[..., 1].shape) + self.focallength_px]).T
         # norm the ray if desired
         if normed:
             ray /= np.linalg.norm(ray, axis=-1)
@@ -106,7 +106,8 @@ class RectilinearProjection(CameraProjection):
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(2*np.arctan(self.sensor_width_mm/(2*self.focallength_mm))), np.rad2deg(2*np.arctan(self.sensor_height_mm/(2*self.focallength_mm)))
+        return np.rad2deg(2 * np.arctan(self.sensor_width_mm / (2 * self.focallength_mm))), \
+               np.rad2deg(2 * np.arctan(self.sensor_height_mm / (2 * self.focallength_mm)))
 
     def fieldOfViewToFocallength(self, view_x=None, view_y=None):
         if view_x is not None:
@@ -140,15 +141,17 @@ class CylindricalProjection(CameraProjection):
         # ensure that the points are provided as an array
         points = np.array(points)
         # transform the points
-        transformed_points = np.array([self.focallength_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.offset_x,
-                                       -self.focallength_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]], axis=-1) + self.offset_y]).T
+        transformed_points = np.array(
+            [self.focallength_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.offset_x,
+             -self.focallength_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]], axis=-1) + self.offset_y]).T
         # ignore points that are behind the camera
         transformed_points[points[..., 2] > 0] = np.nan
         # return the points
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(self.sensor_width_mm/self.focallength_mm), np.rad2deg(2*np.arctan(self.sensor_height_mm/(2*self.focallength_mm)))
+        return np.rad2deg(self.sensor_width_mm / self.focallength_mm), \
+               np.rad2deg(2 * np.arctan(self.sensor_height_mm / (2 * self.focallength_mm)))
 
     def fieldOfViewToFocallength(self, view_x=None, view_y=None):
         if view_x is not None:
@@ -167,7 +170,7 @@ class EquirectangularProjection(CameraProjection):
         alpha = (points[..., 0] - self.offset_x) / self.focallength_px
         x = np.sin(alpha) * r
         z = np.cos(alpha) * r
-        y = r * np.tan((points[..., 1] - self.offset_y)/self.focallength_px)
+        y = r * np.tan((points[..., 1] - self.offset_y) / self.focallength_px)
         # compose the ray
         ray = np.array([x, y, z]).T
         # return the rey
@@ -183,14 +186,16 @@ class EquirectangularProjection(CameraProjection):
         points = np.array(points)
         # transform the points
         transformed_points = np.array([self.focallength_px * np.arctan(points[..., 0] / points[..., 2]) + self.offset_x,
-                                       -self.focallength_px * np.arctan(points[..., 1] / np.sqrt(points[..., 0]**2 + points[..., 2]**2)) + self.offset_y]).T
+                                       -self.focallength_px * np.arctan(points[..., 1] / np.sqrt(
+                                           points[..., 0] ** 2 + points[..., 2] ** 2)) + self.offset_y]).T
         # ignore points that are behind the camera
         transformed_points[points[..., 2] > 0] = np.nan
         # return the points
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(self.sensor_width_mm/self.focallength_mm), np.rad2deg(self.sensor_height_mm/self.focallength_mm)
+        return np.rad2deg(self.sensor_width_mm / self.focallength_mm),\
+               np.rad2deg(self.sensor_height_mm / self.focallength_mm)
 
     def fieldOfViewToFocallength(self, view_x=None, view_y=None):
         if view_x is not None:
