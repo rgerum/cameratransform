@@ -1,20 +1,22 @@
 import unittest
-import CameraTransform as ct
 import numpy as np
 import sys
 import os
+
 from hypothesis import given, reproduce_failure, assume, strategies as st
 from hypothesis.extra import numpy as st_np
 import uuid
+
+import mock
+MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
+sys.modules.update((mod_name, mock.MagicMock()) for mod_name in MOCK_MODULES)
+
+import CameraTransform as ct
 
 #print("path", os.path.dirname(__file__))
 #print("path", os.getcwd())
 sys.path.insert(0, os.path.dirname(__file__))
 import strategies as ct_st
-
-import mock
-MOCK_MODULES = ['matplotlib', 'matplotlib.pyplot']
-sys.modules.update((mod_name, mock.MagicMock()) for mod_name in MOCK_MODULES)
 
 points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(1, 100), st.integers(2, 2)), elements=st.floats(0, 2448))
 
