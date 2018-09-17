@@ -28,7 +28,7 @@ class CameraProjection(ClassWithParameterSet):
 
     def __str__(self):
         string = ""
-        string += "  intrinsic:\n"
+        string += "  intrinsic (%s):\n" % type(self).__name__
         string += "    f:\t\t%.1f mm\n    sensor:\t%.2f×%.2f mm\n    image:\t%d×%d px\n" % (
             self.parameters.focallength_mm, self.parameters.sensor_width_mm, self.parameters.sensor_height_mm, self.parameters.image_width_px,
             self.parameters.image_height_px)
