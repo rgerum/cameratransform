@@ -217,6 +217,7 @@ class Camera(ClassWithParameterSet):
         for key in variables:
             setattr(self, key, variables[key])
 
+
 def load_camera(filename):
     cam = Camera(RectilinearProjection(), SpatialOrientation())
     cam.load(filename)

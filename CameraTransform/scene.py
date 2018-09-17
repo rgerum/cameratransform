@@ -35,6 +35,8 @@ class Scene:
             im = np.zeros(
                 [self.camera.projection.parameters.image_height_px, self.camera.projection.parameters.image_width_px])
             plt.imshow(im)
+            plt.xlim(0, im.shape[1])
+            plt.ylim(im.shape[0], 0)
         for object in self.objects:
             plt.subplot(221)
             plt.plot(object[:, 0], object[:, 1], "-")
