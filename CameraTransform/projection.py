@@ -111,9 +111,9 @@ class RectilinearProjection(CameraProjection):
 
     def fieldOfViewToFocallength(self, view_x=None, view_y=None):
         if view_x is not None:
-            return self.sensor_width_mm / (2 * np.tan(2 * np.deg2rad(view_x)))
+            return self.sensor_width_mm / (2 * np.tan(np.deg2rad(view_x) / 2))
         else:
-            return self.sensor_height_mm / (2 * np.tan(2 * np.deg2rad(view_y)))
+            return self.sensor_height_mm / (2 * np.tan(np.deg2rad(view_y) / 2))
 
 
 class CylindricalProjection(CameraProjection):
@@ -157,7 +157,7 @@ class CylindricalProjection(CameraProjection):
         if view_x is not None:
             return self.sensor_width_mm / np.deg2rad(view_x)
         else:
-            return self.sensor_height_mm / (2 * np.tan(2 * np.deg2rad(view_y)))
+            return self.sensor_height_mm / (2 * np.tan(np.deg2rad(view_y) / 2))
 
 
 class EquirectangularProjection(CameraProjection):
