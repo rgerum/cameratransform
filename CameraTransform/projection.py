@@ -11,7 +11,7 @@ class CameraProjection(ClassWithParameterSet):
     offset_y = 0
 
     def __init__(self, focallength_mm=None, image_height_px=None, image_width_px=None, sensor_height_mm=None,
-                 sensor_width_mm=None):
+                 sensor_width_mm=None, view_x_deg=None, view_y_deg=None):
         self.parameters = ParameterSet(
             # the intrinsic parameters
             focallength_mm=Parameter(focallength_mm, default=14, type=TYPE_INTRINSIC),  # the focal length in mm
@@ -20,6 +20,8 @@ class CameraProjection(ClassWithParameterSet):
             sensor_height_mm=Parameter(sensor_height_mm, default=13.0, type=TYPE_INTRINSIC),  # the sensor height in mm
             sensor_width_mm=Parameter(sensor_width_mm, default=17.3, type=TYPE_INTRINSIC),  # the sensor width in mm
         )
+        if view_x_deg is not None or view_y_deg is not None:
+            self.focallength_mm = self.fieldOfViewToFocallength(view_x_deg, view_y_deg)
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._initIntrinsicMatrix
         self._initIntrinsicMatrix()
@@ -103,6 +105,15 @@ class RectilinearProjection(CameraProjection):
         transformed_points[points[..., 2] > 0] = np.nan
         return transformed_points
 
+    def getFieldOfView(self):
+        return np.rad2deg(2*np.arctan(self.sensor_width_mm/(2*self.focallength_mm))), np.rad2deg(2*np.arctan(self.sensor_height_mm/(2*self.focallength_mm)))
+
+    def fieldOfViewToFocallength(self, view_x=None, view_y=None):
+        if view_x is not None:
+            return self.sensor_width_mm / (2 * np.tan(2 * np.deg2rad(view_x)))
+        else:
+            return self.sensor_height_mm / (2 * np.tan(2 * np.deg2rad(view_y)))
+
 
 class CylindricalProjection(CameraProjection):
 
@@ -137,6 +148,15 @@ class CylindricalProjection(CameraProjection):
         # return the points
         return transformed_points
 
+    def getFieldOfView(self):
+        return np.rad2deg(self.sensor_width_mm/self.focallength_mm), np.rad2deg(2*np.arctan(self.sensor_height_mm/(2*self.focallength_mm)))
+
+    def fieldOfViewToFocallength(self, view_x=None, view_y=None):
+        if view_x is not None:
+            return self.sensor_width_mm / np.deg2rad(view_x)
+        else:
+            return self.sensor_height_mm / (2 * np.tan(2 * np.deg2rad(view_y)))
+
 
 class EquirectangularProjection(CameraProjection):
 
@@ -170,3 +190,12 @@ class EquirectangularProjection(CameraProjection):
         transformed_points[points[..., 2] > 0] = np.nan
         # return the points
         return transformed_points
+
+    def getFieldOfView(self):
+        return np.rad2deg(self.sensor_width_mm/self.focallength_mm), np.rad2deg(self.sensor_height_mm/self.focallength_mm)
+
+    def fieldOfViewToFocallength(self, view_x=None, view_y=None):
+        if view_x is not None:
+            return self.sensor_width_mm / np.deg2rad(view_x)
+        else:
+            return self.sensor_height_mm / np.deg2rad(view_y)
