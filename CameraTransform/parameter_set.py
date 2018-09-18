@@ -46,7 +46,8 @@ class DefaultAccess(object):
             parameter_obj.default = value
             if parameter_obj.value is None and parameter_obj.callback is not None:
                 parameter_obj.callback()
-        return object.__setattr__(self, key, value)
+        else:
+            return object.__setattr__(self, key, value)
 
 
 class ParameterSet(object):
@@ -69,6 +70,8 @@ class ParameterSet(object):
             parameter_obj = self.parameters[key]
             parameter_obj.value = value
             parameter_obj.state = STATE_USER_SET
+            if parameter_obj.callback is not None:
+                parameter_obj.callback()
         else:
             return object.__setattr__(self, key, value)
 
