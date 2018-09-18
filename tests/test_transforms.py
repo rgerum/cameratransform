@@ -7,7 +7,7 @@ import numpy as np
 import sys
 import os
 
-from hypothesis import given, reproduce_failure, assume, strategies as st
+from hypothesis import given, reproduce_failure, assume, note, strategies as st
 from hypothesis.extra import numpy as st_np
 import uuid
 
@@ -92,7 +92,7 @@ class TestTransforms(unittest.TestCase):
 
     @given(ct_st.camera())
     def test_print(self, cam):
-        print(cam)
+        str(cam)
 
     @given(ct_st.camera_image_points(), st.floats(0, 100))
     def test_transWorldToCam(self, params, Z):
@@ -117,9 +117,19 @@ class TestTransforms(unittest.TestCase):
         # transform point
         p1 = cam.imageFromSpace(p)
         # points behind the camera are allowed to be nan
-        p[p[:, 2] >= cam.elevation_m] = np.nan
+        p[p[:, 2] > cam.elevation_m] = np.nan
         np.testing.assert_equal(np.isnan(np.sum(p, axis=1)), np.isnan(np.sum(p1, axis=1)),
                                 err_msg="Points behind the camera do not produce a nan value.")
+
+    @given(ct_st.camera_image_points(), st.floats(1, 100))
+    def test_rays(self, params, factor):
+        cam, p = params
+        note(cam)
+        offset, rays = cam.getRay(p, normed=True)
+        np.testing.assert_almost_equal(np.linalg.norm(rays, axis=1), np.ones(rays.shape[0]), 2)
+        p2 = cam.imageFromSpace(offset + rays*factor)
+        np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
+                                                         "the original point.")
 
 
 if __name__ == '__main__':
