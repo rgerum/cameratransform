@@ -63,7 +63,7 @@ class RectilinearProjection(CameraProjection):
                         np.zeros(points[..., 1].shape) + self.focallength_px]).T
         # norm the ray if desired
         if normed:
-            ray /= np.linalg.norm(ray, axis=-1)
+            ray /= np.linalg.norm(ray, axis=-1)[..., None]
         # return the ray
         return -ray
 
@@ -103,6 +103,9 @@ class CylindricalProjection(CameraProjection):
         y = r * (points[..., 1] - self.offset_y) / self.focallength_px
         # compose the ray
         ray = np.array([x, y, z]).T
+        # norm the ray if desired
+        if normed:
+            ray /= np.linalg.norm(ray, axis=-1)[..., None]
         # return the rey
         return -ray
 
@@ -147,6 +150,9 @@ class EquirectangularProjection(CameraProjection):
         y = r * np.tan((points[..., 1] - self.offset_y) / self.focallength_px)
         # compose the ray
         ray = np.array([x, y, z]).T
+        # norm the ray if desired
+        if normed:
+            ray /= np.linalg.norm(ray, axis=-1)[..., None]
         # return the rey
         return -ray
 
