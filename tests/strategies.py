@@ -111,8 +111,8 @@ def camera_image_points(draw, camera=camera(), n=st.one_of(st.integers(1, 1000),
     height = camera.projection.image_height_px
     n = draw(n)
     # the points can either be
-    if 0:#n == 1:
-        points = draw(st.tuples(st.integers(0, height), st.integers(0, width)))
+    if n == 1:
+        points = draw(st.tuples(st.floats(0, height), st.floats(0, width)))
     else:
         pointsX = draw(
             st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(1)), elements=st.floats(0, width)))
@@ -126,8 +126,8 @@ def camera_down_with_world_points(draw, projection=projection(),  n=st.one_of(st
     camera = ct.Camera(projection=draw(projection), orientation=ct.SpatialOrientation())
     n = draw(n)
     # the points can either be
-    if 0:#n == 1:
-        points = draw(st.tuples(st.integers(0, height), st.integers(0, width)))
+    if n == 1:
+        points = draw(st.tuples(st.floats(-100, 100), st.floats(-100, 100), st.floats(-100, 100)))
     else:
         points = draw(
             st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(3)), elements=st.floats(-100, 100)))

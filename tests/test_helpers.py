@@ -26,31 +26,25 @@ while True:
 
 points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(2, 2), st.integers(0, 100)), elements=st.floats(0, 10000))
 
-class TestHelpers(unittest.TestCase):
+class TestParameterSet(unittest.TestCase):
 
-    @given(st.integers(-90, 90), st.integers(0, 59), st.integers(0, 59))
-    def test_formatGPS(self, deg, min, sec):
-        return
-        # test with N/S, W/E
-        fmt = "%2d° %2d' %6.3f %s"
-        degs = (abs(deg)+min/60+sec/(60*60))*(1-2*(deg<0))
-        lat, lng = ct.formatGPS(degs, degs, format=fmt)
-        if deg < 0:
-            self.assertEqual(lat, fmt % (abs(deg), min, sec, "S"))
-            self.assertEqual(lng, fmt % (abs(deg), min, sec, "W"))
-        else:
-            self.assertEqual(lat, fmt % (abs(deg), min, sec, "N"))
-            self.assertEqual(lng, fmt % (abs(deg), min, sec, "E"))
+    def test_parameterSet(self):
+        cam = ct.Camera(ct.RectilinearProjection(), ct.SpatialOrientation())
+        cam.defaults.elevation_m = 99
+        assert cam.elevation_m == 99
+        assert cam.defaults.elevation_m == 99
+        cam.elevation_m = 10
+        assert cam.elevation_m == 10
+        assert cam.defaults.elevation_m == 99
+        cam.elevation_m = None
+        assert cam.elevation_m == 99
+        assert cam.defaults.elevation_m == 99
+        # test non parameter
+        cam.foo = 99
+        cam.foo
+        cam.defaults.foo = 99
+        cam.defaults.foo
 
-        # test with +- sign
-        fmt = "%2d° %2d' %6.3f"
-        lat, lng = ct.formatGPS(degs, degs, format=fmt)
-        self.assertEqual(lat, fmt % (deg, min, sec))
-
-        # test as just one value
-        fmt = "%2f.2°"
-        lat, lng = ct.formatGPS(degs, degs, format=fmt)
-        self.assertEqual(lat, fmt % (degs))
 
 
 if __name__ == '__main__':

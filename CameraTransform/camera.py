@@ -134,9 +134,11 @@ class Camera(ClassWithParameterSet):
         # solve the line equation for the factor (how many times the direction vector needs to be added to the origin point)
         factor = (given[index] - offset[..., index]) / direction[..., index]
         if not isinstance(factor, np.ndarray):
-            factor = np.array([factor])
-        # apply the factor to the direction vector plus the offset
-        points = direction * factor[:, None] + offset[None, :]
+            # if factor is not an array, we don't need to specify the broadcasting
+            points = direction * factor + offset
+        else:
+            # apply the factor to the direction vector plus the offset
+            points = direction * factor[:, None] + offset[None, :]
         # ignore points that are behind the camera (e.g. trying to project points above the horizon to the ground)
         points[factor < 0] = np.nan
         return points
