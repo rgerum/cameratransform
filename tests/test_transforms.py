@@ -114,11 +114,12 @@ class TestTransforms(unittest.TestCase):
         cam.tilt_deg = 0
         cam.roll_deg = 0
         cam.heading_deg = 0
+        p = np.array(p)
         # transform point
         p1 = cam.imageFromSpace(p)
         # points behind the camera are allowed to be nan
-        p[p[:, 2] > cam.elevation_m] = np.nan
-        np.testing.assert_equal(np.isnan(np.sum(p, axis=1)), np.isnan(np.sum(p1, axis=1)),
+        p[p[..., 2] > cam.elevation_m] = np.nan
+        np.testing.assert_equal(np.isnan(p[..., :2]), np.isnan(p1),
                                 err_msg="Points behind the camera do not produce a nan value.")
 
     @given(ct_st.camera_image_points(), st.floats(1, 100))
@@ -126,7 +127,7 @@ class TestTransforms(unittest.TestCase):
         cam, p = params
         note(cam)
         offset, rays = cam.getRay(p, normed=True)
-        np.testing.assert_almost_equal(np.linalg.norm(rays, axis=1), np.ones(rays.shape[0]), 2)
+        np.testing.assert_almost_equal(np.linalg.norm(rays, axis=-1), np.ones(rays.shape[0]), 2)
         p2 = cam.imageFromSpace(offset + rays*factor)
         np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
                                                          "the original point.")
