@@ -1,11 +1,12 @@
 import matplotlib
 matplotlib.use('agg')
+import sys
+import os
 import unittest
 import numpy as np
-from hypothesis import given, strategies as st
+from hypothesis import given, reproduce_failure, strategies as st
 from hypothesis.extra import numpy as st_np
 
-import sys
 import mock
 
 while True:
@@ -24,7 +25,9 @@ while True:
     else:
         break
 
-points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(2, 2), st.integers(0, 100)), elements=st.floats(0, 10000))
+sys.path.insert(0, os.path.dirname(__file__))
+import strategies as ct_st
+
 
 class TestParameterSet(unittest.TestCase):
 
@@ -39,11 +42,21 @@ class TestParameterSet(unittest.TestCase):
         cam.elevation_m = None
         assert cam.elevation_m == 99
         assert cam.defaults.elevation_m == 99
+        # test if the parameter sets are liked properly
+        cam.orientation.elevation_m = 900
+        assert cam.elevation_m == 900
+        cam.elevation_m = 800
+        assert cam.orientation.elevation_m == 800
         # test non parameter
         cam.foo = 99
         assert cam.foo == 99
         cam.defaults.foo = 99
         assert cam.defaults.foo == 99
+        self.assertRaises(AttributeError, lambda: cam.bla)
+        self.assertRaises(AttributeError, lambda: cam.parameters.bla)
+        self.assertRaises(AttributeError, lambda: cam.projection.bla)
+        self.assertRaises(AttributeError, lambda: cam.orientation.bla)
+        self.assertRaises(AttributeError, lambda: cam.defaults.bla)
 
 
 
