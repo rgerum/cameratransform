@@ -143,20 +143,6 @@ class Camera(ClassWithParameterSet):
         points[factor < 0] = np.nan
         return points
 
-    def getMapXXX(self):
-        if self.map is None:
-            # get a mesh grid
-            mesh = np.array(np.meshgrid(np.arange(int(self.projection.parameters.image_width_px)),
-                                        np.arange(int(self.projection.parameters.image_height_px))))
-            # convert it to a list of points Nx2
-            mesh_points = mesh.reshape(2, mesh.shape[1] * mesh.shape[2]).T
-
-            mesh_points_shape = self.spaceFromImage(mesh_points, Z=0)[..., :2]
-            plt.plot(mesh_points_shape[:, 0], mesh_points_shape[:, 1], "ko")
-
-            self.map = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)
-        return self.map
-
     def getMap(self, extent=None, scaling=None):
         # if we have cached the map, use the cached map
         if self.map is not None and \
