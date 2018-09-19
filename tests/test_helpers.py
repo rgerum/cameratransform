@@ -58,6 +58,28 @@ class TestParameterSet(unittest.TestCase):
         self.assertRaises(AttributeError, lambda: cam.orientation.bla)
         self.assertRaises(AttributeError, lambda: cam.defaults.bla)
 
+    @given(ct_st.camera())
+    def test_cameraCone(self, cam):
+        cone = cam.getCameraCone()
+        cone_image = np.round(cam.imageFromSpace(cone))
+        cone_image[cone_image[:, 0] == 0] = np.nan
+        cone_image[cone_image[:, 0] == cam.projection.image_width_px] = np.nan
+        cone_image[cone_image[:, 1] == cam.projection.image_height_px] = np.nan
+        cone_image[cone_image[:, 1] == 0] = np.nan
+        assert np.all(np.isnan(cone_image))
+
+        cone = cam.getImageBorder()
+        cone_image = np.round(cam.imageFromSpace(cone))
+        cone_image[cone_image[:, 0] == 0] = np.nan
+        cone_image[cone_image[:, 0] == cam.projection.image_width_px] = np.nan
+        cone_image[cone_image[:, 1] == cam.projection.image_height_px] = np.nan
+        cone_image[cone_image[:, 1] == 0] = np.nan
+        assert np.all(np.isnan(cone_image))
+
+    @given(ct_st.camera())
+    def test_cameraOrigin(self, cam):
+        origin, ray = cam.getRay([0, 0])
+        assert np.all(np.isnan(cam.imageFromSpace(origin)))
 
 
 if __name__ == '__main__':
