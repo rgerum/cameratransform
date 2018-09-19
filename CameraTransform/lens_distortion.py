@@ -2,7 +2,7 @@ import numpy as np
 from .parameter_set import ParameterSet, Parameter, TYPE_DISTORTION
 
 
-class BrownLensDistortion:
+class BrownLensDistortion:  # pragma: no cover
     offset_x = 0
     offset_y = 0
 

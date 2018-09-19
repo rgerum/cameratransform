@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-class Scene:
+class Scene:  # pragma: no cover
     objects = []
     camera = None
 
