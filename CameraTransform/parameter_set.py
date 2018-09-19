@@ -38,6 +38,7 @@ class DefaultAccess(object):
     def __getattr__(self, item):
         if item in self.parameters:
             return self.parameters[item].default
+        return object.__getattribute__(self, item)
 
     def __setattr__(self, key, value):
         if key in self.parameters:
@@ -62,6 +63,7 @@ class ParameterSet(object):
             if parameter_obj.value is not None:
                 return parameter_obj.value
             return parameter_obj.default
+        return object.__getattribute__(self, item)
 
     def __setattr__(self, key, value):
         if key in self.parameters:
@@ -104,6 +106,7 @@ class ClassWithParameterSet(object):
         if self.parameters is not None:
             if item == "defaults" or item in self.parameters.parameters:
                 return getattr(self.parameters, item)
+        return object.__getattribute__(self, item)
 
     def __setattr__(self, key, value):
         if self.parameters is not None and key in self.parameters.parameters:
