@@ -41,9 +41,9 @@ class TestParameterSet(unittest.TestCase):
         assert cam.defaults.elevation_m == 99
         # test non parameter
         cam.foo = 99
-        cam.foo
+        assert cam.foo == 99
         cam.defaults.foo = 99
-        cam.defaults.foo
+        assert cam.defaults.foo == 99
 
 
 
