@@ -2,7 +2,7 @@ import matplotlib
 matplotlib.use('agg')
 import unittest
 import numpy as np
-from hypothesis import given, strategies as st
+from hypothesis import given, assume, note, strategies as st
 from hypothesis.extra import numpy as st_np
 
 import sys
@@ -33,7 +33,7 @@ class TestFits(unittest.TestCase):
         # setup the camera
         cam = ct.Camera(ct.RectilinearProjection(6.2, 2448, 3264, 4.55, 6.17), ct.SpatialOrientation())
         # set the parameters
-        cam.elevetion_m = 34.025954
+        cam.elevation_m = 34.025954
         cam.roll_deg = -1.933622
         cam.tilt_deg = 83.307121
         cam.heading_deg = 0
@@ -48,20 +48,30 @@ class TestFits(unittest.TestCase):
                              [1569.205, 1556.647, 1545.462, 1445.683, 1554.840, 1412.185, 1497.422, 1407.026, 1563.188,
                               1588.567, 1606.385, 1606.847, 1607.042, 1462.714, 1597.782, 1520.728, 1481.460, 1441.808,
                               1419.911, 1535.729, 1597.528, 1449.718]]).T
-        heads = np.array([[2444.983, 2648.486, 2843.791, 2820.373, 3193.688, 1902.720, 1543.973, 1490.770, 1660.660,
-                               1787.174, 2020.442, 2074.914, 2555.684, 2904.453, 3084.393, 1595.931, 1562.091, 1851.034,
-                               2215.969, 2756.997, 1969.461, 1870.150],
-                              [1548.691, 1537.182, 1526.287, 1429.232, 1535.311, 1395.279, 1478.906, 1390.332, 1542.916,
-                               1566.117, 1584.135, 1585.859, 1588.504, 1445.887, 1576.425, 1501.253, 1463.102, 1424.282,
-                               1403.555, 1516.264, 1576.358, 1432.114]]).T
+
+        feet_space = cam.spaceFromImage(feet)
+        heads_space = feet_space.copy()
+        heads_space[:, 2] += 1
+        heads = cam.imageFromSpace(heads_space)
+
+        def cost():
+            estimated_feet_space = cam2.spaceFromImage(feet.copy(), Z=0)
+            estimated_heads_space = estimated_feet_space.copy()
+            estimated_heads_space[:, 2] += 1
+            estimated_heads = cam2.imageFromSpace(estimated_heads_space)
+            pixels = np.linalg.norm(heads - estimated_heads, axis=0)
+            return np.mean(pixels ** 2)
 
         # setup the camera
-        cam2 = ct.Camera(ct.RectilinearProjection(6.2, 2448, 3264, 4.55, 6.17), ct.SpatialOrientation())
+        cam2 = ct.Camera(cam.projection, ct.SpatialOrientation())
+        cam2.pos_x_m = 0
+        cam2.pos_y_m = 0
+        cam2.heading_deg = 0
         # fit
-        #cam2.fixHorizon(horizon)
-        #cam2.fitCamParametersFromObjects(feet, heads)
-        #for name in ["height", "tilt"]:
-        #    self.assertAlmostEqual(getattr(cam2, name), getattr(cam, name), 1, "Parameter %s is not fitted correctly" % name)
+        cam2.fit(cost)
+        # check the fitted parameters
+        for name in ["elevation_m", "tilt_deg"]:
+            self.assertAlmostEqual(getattr(cam2, name), getattr(cam, name), 1, "Parameter %s is not fitted correctly" % name)
 
 
 if __name__ == '__main__':
