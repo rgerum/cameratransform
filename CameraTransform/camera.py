@@ -3,24 +3,33 @@ import matplotlib.pyplot as plt
 import cv2
 from scipy.optimize import minimize
 from .parameter_set import ParameterSet, ClassWithParameterSet
-from .projection import RectilinearProjection
+from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 import json
 
 
 class CameraGroup(ClassWithParameterSet):
     def __init__(self, projection, orientation_list=None):
-        self.projection = projection
+        self.projection_list = projection
         self.orientation_list = orientation_list
 
         params = {}
-        params.update(self.projection.parameters.parameters)
+        if isinstance(self.projection_list, CameraProjection):
+            params.update(self.projection_list.parameters.parameters)
+        else:  # if not, we expect a list
+            for index, projection in enumerate(self.projection_list):
+                for name in projection.parameters.parameters:
+                    params["C%d_%s" % (index, name)] = name
+
         for index, orientation in enumerate(orientation_list):
             for name in orientation.parameters.parameters:
                 params["C%d_%s" % (index, name)] = name
         self.parameters = ParameterSet(**params)
 
-        self.cameras = [Camera(projection, orientation) for orientation in self.orientation_list]
+        if isinstance(self.projection_list, CameraProjection):
+            self.cameras = [Camera(self.projection_list, orientation) for orientation in self.orientation_list]
+        else:
+            self.cameras = [Camera(projection, orientation) for projection, orientation in zip(self.projection_list, self.orientation_list)]
 
     def fit(self, cost_function):
         names = self.parameters.get_fit_parameters()
