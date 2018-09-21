@@ -44,6 +44,15 @@ class CameraGroup(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
+    def __getitem__(self, item):
+        return self.cameras[item]
+
+    def __len__(self):
+        return len(self.cameras)
+
+    def __iter__(self):
+        return iter(self.cameras)
+
 
 class Camera(ClassWithParameterSet):
     map = None
