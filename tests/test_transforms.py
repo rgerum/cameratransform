@@ -130,6 +130,53 @@ class TestTransforms(unittest.TestCase):
         np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
                                                          "the original point.")
 
+    @given(ct_st.projection(), ct_st.projection(), ct_st.orientation(), ct_st.orientation())
+    def test_cameraGroup(self, proj1, proj2, orientation1, orientation2):
+        def length(obj):
+            try:
+                return len(obj)
+            except TypeError:
+                return 1
+
+        for projections in [proj1, (proj1, proj2)]:
+            for orientations in [orientation1, (orientation1, orientation2)]:
+                camGroup = ct.CameraGroup(projections, orientations)
+                assert len(camGroup) == max(length(projections), length(orientations))
+                for index, cam in enumerate(camGroup):
+                    if isinstance(projections, tuple):
+                        assert cam.projection == projections[index]
+                    else:
+                        assert cam.projection == projections
+                    if isinstance(orientations, tuple):
+                        assert cam.orientation == orientations[index]
+                    else:
+                        assert cam.orientation == orientations
+
+    @given(ct_st.camera_down_with_world_points())
+    def test_stereoCamera(self, params):
+        cam, p = params
+        camGroup = ct.CameraGroup(cam.projection, (cam.orientation, ct.SpatialOrientation()))
+        cam1 = camGroup[0]
+        cam2 = camGroup[1]
+
+        cam1.tilt_deg = 0
+        cam1.roll_deg = 0
+        cam1.heading_deg = 0
+
+        cam2.tilt_deg = 0
+        cam2.roll_deg = 0
+        cam2.heading_deg = 0
+        cam2.pos_x_m = 10
+
+        p = np.array(p)
+        # transform point
+        p1, p2 = camGroup.imagesFromSpace(p)
+        p3 = camGroup.spaceFromImages(p1, p2)
+        # points behind the camera are allowed to be nan
+        p[p[..., 2] > cam.elevation_m] = np.nan
+        np.testing.assert_almost_equal(p, p3, 4,
+                                err_msg="Points behind the camera do not produce a nan value.")
+
 
 if __name__ == '__main__':
     unittest.main()
