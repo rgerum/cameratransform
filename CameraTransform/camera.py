@@ -6,6 +6,7 @@ from .parameter_set import ParameterSet, ClassWithParameterSet
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 import json
+import itertools
 
 
 class CameraGroup(ClassWithParameterSet):
@@ -16,20 +17,28 @@ class CameraGroup(ClassWithParameterSet):
         params = {}
         if isinstance(self.projection_list, CameraProjection):
             params.update(self.projection_list.parameters.parameters)
+            if not isinstance(self.orientation_list, SpatialOrientation):
+                projection = itertools.cycle((projection,))
+            else:
+                projection = (projection, )
         else:  # if not, we expect a list
-            for index, projection in enumerate(self.projection_list):
-                for name in projection.parameters.parameters:
+            for index, proj in enumerate(self.projection_list):
+                for name in proj.parameters.parameters:
                     params["C%d_%s" % (index, name)] = name
 
-        for index, orientation in enumerate(orientation_list):
-            for name in orientation.parameters.parameters:
-                params["C%d_%s" % (index, name)] = name
+        if isinstance(self.orientation_list, SpatialOrientation):
+            params.update(self.orientation_list.parameters.parameters)
+            if not isinstance(self.projection_list, CameraProjection):
+                orientation_list = itertools.cycle((orientation_list,))
+            else:
+                orientation_list = (orientation_list,)
+        else:
+            for index, orientation in enumerate(orientation_list):
+                for name in orientation.parameters.parameters:
+                    params["C%d_%s" % (index, name)] = name
         self.parameters = ParameterSet(**params)
 
-        if isinstance(self.projection_list, CameraProjection):
-            self.cameras = [Camera(self.projection_list, orientation) for orientation in self.orientation_list]
-        else:
-            self.cameras = [Camera(projection, orientation) for projection, orientation in zip(self.projection_list, self.orientation_list)]
+        self.cameras = [Camera(projection, orientation) for projection, orientation in zip(projection, orientation_list)]
 
     def fit(self, cost_function):
         names = self.parameters.get_fit_parameters()
@@ -59,6 +68,7 @@ class CameraGroup(ClassWithParameterSet):
             c2 = -np.einsum('ij,j->i', v2, p1 - p2)
             res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]).transpose(2, 0, 1), np.array([c1, c2]).T)
             res = res[:, None, :]
+            return np.mean([p1 + res[..., 0] * v1, p2 + res[..., 1] * v2], axis=0)
         else:  # or just one point
             a1 = np.dot(v1, v1)
             a2 = np.dot(v1, v2)
@@ -68,7 +78,7 @@ class CameraGroup(ClassWithParameterSet):
             c2 = -np.dot(v2, p1 - p2)
             res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
             res = res[None, None, :]
-        return np.mean([p1 + res[..., 0] * v1, p2 + res[..., 1] * v2], axis=0)
+            return np.mean([p1 + res[..., 0] * v1, p2 + res[..., 1] * v2], axis=0)[0]
 
     def spaceFromImages(self, points1, points2):
         p1, v1 = self.cameras[0].getRay(points1)
