@@ -220,17 +220,17 @@ class Camera(ClassWithParameterSet):
         return points
 
     def getMap(self, extent=None, scaling=None):
-        # if we have cached the map, use the cached map
-        if self.map is not None and \
-                all(self.last_extent == extent) and \
-                self.last_scaling == scaling:
-            return self.map
-
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             border = self.getImageBorder()
             extent = [np.nanmin(border[:, 0]), np.nanmax(border[:, 0]),
                       np.nanmin(border[:, 1]), np.nanmax(border[:, 1])]
+
+        # if we have cached the map, use the cached map
+        if self.map is not None and \
+                self.last_extent == extent and \
+                self.last_scaling == scaling:
+            return self.map
 
         # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
         if scaling is None:
