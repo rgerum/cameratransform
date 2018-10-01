@@ -185,16 +185,30 @@ class Camera(ClassWithParameterSet):
         # return the offset point and the direction of the ray
         return offset, direction
 
-    def spaceFromImage(self, points, X=None, Y=None, Z=0):
+    def spaceFromImage(self, points, X=None, Y=None, Z=0, D=None):
         # ensure that the points are provided as an array
         points = np.array(points)
         # get the index which coordinate to force to the given value
         given = np.array([X, Y, Z])
-        index = np.argmax(given != None)
-        # get the rays from the image points
-        offset, direction = self.getRay(points)
-        # solve the line equation for the factor (how many times the direction vector needs to be added to the origin point)
-        factor = (given[index] - offset[..., index]) / direction[..., index]
+        if X is not None:
+            index = 0
+        elif Y is not None:
+            index = 1
+        elif Z is not None:
+            index = 2
+
+        # transform to a given distance
+        if D is not None:
+            # get the rays from the image points (in this case it has to be normed)
+            offset, direction = self.getRay(points, normed=True)
+            # the factor is than simple the distance
+            factor = D
+        else:
+            # get the rays from the image points
+            offset, direction = self.getRay(points)
+            # solve the line equation for the factor (how many times the direction vector needs to be added to the origin point)
+            factor = (given[index] - offset[..., index]) / direction[..., index]
+
         if not isinstance(factor, np.ndarray):
             # if factor is not an array, we don't need to specify the broadcasting
             points = direction * factor + offset
