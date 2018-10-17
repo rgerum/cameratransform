@@ -103,8 +103,14 @@ class Camera(ClassWithParameterSet):
     last_extent = None
     last_scaling = None
 
-    def __init__(self, projection, orientation):
+    fit_method = None
+
+    R_earth = 6371e3
+
+    def __init__(self, projection, orientation=None):
         self.projection = projection
+        if orientation is None:
+            orientation = SpatialOrientation()
         self.orientation = orientation
 
         params = {}
@@ -127,9 +133,97 @@ class Camera(ClassWithParameterSet):
             self.parameters.set_fit_parameters(names, p)
             return cost_function()
 
-        p = minimize(cost, estimates, bounds=ranges)
+        p = minimize(cost, estimates, bounds=ranges, method=self.fit_method)
         self.parameters.set_fit_parameters(names, p["x"])
         return p
+
+    def fitCamParametersFromObjects(self, points_foot, points_head, object_height=1, object_elevation=0, points_horizon=None):
+        """
+        Fit the camera parameters for given objects of equal heights. The foot positions are given in points_foot and
+        the heads are given in points_head. The height of each objects is given in object_height, and if the objects are
+        not at sea level, an object_elevation can be given.
+
+        For an example see: `Fit from object heights <fit_heights.html>`_
+
+        Parameters
+        ----------
+        points_foot: ndarray
+            The pixel positions of the feet of the objects in the image.
+        points_head: ndarray
+            The pixel positions of the heads of the objects in the image.
+        object_height: number, optional
+            The height of the objects. Default = 1m
+        object_elevation: number, optional
+            The elevation of the feet ot the objects.
+
+        Returns
+        -------
+        p: list
+            the fitted parameters.
+        """
+        points_foot = np.array(points_foot)
+        points_head = np.array(points_head)
+        if points_horizon is not None:
+            points_horizon = np.array(points_horizon)
+
+        # the heading and position cannot be fitted using just relative distances
+        self.heading_deg = 0
+        self.pos_x_m = 0
+        self.pos_y_m = 0
+
+        def cost():
+            if points_horizon is not None:
+                horizon_points_fit = self.getImageHorizon(points_horizon[:, 0])
+                #print("horizon_points_fit", horizon_points_fit)
+                error_horizon = np.mean(np.linalg.norm(points_horizon - horizon_points_fit, axis=1)**2)
+            else:
+                error_horizon = 0
+
+            # project the feet from the image to the space with the provided elevation
+            estimated_foot_space = self.spaceFromImage(points_foot.copy(), Z=object_elevation)
+            # add the object height to the z position
+            estimated_foot_space[:, 2] = object_elevation + object_height
+            # transform the "head" positions back
+            estimated_head_image = self.imageFromSpace(estimated_foot_space)
+            # calculate the distance between real pixel position and estimated position
+            pixels = np.linalg.norm(points_head - estimated_head_image, axis=1)
+            # the error is the squared sum
+            #print(np.mean(pixels ** 2), error_horizon*10, self.roll_deg)
+            #return error_horizon
+            return np.mean(pixels ** 2)+error_horizon
+
+        # fit with the given cost function
+        return self.fit(cost)
+
+    def distanceToHorizon(self):
+        return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.elevation_m)))
+
+    def getImageHorizon(self, pointsX=None):
+        """
+        This function calculates the position of the horizon in the image sampled at the points x=0, x=im_width/2,
+        x=im_width.
+
+        :return: The points im camera image coordinates of the horizon in the format of [2xN].
+        """
+        d = self.distanceToHorizon()
+        if pointsX is None:
+            pointsX = [0, self.image_width_px/2, self.image_width_px]
+        pointsY = np.arange(0, self.image_height_px)
+
+        points = []
+        # for every x-coordinate where we want to determine the horizon
+        for x in pointsX:
+            # test all y points of the image
+            p = np.vstack((np.ones(len(pointsY))*x, pointsY)).T
+            # transform them to the space with a fixed distance from the camera (the distance to the horizon)
+            # and select the point with the z coordinate closest to 0
+            try:
+                y = np.nanargmin(np.abs(self.spaceFromImage(p, D=d)[:, 2]))
+            except ValueError:
+                y = np.nan
+            # add the found point to the list
+            points.append([x, y])
+        return np.array(points)
 
     def getImageBorder(self, resolution=1):
         w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
@@ -257,16 +351,18 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False):
+    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None):
         x, y = self.getMap(extent=extent, scaling=scaling)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
-        if im.shape[2] == 3:
+        if len(im.shape) == 2:
+            pass
+        elif im.shape[2] == 3:
             im = np.dstack((im, np.ones(shape=(im.shape[0], im.shape[1], 1), dtype="uint8") * 255))
         image = cv2.remap(im, x, y,
                           interpolation=cv2.INTER_NEAREST,
                           borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
-            plt.imshow(image, extent=self.last_extent)  # , alpha=1)
+            plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 
     def save(self, filename):
