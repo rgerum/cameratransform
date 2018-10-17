@@ -24,7 +24,7 @@ class CameraGroup(ClassWithParameterSet):
         else:  # if not, we expect a list
             for index, proj in enumerate(self.projection_list):
                 for name in proj.parameters.parameters:
-                    params["C%d_%s" % (index, name)] = name
+                    params["C%d_%s" % (index, name)] = proj.parameters.parameters[name]
 
         if isinstance(self.orientation_list, SpatialOrientation):
             params.update(self.orientation_list.parameters.parameters)
@@ -35,7 +35,7 @@ class CameraGroup(ClassWithParameterSet):
         else:
             for index, orientation in enumerate(orientation_list):
                 for name in orientation.parameters.parameters:
-                    params["C%d_%s" % (index, name)] = name
+                    params["C%d_%s" % (index, name)] = orientation.parameters.parameters[name]
         self.parameters = ParameterSet(**params)
 
         self.cameras = [Camera(projection, orientation) for projection, orientation in zip(projection, orientation_list)]
