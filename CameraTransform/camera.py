@@ -1,12 +1,132 @@
 import numpy as np
+import os
+import json
+import itertools
 import matplotlib.pyplot as plt
 import cv2
 from scipy.optimize import minimize
 from .parameter_set import ParameterSet, ClassWithParameterSet
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
-import json
-import itertools
+
+
+def _getSensorFromDatabase(model):
+    """
+    Get the sensor size from the given model from the database at: https://github.com/openMVG/CameraSensorSizeDatabase
+
+    Parameters
+    ----------
+    model: string
+        the model name as received from the exif data
+
+    Returns
+    -------
+    sensor_size: tuple
+        (sensor_width, sensor_height) in mm or None
+    """
+    import requests
+
+    url = "https://raw.githubusercontent.com/openMVG/CameraSensorSizeDatabase/master/sensor_database_detailed.csv"
+
+    database_filename = "sensor_database_detailed.csv"
+    # download the database if it is not there
+    if not os.path.exists(database_filename):
+        with open(database_filename, "w") as fp:
+            print("Downloading database from:", url)
+            r = requests.get(url)
+            fp.write(r.text)
+    # load the database
+    with open(database_filename, "r") as fp:
+        data = fp.readlines()
+
+    # format the name
+    model = model.replace(" ", ";", 1)
+    name = model + ";"
+    # try to find it
+    for line in data:
+        if line.startswith(name):
+            # extract the sensor dimensions
+            line = line.split(";")
+            sensor_size = (float(line[3]), float(line[4]))
+            return sensor_size
+    # no sensor size found
+    return None
+
+
+def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=True):
+    """
+    Try to extract the intrinsic camera parameters from the exif information.
+
+    Parameters
+    ----------
+    filename: basestring
+        the filename of the image to load.
+    verbose: bool
+         whether to print the output.
+    sensor_from_database: bool
+        whether to try to load the sensor size from a database at https://github.com/openMVG/CameraSensorSizeDatabase
+
+    Returns
+    -------
+    focal_length: number
+        the extracted focal length in mm
+    sensor_size: tuple
+        (width, height) of the camera sensor in mm
+    image_size: tuple
+        (width, height) of the image in pixel
+
+    Examples
+    --------
+
+    >>> import CameraTransform as ct
+
+    Supply the image filename to print the results:
+
+    >>> ct.getCameraParametersFromExif("Image.jpg", verbose=True)
+    Intrinsic parameters for 'Canon EOS 50D':
+       focal length: 400.0 mm
+       sensor size: 22.3 mm × 14.9 mm
+       image size: 4752 × 3168 Pixels
+
+    Or use the resulting parameters to initialize a CameraTransform instance:
+
+    >>> focal_length, sensor_size, image_size = ct.getCameraParametersFromExif("Image.jpg")
+    >>> cam = ct.Camera(focal_length, sensor=sensor_size, image=image_size)
+
+    """
+    from PIL import Image
+    from PIL.ExifTags import TAGS
+
+    def get_exif(fn):
+        ret = {}
+        i = Image.open(fn)
+        info = i._getexif()
+        for tag, value in info.items():
+            decoded = TAGS.get(tag, tag)
+            ret[decoded] = value
+        return ret
+
+    # read the exif information of the file
+    exif = get_exif(filename)
+    # get the focal length
+    f = exif["FocalLength"][0] / exif["FocalLength"][1]
+    # get the sensor size, either from a database
+    if sensor_from_database:
+        sensor_size = _getSensorFromDatabase(exif["Model"])
+    # or from the exif information
+    if not sensor_size or sensor_size is None:
+        sensor_size = (
+            exif["ExifImageWidth"] / (exif["FocalPlaneXResolution"][0] / exif["FocalPlaneXResolution"][1]) * 25.4,
+            exif["ExifImageHeight"] / (exif["FocalPlaneYResolution"][0] / exif["FocalPlaneYResolution"][1]) * 25.4)
+    # get the image size
+    image_size = (exif["ExifImageWidth"], exif["ExifImageHeight"])
+    # print the output if desired
+    if verbose:
+        print("Intrinsic parameters for '%s':" % exif["Model"])
+        print("   focal length: %.1f mm" % f)
+        print("   sensor size: %.1f mm × %.1f mm" % sensor_size)
+        print("   image size: %d × %d Pixels" % image_size)
+    return f, sensor_size, image_size
 
 
 class CameraGroup(ClassWithParameterSet):
