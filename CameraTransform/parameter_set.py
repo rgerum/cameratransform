@@ -78,7 +78,7 @@ class ParameterSet(object):
     def get_fit_parameters(self):
         fit_param_names = []
         for name, param in self.parameters.items():
-            if param.state != STATE_USER_SET:
+            if param.state != STATE_USER_SET or param.value is None:
                 fit_param_names.append(name)
         return fit_param_names
 
