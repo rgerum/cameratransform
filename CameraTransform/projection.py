@@ -8,8 +8,15 @@ class CameraProjection(ClassWithParameterSet):
     offset_x = 0
     offset_y = 0
 
-    def __init__(self, focallength_mm=None, image_height_px=None, image_width_px=None, sensor_height_mm=None,
-                 sensor_width_mm=None, view_x_deg=None, view_y_deg=None):
+    def __init__(self, focallength_mm=None, image_width_px=None, image_height_px=None, image=None,
+                 sensor_width_mm=None, sensor_height_mm=None, sensor=None, view_x_deg=None, view_y_deg=None):
+        if sensor is not None:
+            sensor_width_mm, sensor_height_mm = sensor
+        if image is not None:
+            try:
+                image_height_px, image_width_px = image.shape[:2]
+            except AttributeError:
+                image_width_px, image_height_px = image
         self.parameters = ParameterSet(
             # the intrinsic parameters
             focallength_mm=Parameter(focallength_mm, default=14, type=TYPE_INTRINSIC),  # the focal length in mm
