@@ -33,9 +33,9 @@ class SpatialOrientation(ClassWithParameterSet):
     def __init__(self, elevation_m=None, tilt_deg=None, roll_deg=None, heading_deg=None, pos_x_m=None, pos_y_m=None):
         self.parameters = ParameterSet(
             # the extrinsic parameters if the camera will not be compared to other cameras or maps
-            elevation_m=Parameter(elevation_m, default=10, range=(0, None), type=TYPE_EXTRINSIC1),
+            elevation_m=Parameter(elevation_m, default=30, range=(0, None), type=TYPE_EXTRINSIC1),
             # the elevation of the camera above sea level in m
-            tilt_deg=Parameter(tilt_deg, default=45, range=(0, None), type=TYPE_EXTRINSIC1),  # the tilt angle of the camera in degrees
+            tilt_deg=Parameter(tilt_deg, default=85, range=(-90, 90), type=TYPE_EXTRINSIC1),  # the tilt angle of the camera in degrees
             roll_deg=Parameter(roll_deg, default=0, range=(-180, 180), type=TYPE_EXTRINSIC1),  # the roll angle of the camera in degrees
 
             # the extrinsic parameters if the camera will be compared to other cameras or maps
@@ -56,6 +56,8 @@ class SpatialOrientation(ClassWithParameterSet):
         return string
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
+        if self.heading_deg < -360 or self.heading_deg > 360:
+            self.heading_deg = self.heading_deg % 360
         # convert the angle to radians
         tilt = np.deg2rad(self.parameters.tilt_deg)
         roll = np.deg2rad(self.parameters.roll_deg)
