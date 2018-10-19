@@ -485,6 +485,48 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 
+    def generateLUT(self, undef_value=0):
+        """
+        Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
+
+        Parameters
+        ----------
+        undef_value: number, optional
+            what values undefined positions should have, default=0
+
+        Returns
+        -------
+        LUT: ndarray
+            same length as image height
+        """
+
+        def get_square(x, y):
+            p0 = [x - 0.5, y - 0.5]
+            p1 = [x + 0.5, y - 0.5]
+            p2 = [x + 0.5, y + 0.5]
+            p3 = [x - 0.5, y + 0.5]
+            return np.array([p0, p1, p2, p3])
+
+        def calc_quadrilateral_size(rect):
+            A, B, C, D = rect
+            return 0.5 * abs((A[1] - C[1]) * (D[0] - B[0]) + (B[1] - D[1]) * (A[0] - C[0]))
+
+        x = self.image_width_px / 2
+
+        horizon = self.getImageHorizon([x])
+        y_stop = max([0, int(horizon[0, 1])])
+        y_start = self.image_height_px
+
+        y_lookup = np.zeros(self.image_height_px) + undef_value
+
+        for y in range(y_stop, y_start):
+            rect = get_square(x, y)
+            rect = self.spaceFromImage(rect, Z=0)
+            A = calc_quadrilateral_size(rect)
+            y_lookup[y] = A
+
+        return y_lookup
+
     def save(self, filename):
         keys = self.parameters.parameters.keys()
         export_dict = {key: getattr(self, key) for key in keys}
