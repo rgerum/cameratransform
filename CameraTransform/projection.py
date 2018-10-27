@@ -32,10 +32,10 @@ class CameraProjection(ClassWithParameterSet):
         if view_x_deg is not None or view_y_deg is not None:
             if sensor_width_mm is None:
                 if view_x_deg is not None:
-                    self.sensor_width_mm = self.sensorFromFOV(view_x_deg=view_x_deg)
+                    self.sensor_width_mm = self.sensorFromFOV(view_x=view_x_deg)
                     self.sensor_height_mm = self.image_height_px / self.image_width_px * self.sensor_width_mm
                 elif view_y_deg is not None:
-                    self.sensor_height_mm = self.sensorFromFOV(view_y_deg=view_y_deg)
+                    self.sensor_height_mm = self.sensorFromFOV(view_y=view_y_deg)
                     self.sensor_width_mm = self.image_width_px / self.image_height_px * self.sensor_height_mm
             else:
                 self.focallength_mm = self.focallengthFromFOV(view_x_deg, view_y_deg)
