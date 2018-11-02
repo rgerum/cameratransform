@@ -567,7 +567,7 @@ class Camera(ClassWithParameterSet):
         keys = self.parameters.parameters.keys()
         export_dict = {key: getattr(self, key) for key in keys}
         with open(filename, "w") as fp:
-            fp.write(json.dumps(export_dict))
+            fp.write(json.dumps(export_dict, indent=4))
 
     def load(self, filename):
         with open(filename, "r") as fp:
