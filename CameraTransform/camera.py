@@ -176,6 +176,20 @@ class CameraGroup(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
+    def sampled_fit(self, cost_function, sample_function, N=1000):
+        names = self.parameters.get_fit_parameters()
+        fits = []
+        for i in range(N):
+            print("Sample", i)
+            sample_function()
+            r = self.fit(cost_function)
+            fits.append(r["x"])
+        fit_data = np.array(fits)
+        for i, name in enumerate(names):
+            data = fit_data[:, i]
+            self.parameters.parameters[name].set_stats(np.mean(data), np.std(data))
+        return fit_data
+
     def intersectionOfTwoLines(self, p1, v1, p2, v2):
         """
         Get the point closest to the intersection of two lines. The lines are given by one point (p1 and p2) and a
@@ -292,6 +306,20 @@ class Camera(ClassWithParameterSet):
         p = minimize(cost, estimates, bounds=ranges, method=self.fit_method)
         self.parameters.set_fit_parameters(names, p["x"])
         return p
+
+    def sampled_fit(self, cost_function, sample_function, N=1000):
+        names = self.parameters.get_fit_parameters()
+        fits = []
+        for i in range(N):
+            print("Sample", i)
+            sample_function()
+            r = self.fit(cost_function)
+            fits.append(r["x"])
+        fit_data = np.array(fits)
+        for i, name in enumerate(names):
+            data = fit_data[:, i]
+            self.parameters.parameters[name].set_stats(np.mean(data), np.std(data))
+        return fit_data
 
     def fitCamParametersFromObjects(self, points_foot, points_head, object_height=1, object_elevation=0, points_horizon=None):
         """
