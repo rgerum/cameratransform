@@ -1,3 +1,4 @@
+import numpy as np
 
 STATE_DEFAULT = 0
 STATE_USER_SET = 1
@@ -11,7 +12,7 @@ TYPE_DISTORTION = 1 << 4
 
 
 class Parameter(object):
-    __slots__ = ["value", "range", "state", "type", "default", "callback"]
+    __slots__ = ["value", "range", "state", "type", "default", "callback", "std", "mean"]
 
     def __init__(self, value=None, range=None, default=None, state=None, type=TYPE_INTRINSIC, callback=None):
         self.value = value
@@ -27,6 +28,19 @@ class Parameter(object):
                 self.state = STATE_USER_SET
         self.type = type
         self.callback = callback
+
+    def sample(self):
+        if self.mean is not None:
+            self.value = np.random.normal(self.mean, self.std)
+
+    def set_to_mean(self):
+        if self.mean is not None:
+            self.value = self.mean
+
+    def set_stats(self, mean, std):
+        self.mean = mean
+        self.value = mean
+        self.std = std
 
 
 class DefaultAccess(object):
@@ -68,7 +82,11 @@ class ParameterSet(object):
     def __setattr__(self, key, value):
         if key in self.parameters:
             parameter_obj = self.parameters[key]
-            parameter_obj.value = value
+            if isinstance(value, tuple):
+                parameter_obj.set_stats(*value)
+            else:
+                parameter_obj.mean = None
+                parameter_obj.value = value
             parameter_obj.state = STATE_USER_SET
             if parameter_obj.callback is not None:
                 parameter_obj.callback()
@@ -112,3 +130,21 @@ class ClassWithParameterSet(object):
         if self.parameters is not None and key in self.parameters.parameters:
             return setattr(self.parameters, key, value)
         return object.__setattr__(self, key, value)
+
+    def sample(self):
+        callbacks = set()
+        for name, parameter_obj in self.parameters.parameters.items():
+            parameter_obj.sample()
+            if parameter_obj.callback is not None:
+                callbacks.add(parameter_obj.callback)
+        for call in callbacks:
+            call()
+
+    def set_to_mean(self):
+        callbacks = set()
+        for name, parameter_obj in self.parameters.parameters.items():
+            parameter_obj.set_to_mean()
+            if parameter_obj.callback is not None:
+                callbacks.add(parameter_obj.callback)
+        for call in callbacks:
+            call()
