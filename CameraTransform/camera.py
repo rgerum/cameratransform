@@ -160,6 +160,9 @@ class CameraGroup(ClassWithParameterSet):
 
         self.cameras = [Camera(projection, orientation) for projection, orientation in zip(projection, orientation_list)]
 
+    def getBaseline(self):
+        return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
+
     def fit(self, cost_function):
         names = self.parameters.get_fit_parameters()
         ranges = self.parameters.get_parameter_ranges(names)
@@ -204,6 +207,39 @@ class CameraGroup(ClassWithParameterSet):
         p1, v1 = self.cameras[0].getRay(points1)
         p2, v2 = self.cameras[1].getRay(points2)
         return self.intersectionOfTwoLines(p1, v1, p2, v2)
+
+    def distanceOfTwoLines(self, p1, v1, p2, v2):
+        """
+        Get the point closest to the intersection of two lines. The lines are given by one point (p1 and p2) and a
+        direction vector v (v1 and v2). If a batch should be processed, the multiple direction vectors can be given.
+        """
+        # if we transform multiple points in one go
+        if len(v1.shape) == 2:
+            a1 = np.einsum('ij,ij->i', v1, v1)
+            a2 = np.einsum('ij,ij->i', v1, v2)
+            b1 = -np.einsum('ij,ij->i', v2, v1)
+            b2 = -np.einsum('ij,ij->i', v2, v2)
+            c1 = -np.einsum('ij,j->i', v1, p1 - p2)
+            c2 = -np.einsum('ij,j->i', v2, p1 - p2)
+            res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]).transpose(2, 0, 1), np.array([c1, c2]).T)
+            res = res[:, None, :]
+            #print("res[..., 0]", res[..., 0], res[..., 1], np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1))
+            return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)#+(res[..., 0]<10)*999+(res[..., 1]<10)*999
+        else:  # or just one point
+            a1 = np.dot(v1, v1)
+            a2 = np.dot(v1, v2)
+            b1 = -np.dot(v2, v1)
+            b2 = -np.dot(v2, v2)
+            c1 = -np.dot(v1, p1 - p2)
+            c2 = -np.dot(v2, p1 - p2)
+            res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
+            res = res[None, None, :]
+            return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)[0]
+
+    def discanteBetweenRays(self, points1, points2):
+        p1, v1 = self.cameras[0].getRay(points1, normed=True)
+        p2, v2 = self.cameras[1].getRay(points2, normed=True)
+        return self.distanceOfTwoLines(p1, v1, p2, v2)
 
     def imagesFromSpace(self, points):
         return [cam.imageFromSpace(points) for cam in self.cameras]
