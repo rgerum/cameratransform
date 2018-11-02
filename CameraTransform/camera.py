@@ -8,6 +8,7 @@ from scipy.optimize import minimize
 from .parameter_set import ParameterSet, ClassWithParameterSet
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
+from .lens_distortion import NoDistortion
 
 
 def _getSensorFromDatabase(model):
@@ -277,21 +278,29 @@ class Camera(ClassWithParameterSet):
 
     R_earth = 6371e3
 
-    def __init__(self, projection, orientation=None):
+    def __init__(self, projection, orientation=None, lens=None):
         self.projection = projection
         if orientation is None:
             orientation = SpatialOrientation()
         self.orientation = orientation
+        if lens is None:
+            lens = NoDistortion
+        self.lens = lens
+        self.lens.scale = np.linalg.norm(np.array([self.projection.image_width_px, self.projection.image_height_px])) / 2
+        self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px])
 
         params = {}
         params.update(self.projection.parameters.parameters)
         params.update(self.orientation.parameters.parameters)
+        params.update(self.lens.parameters.parameters)
         self.parameters = ParameterSet(**params)
 
     def __str__(self):
         string = "CameraTransform(\n"
+        string += str(self.lens)
         string += str(self.projection)
         string += str(self.orientation)
+        string += ")"
         return string
 
     def fit(self, cost_function):
@@ -450,7 +459,7 @@ class Camera(ClassWithParameterSet):
         # ensure that the points are provided as an array
         points = np.array(points)
         # project the points from the space to the camera and from the camera to the image
-        return self.projection.imageFromCamera(self.orientation.cameraFromSpace(points))
+        return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points)))
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
@@ -459,7 +468,7 @@ class Camera(ClassWithParameterSet):
         offset = self.orientation.spaceFromCamera([0, 0, 0])
         # get the direction fo the ray from the points
         # the projection provides the ray in camera coordinates, which we convert to the space coordinates
-        direction = self.orientation.spaceFromCamera(self.projection.getRay(points, normed=normed), direction=True)
+        direction = self.orientation.spaceFromCamera(self.projection.getRay(self.lens.imageFromDistorted(points), normed=normed), direction=True)
         # return the offset point and the direction of the ray
         return offset, direction
 
