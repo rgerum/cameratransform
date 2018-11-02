@@ -52,7 +52,7 @@ class SpatialOrientation(ClassWithParameterSet):
         string += "  position:\n"
         string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m)
         string += "  orientation:\n"
-        string += "    tilt:\t\t%f°\n    roll:\t\t%f°\n    heading:\t%f°\n)" % (self.parameters.tilt_deg, self.parameters.roll_deg, self.parameters.heading_deg)
+        string += "    tilt:\t\t%f°\n    roll:\t\t%f°\n    heading:\t%f°\n" % (self.parameters.tilt_deg, self.parameters.roll_deg, self.parameters.heading_deg)
         return string
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
