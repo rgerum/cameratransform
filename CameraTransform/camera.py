@@ -172,8 +172,8 @@ class CameraGroup(ClassWithParameterSet):
     def getBaseline(self):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
 
-    def fit(self, cost_function):
-        names = self.parameters.get_fit_parameters()
+    def fit(self, cost_function, param_type=None):
+        names = self.parameters.get_fit_parameters(param_type)
         ranges = self.parameters.get_parameter_ranges(names)
         estimates = self.parameters.get_parameter_defaults(names)
 
@@ -185,8 +185,8 @@ class CameraGroup(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def sampled_fit(self, cost_function, sample_function, N=1000):
-        names = self.parameters.get_fit_parameters()
+    def sampled_fit(self, cost_function, sample_function, N=1000, param_type=None):
+        names = self.parameters.get_fit_parameters(param_type)
         fits = []
         for i in range(N):
             print("Sample", i)
@@ -294,7 +294,7 @@ class Camera(ClassWithParameterSet):
         if lens is None:
             lens = NoDistortion()
         self.lens = lens
-        self.lens.scale = np.linalg.norm(np.array([self.projection.image_width_px, self.projection.image_height_px])) / 2
+        self.lens.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
         self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px]) / 2
 
         params = {}
@@ -311,8 +311,8 @@ class Camera(ClassWithParameterSet):
         string += ")"
         return string
 
-    def fit(self, cost_function):
-        names = self.parameters.get_fit_parameters()
+    def fit(self, cost_function, param_type=None):
+        names = self.parameters.get_fit_parameters(param_type)
         ranges = self.parameters.get_parameter_ranges(names)
         estimates = self.parameters.get_parameter_defaults(names)
 
@@ -324,8 +324,8 @@ class Camera(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def sampled_fit(self, cost_function, sample_function, N=1000):
-        names = self.parameters.get_fit_parameters()
+    def sampled_fit(self, cost_function, sample_function, N=1000, param_type=None):
+        names = self.parameters.get_fit_parameters(param_type)
         fits = []
         for i in range(N):
             print("Sample", i)

@@ -10,6 +10,8 @@ TYPE_EXTRINSIC1 = 1 << 2
 TYPE_EXTRINSIC2 = 1 << 3
 TYPE_DISTORTION = 1 << 4
 
+TYPE_EXTRINSIC = TYPE_EXTRINSIC1 | TYPE_EXTRINSIC2
+
 
 class Parameter(object):
     __slots__ = ["value", "range", "state", "type", "default", "callback", "std", "mean"]
@@ -93,9 +95,12 @@ class ParameterSet(object):
         else:
             return object.__setattr__(self, key, value)
 
-    def get_fit_parameters(self):
+    def get_fit_parameters(self, type=None):
         fit_param_names = []
         for name, param in self.parameters.items():
+            # if a type is given only use the parameters of this type
+            if type is not None and not param.type & type:
+                continue
             if param.state != STATE_USER_SET or param.value is None:
                 fit_param_names.append(name)
         return fit_param_names
