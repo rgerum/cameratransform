@@ -58,8 +58,8 @@ class TestTransforms(unittest.TestCase):
     @given(ct_st.camera())
     def test_transFieldOfView(self, cam):
         viewX, viewY = cam.projection.getFieldOfView()
-        focalX = cam.projection.fieldOfViewToFocallength(viewX)
-        focalY = cam.projection.fieldOfViewToFocallength(view_y=viewY)
+        focalX = cam.projection.focallengthFromFOV(viewX)
+        focalY = cam.projection.focallengthFromFOV(view_y=viewY)
         np.testing.assert_almost_equal(cam.projection.focallength_mm, focalX, 2,
                                        err_msg="Converting focallength to view and back failed.")
         np.testing.assert_almost_equal(cam.projection.focallength_mm, focalY, 2,
