@@ -8,7 +8,7 @@ from scipy.optimize import minimize
 from .parameter_set import ParameterSet, ClassWithParameterSet
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
-from .lens_distortion import NoDistortion
+from .lens_distortion import NoDistortion, LensDistortion
 
 
 def _getSensorFromDatabase(model):
@@ -131,35 +131,43 @@ def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=Tr
 
 
 class CameraGroup(ClassWithParameterSet):
-    def __init__(self, projection, orientation_list=None):
-        self.projection_list = projection
-        self.orientation_list = orientation_list
+    projection_list = None
+    orientation_list = None
+    lens_list = None
+
+    def __init__(self, projection, orientation=None, lens=None):
+        self.N = 1
+
+        def checkCount(parameter, class_type, parameter_name, default):
+            if parameter is None:
+                setattr(self, parameter_name, [default()])
+            elif isinstance(parameter, class_type):
+                setattr(self, parameter_name, [parameter])
+            else:
+                setattr(self, parameter_name, list(parameter))
+                self.N = len(getattr(self, parameter_name))
+
+        checkCount(projection, CameraProjection, "projection_list", RectilinearProjection)
+        checkCount(orientation, SpatialOrientation, "orientation_list", SpatialOrientation)
+        checkCount(lens, LensDistortion, "lens_list", NoDistortion)
 
         params = {}
-        if isinstance(self.projection_list, CameraProjection):
-            params.update(self.projection_list.parameters.parameters)
-            if not isinstance(self.orientation_list, SpatialOrientation):
-                projection = itertools.cycle((projection,))
+        def gatherParameters(parameter_list):
+            if len(parameter_list) == 1:
+                params.update(parameter_list[0].parameters.parameters)
             else:
-                projection = (projection, )
-        else:  # if not, we expect a list
-            for index, proj in enumerate(self.projection_list):
-                for name in proj.parameters.parameters:
-                    params["C%d_%s" % (index, name)] = proj.parameters.parameters[name]
+                for index, proj in enumerate(parameter_list):
+                    for name in proj.parameters.parameters:
+                        params["C%d_%s" % (index, name)] = proj.parameters.parameters[name]
 
-        if isinstance(self.orientation_list, SpatialOrientation):
-            params.update(self.orientation_list.parameters.parameters)
-            if not isinstance(self.projection_list, CameraProjection):
-                orientation_list = itertools.cycle((orientation_list,))
-            else:
-                orientation_list = (orientation_list,)
-        else:
-            for index, orientation in enumerate(orientation_list):
-                for name in orientation.parameters.parameters:
-                    params["C%d_%s" % (index, name)] = orientation.parameters.parameters[name]
+        gatherParameters(self.projection_list)
+        gatherParameters(self.orientation_list)
+        gatherParameters(self.lens_list)
+
         self.parameters = ParameterSet(**params)
 
-        self.cameras = [Camera(projection, orientation) for projection, orientation in zip(projection, orientation_list)]
+        self.cameras = [Camera(projection, orientation, lens) for index, projection, orientation, lens in
+                        zip(range(self.N), itertools.cycle(self.projection_list), itertools.cycle(self.orientation_list), itertools.cycle(self.lens_list))]
 
     def getBaseline(self):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
