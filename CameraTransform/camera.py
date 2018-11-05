@@ -292,7 +292,7 @@ class Camera(ClassWithParameterSet):
             orientation = SpatialOrientation()
         self.orientation = orientation
         if lens is None:
-            lens = NoDistortion
+            lens = NoDistortion()
         self.lens = lens
         self.lens.scale = np.linalg.norm(np.array([self.projection.image_width_px, self.projection.image_height_px])) / 2
         self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px]) / 2
