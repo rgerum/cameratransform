@@ -287,7 +287,7 @@ class Camera(ClassWithParameterSet):
             lens = NoDistortion
         self.lens = lens
         self.lens.scale = np.linalg.norm(np.array([self.projection.image_width_px, self.projection.image_height_px])) / 2
-        self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px])
+        self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px]) / 2
 
         params = {}
         params.update(self.projection.parameters.parameters)
