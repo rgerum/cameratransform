@@ -88,3 +88,51 @@ class BrownLensDistortion(LensDistortion):  # pragma: no cover
         points[np.isnan(points)] = 0
         # rescale back to the image
         return points * self.scale + self.offset
+
+
+class ABCDistortion(LensDistortion):  # pragma: no cover
+
+    def __init__(self, a=None, b=None, c=None):
+        self.parameters = ParameterSet(
+            # the intrinsic parameters
+            a=Parameter(a, default=0, type=TYPE_DISTORTION),
+            b=Parameter(b, default=0, type=TYPE_DISTORTION),
+            c=Parameter(c, default=0, type=TYPE_DISTORTION),
+        )
+        for name in self.parameters.parameters:
+            self.parameters.parameters[name].callback = self._init_inverse
+        self._init_inverse()
+
+    def _init_inverse(self):
+        self.d = 1 - self.a - self.b - self.c
+        r = np.arange(0, 2, 0.1)
+        self._convert_radius_inverse = invert_function(r, self._convert_radius)
+
+    def _convert_radius(self, r):
+        return self.d * r + self.c * r**2 + self.b * r**3 + self.a * r**4
+
+    def imageFromDistorted(self, points):
+        # ensure that the points are provided as an array
+        # and rescale the points to that the center is at 0 and the border at 1
+        points = (np.array(points)-self.offset)/self.scale
+        # calculate the radius form the center
+        r = np.linalg.norm(points, axis=1)[:, None]
+        # transform the points
+        points = points / r * self._convert_radius_inverse(r)
+        # set nans to 0
+        points[np.isnan(points)] = 0
+        # rescale back to the image
+        return points * self.scale + self.offset
+
+    def distortedFromImage(self, points):
+        # ensure that the points are provided as an array
+        # and rescale the points to that the center is at 0 and the border at 1
+        points = (np.array(points)-self.offset)/self.scale
+        # calculate the radius form the center
+        r = np.linalg.norm(points, axis=1)[:, None]
+        # transform the points
+        points = points / r * self._convert_radius(r)
+        # set nans to 0
+        points[np.isnan(points)] = 0
+        # rescale back to the image
+        return points * self.scale + self.offset
