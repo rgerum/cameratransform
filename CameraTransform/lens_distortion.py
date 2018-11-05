@@ -4,10 +4,15 @@ from .parameter_set import ClassWithParameterSet, ParameterSet, Parameter, TYPE_
 
 def invert_function(x, func):
     from scipy import interpolate
+    from scipy.interpolate import dfitpack
     y = func(x)
     dy = np.concatenate(([0], np.diff(y)))
     y = y[dy>=0]
-    inter = interpolate.InterpolatedUnivariateSpline(y, x)
+    x = x[dy>=0]
+    try:
+        inter = interpolate.InterpolatedUnivariateSpline(y, x)
+    except Exception:  # dfitpack.error
+        inter = lambda x: x
     return inter
 
 
