@@ -5,7 +5,7 @@ import itertools
 import matplotlib.pyplot as plt
 import cv2
 from scipy.optimize import minimize
-from .parameter_set import ParameterSet, ClassWithParameterSet
+from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion
@@ -297,7 +297,7 @@ class Camera(ClassWithParameterSet):
         self.lens.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
         self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px]) / 2
 
-        params = {}
+        params = dict(gps_lat=Parameter(0, default=0, type=TYPE_GPS), gps_lon=Parameter(0, default=0, type=TYPE_GPS))
         params.update(self.projection.parameters.parameters)
         params.update(self.orientation.parameters.parameters)
         params.update(self.lens.parameters.parameters)
@@ -310,6 +310,22 @@ class Camera(ClassWithParameterSet):
         string += str(self.orientation)
         string += ")"
         return string
+
+    def setGPSpos(self, lat, lon=None, elevation=None):
+        # if it is a string
+        if isinstance(lat, str):
+            lat, lon, elevation = gps.gpsFromString(lat, height=elevation)
+        else:
+            # if it is a tuple
+            try:
+                lat, lon, elevation = gps.splitGPS(lat)
+            # or if it is just a single value
+            except AttributeError:
+                pass
+        self.gps_lat = lat
+        self.gps_lon = lon
+        if elevation is not None:
+            self.elevation_m = elevation
 
     def fit(self, cost_function, param_type=None):
         names = self.parameters.get_fit_parameters(param_type)
@@ -513,6 +529,28 @@ class Camera(ClassWithParameterSet):
         # ignore points that are behind the camera (e.g. trying to project points above the horizon to the ground)
         points[factor < 0] = np.nan
         return points
+
+    def gpsFromSpace(self, points):
+        return gps.gpsFromSpace(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
+
+    def spaceFromGPS(self, points):
+        return gps.spaceFromGPS(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
+
+    def gpsFromImage(self, points, X=None, Y=None, Z=0, D=None):
+        return self.gpsFromSpace(self.spaceFromImage(points, X=X, Y=Y, Z=Z, D=D))
+
+    def imageFromGPS(self, points):
+        return self.imageFromSpace(self.spaceFromGPS(points))
+
+    def getObjectHeight(self, point_feet, point_heads, Z=0):
+        # get the feet positions in the world
+        point3D_feet = self.spaceFromImage(point_feet, Z=Z)
+        # get the head positions in the world
+        point3D_head1 = self.spaceFromImage(point_heads, Y=point3D_feet[:, 1])
+        point3D_head2 = self.spaceFromImage(point_heads, X=point3D_feet[:, 0])
+        point3D_head = np.mean([point3D_head1, point3D_head2], axis=0)
+        # the z difference between these two points
+        return point3D_head[:, 2] - point3D_feet[:, 2]
 
     def getMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
