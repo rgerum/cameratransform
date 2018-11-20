@@ -229,8 +229,6 @@ class EquirectangularProjection(CameraProjection):
         transformed_points = np.array([self.focallength_px_x * np.arctan(points[..., 0] / points[..., 2]) + self.center_x_px,
                                        -self.focallength_px_y * np.arctan(points[..., 1] / np.sqrt(
                                            points[..., 0] ** 2 + points[..., 2] ** 2)) + self.center_y_px]).T
-        # ignore points that are behind the camera
-        transformed_points[points[..., 2] > 0] = np.nan
         # return the points
         return transformed_points
 
