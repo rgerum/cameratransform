@@ -282,6 +282,10 @@ class Camera(ClassWithParameterSet):
     last_extent = None
     last_scaling = None
 
+    map_undistort = None
+    last_extent_undistort = None
+    last_scaling_undistort = None
+
     fit_method = None
 
     R_earth = 6371e3
@@ -551,6 +555,55 @@ class Camera(ClassWithParameterSet):
         point3D_head = np.mean([point3D_head1, point3D_head2], axis=0)
         # the z difference between these two points
         return point3D_head[:, 2] - point3D_feet[:, 2]
+
+    def getUndistortMap(self, extent=None, scaling=None):
+        # if no extent is given, take the maximum extent from the image border
+        if extent is None:
+            extent = [0, self.image_width_px, self.image_height_px, 0]
+
+        # if we have cached the map, use the cached map
+        if self.map_undistort is not None and \
+                self.last_extent_undistort == extent and \
+                self.last_scaling_undistort == scaling:
+            return self.map_undistort
+
+        # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
+        if scaling is None:
+            scaling = 1
+
+        # get a mesh grid
+        mesh = np.array(np.meshgrid(np.arange(extent[0], extent[1], scaling),
+                                    np.arange(extent[2], extent[3], scaling)))
+
+        # convert it to a list of points Nx2
+        mesh_points = mesh.reshape(2, mesh.shape[1] * mesh.shape[2]).T
+
+        # transform the space points to the image
+        mesh_points_shape = self.lens.distortedFromImage(mesh_points)
+
+        # reshape the map and cache it
+        self.map_undistort = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[:, ::-1, :]
+
+        self.last_extent_undistort = extent
+        self.last_scaling_undistort = scaling
+
+        # return the calculated map
+        return self.map_undistort
+
+    def undistortImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None):
+        x, y = self.getUndistortMap(extent=extent, scaling=scaling)
+        # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
+        if len(im.shape) == 2:
+            pass
+        elif im.shape[2] == 3:
+            im = np.dstack((im, np.ones(shape=(im.shape[0], im.shape[1], 1), dtype="uint8") * 255))
+        image = cv2.remap(im, x, y,
+                          interpolation=cv2.INTER_NEAREST,
+                          borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
+        if do_plot:
+            plt.imshow(image, extent=self.last_extent_undistort, alpha=alpha)
+            plt.gca().invert_yaxis()
+        return image
 
     def getMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
