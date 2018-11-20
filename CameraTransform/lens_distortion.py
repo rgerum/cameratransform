@@ -44,8 +44,9 @@ class NoDistortion(LensDistortion):
 
 
 class BrownLensDistortion(LensDistortion):  # pragma: no cover
+    projection = None
 
-    def __init__(self, k1=None, k2=None, k3=None):
+    def __init__(self, k1=None, k2=None, k3=None, projection=None):
         self.parameters = ParameterSet(
             # the intrinsic parameters
             k1=Parameter(k1, default=0, range=(0, None), type=TYPE_DISTORTION),
@@ -56,9 +57,29 @@ class BrownLensDistortion(LensDistortion):  # pragma: no cover
             self.parameters.parameters[name].callback = self._init_inverse
         self._init_inverse()
 
+    def setProjection(self, projection):
+        self.projection = projection
+        self.parameters = ParameterSet(
+            k1=self.parameters.parameters["k1"],
+            k2=self.parameters.parameters["k2"],
+            k3=self.parameters.parameters["k3"],
+            image_width_px=self.projection.parameters.parameters["image_width_px"],
+            image_height_px=self.projection.parameters.parameters["image_height_px"],
+            focallength_x_px=self.projection.parameters.parameters["focallength_x_px"],
+            focallength_y_px=self.projection.parameters.parameters["focallength_y_px"],
+            center_x_px=self.projection.parameters.parameters["center_x_px"],
+            center_y_px=self.projection.parameters.parameters["center_y_px"],
+        )
+        for name in self.parameters.parameters:
+            self.parameters.parameters[name].callback = self._init_inverse
+        self._init_inverse()
+
     def _init_inverse(self):
         r = np.arange(0, 2, 0.1)
         self._convert_radius_inverse = invert_function(r, self._convert_radius)
+        if self.projection is not None:
+            self.scale = np.array([self.projection.focallength_x_px, self.projection.focallength_y_px])
+            self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
 
     def _convert_radius(self, r):
         return r*(1 + self.parameters.k1*r**2 + self.parameters.k2*r**4 + self.parameters.k3*r**6)
@@ -70,7 +91,7 @@ class BrownLensDistortion(LensDistortion):  # pragma: no cover
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=1)[:, None]
         # transform the points
-        points = points / r * self._convert_radius(r)
+        points = points / r * self._convert_radius_inverse(r)
         # set nans to 0
         points[np.isnan(points)] = 0
         # rescale back to the image
@@ -83,7 +104,7 @@ class BrownLensDistortion(LensDistortion):  # pragma: no cover
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=1)[:, None]
         # transform the points
-        points = points / r * self._convert_radius_inverse(r)
+        points = points / r * self._convert_radius(r)
         # set nans to 0
         points[np.isnan(points)] = 0
         # rescale back to the image
@@ -98,6 +119,10 @@ class ABCDistortion(LensDistortion):  # pragma: no cover
             a=Parameter(a, default=0, type=TYPE_DISTORTION),
             b=Parameter(b, default=0, type=TYPE_DISTORTION),
             c=Parameter(c, default=0, type=TYPE_DISTORTION),
+            image_width_px=self.projection.parameters["image_width_px"],
+            image_height_px=self.projection.parameters["image_height_px"],
+            focalllength_mm=self.projection.parameters["focalllength_mm"],
+            sensor_width_mm=self.projection.parameters["sensor_width_mm"],
         )
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._init_inverse
@@ -107,6 +132,9 @@ class ABCDistortion(LensDistortion):  # pragma: no cover
         self.d = 1 - self.a - self.b - self.c
         r = np.arange(0, 2, 0.1)
         self._convert_radius_inverse = invert_function(r, self._convert_radius)
+
+        self.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
+        self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
 
     def _convert_radius(self, r):
         return self.d * r + self.c * r**2 + self.b * r**3 + self.a * r**4
