@@ -58,10 +58,10 @@ class CameraProjection(ClassWithParameterSet):
         if view_x_deg is not None or view_y_deg is not None:
             if sensor_width_mm is None:
                 if view_x_deg is not None:
-                    self.sensor_width_mm = self.sensorFromFOV(view_x=view_x_deg)
+                    self.sensor_width_mm = self.imageFromFOV(view_x=view_x_deg)
                     self.sensor_height_mm = self.image_height_px / self.image_width_px * self.sensor_width_mm
                 elif view_y_deg is not None:
-                    self.sensor_height_mm = self.sensorFromFOV(view_y=view_y_deg)
+                    self.sensor_height_mm = self.imageFromFOV(view_y=view_y_deg)
                     self.sensor_width_mm = self.image_width_px / self.image_height_px * self.sensor_height_mm
             else:
                 self.focallength_mm = self.focallengthFromFOV(view_x_deg, view_y_deg)
@@ -121,22 +121,22 @@ class RectilinearProjection(CameraProjection):
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(2 * np.arctan(self.sensor_width_mm / (2 * self.focallength_mm))), \
-               np.rad2deg(2 * np.arctan(self.sensor_height_mm / (2 * self.focallength_mm)))
+        return np.rad2deg(2 * np.arctan(self.image_width_px / (2 * self.focallength_x_px))), \
+               np.rad2deg(2 * np.arctan(self.image_height_px / (2 * self.focallength_y_px)))
 
     def focallengthFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            return self.sensor_width_mm / (2 * np.tan(np.deg2rad(view_x) / 2))
+            return self.image_width_px / (2 * np.tan(np.deg2rad(view_x) / 2))
         else:
-            return self.sensor_height_mm / (2 * np.tan(np.deg2rad(view_y) / 2))
+            return self.image_height_px / (2 * np.tan(np.deg2rad(view_y) / 2))
         
-    def sensorFromFOV(self, view_x=None, view_y=None):
+    def imageFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            # sensor_width_mm
-            return self.focallength_mm * (2 * np.tan(np.deg2rad(view_x) / 2))
+            # image_width_px
+            return self.focallength_x_px * (2 * np.tan(np.deg2rad(view_x) / 2))
         else:
-            # sensor_height_mm
-            return self.focallength_mm * (2 * np.tan(np.deg2rad(view_y) / 2))
+            # image_height_px
+            return self.focallength_y_px * (2 * np.tan(np.deg2rad(view_y) / 2))
 
 
 class CylindricalProjection(CameraProjection):
@@ -178,22 +178,22 @@ class CylindricalProjection(CameraProjection):
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(self.sensor_width_mm / self.focallength_mm), \
-               np.rad2deg(2 * np.arctan(self.sensor_height_mm / (2 * self.focallength_mm)))
+        return np.rad2deg(self.image_width_px / self.focallength_x_px), \
+               np.rad2deg(2 * np.arctan(self.image_height_px / (2 * self.focallength_y_px)))
 
     def focallengthFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            return self.sensor_width_mm / np.deg2rad(view_x)
+            return self.image_width_px / np.deg2rad(view_x)
         else:
-            return self.sensor_height_mm / (2 * np.tan(np.deg2rad(view_y) / 2))
+            return self.image_height_px / (2 * np.tan(np.deg2rad(view_y) / 2))
 
-    def sensorFromFOV(self, view_x=None, view_y=None):
+    def imageFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            # sensor_width_mm
-            return self.focallength_mm * np.deg2rad(view_x)
+            # image_width_px
+            return self.focallength_x_px * np.deg2rad(view_x)
         else:
-            # sensor_height_mm
-            return self.focallength_mm * (2 * np.tan(np.deg2rad(view_y) / 2))
+            # image_height_px
+            return self.focallength_y_px * (2 * np.tan(np.deg2rad(view_y) / 2))
 
 
 class EquirectangularProjection(CameraProjection):
@@ -233,19 +233,19 @@ class EquirectangularProjection(CameraProjection):
         return transformed_points
 
     def getFieldOfView(self):
-        return np.rad2deg(self.sensor_width_mm / self.focallength_mm),\
-               np.rad2deg(self.sensor_height_mm / self.focallength_mm)
+        return np.rad2deg(self.image_width_mm / self.focallength_x_px),\
+               np.rad2deg(self.image_height_mm / self.focallength_y_px)
 
     def focallengthFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            return self.sensor_width_mm / np.deg2rad(view_x)
+            return self.image_width_mm / np.deg2rad(view_x)
         else:
-            return self.sensor_height_mm / np.deg2rad(view_y)
+            return self.image_height_mm / np.deg2rad(view_y)
 
-    def sensorFromFOV(self, view_x=None, view_y=None):
+    def imageFromFOV(self, view_x=None, view_y=None):
         if view_x is not None:
-            # sensor_width_mm
-            return self.focallength_mm * np.deg2rad(view_x)
+            # image_width_mm
+            return self.focallength_x_px * np.deg2rad(view_x)
         else:
-            # sensor_height_mm
-            return self.focallength_mm * np.deg2rad(view_y)
+            # image_height_mm
+            return self.focallength_y_px * np.deg2rad(view_y)
