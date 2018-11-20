@@ -96,9 +96,9 @@ class RectilinearProjection(CameraProjection):
         # ensure that the points are provided as an array
         points = np.array(points)
         # set z=focallenth and solve the other equations for x and y
-        ray = np.array([points[..., 0] - self.center_x_px,
-                        points[..., 1] - self.center_y_px,
-                        np.zeros(points[..., 1].shape) + self.focallength_x_px]).T
+        ray = np.array([(points[..., 0] - self.center_x_px) / self.focallength_x_px,
+                        (points[..., 1] - self.center_y_px) / self.focallength_y_px,
+                        np.ones(points[..., 1].shape)]).T
         # norm the ray if desired
         if normed:
             ray /= np.linalg.norm(ray, axis=-1)[..., None]
@@ -107,9 +107,9 @@ class RectilinearProjection(CameraProjection):
 
     def imageFromCamera(self, points):
         """
-                        x                              y
-            x_im = f * --- + offset_x      y_im = f * --- + offset_y
-                        z                              z
+                          x                                y
+            x_im = f_x * --- + offset_x      y_im = f_y * --- + offset_y
+                          z                                z
         """
         points = np.array(points)
         # set small z distances to 0
