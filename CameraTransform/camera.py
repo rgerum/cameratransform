@@ -559,7 +559,7 @@ class Camera(ClassWithParameterSet):
     def getUndistortMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
-            extent = [0, self.image_width_px, self.image_height_px, 0]
+            extent = [0, self.image_width_px, 0, self.image_height_px]
 
         # if we have cached the map, use the cached map
         if self.map_undistort is not None and \
@@ -599,10 +599,11 @@ class Camera(ClassWithParameterSet):
             im = np.dstack((im, np.ones(shape=(im.shape[0], im.shape[1], 1), dtype="uint8") * 255))
         image = cv2.remap(im, x, y,
                           interpolation=cv2.INTER_NEAREST,
-                          borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
+                          borderValue=[0, 1, 0, 0])[::-1]  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
-            plt.imshow(image, extent=self.last_extent_undistort, alpha=alpha)
-            plt.gca().invert_yaxis()
+            extent = self.last_extent_undistort.copy()
+            extent[2], extent[3] = extent[3]-1, extent[2]-1
+            plt.imshow(image, extent=extent, alpha=alpha)
         return image
 
     def getMap(self, extent=None, scaling=None):
