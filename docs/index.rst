@@ -12,6 +12,8 @@ the camera space to the world space and back.
 
    installation
    general
+   lens_distortion
+   projections
    fitting
    api
 
