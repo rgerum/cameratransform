@@ -1,6 +1,9 @@
 Projections
 ===========
 
+.. tip::
+    Projections transforms from the **image** to **camera** coordinate system. Parameters are :math:`f_x, f_y, c_x, c_y` and the image size in px.
+
 This section describes the different projections which are available for the projection of the objects in the camera
 **coordinate system** to the **image coordinates**.
 
@@ -17,6 +20,12 @@ same point in the camera coordinate system. The center of the image is
 :math:`x_\mathrm{center},y_\mathrm{center}` and :math:`f_x` and :math:`f_y` are the focal lengths in pixel (focal length in mm divided by
 the sensor width/height in mm times the image width/height in pixel), both focal lengths are the same for quadratic pixels on the sensor.
 
+Parameters
+----------
+- ``focallength_x_px``, :math:`f_x`: the focal length of the camera relative to the width of a pixel on the sensor.
+- ``focallength_y_px``, :math:`f_y`: the focal length of the camera relative to the height of a pixel on the sensor.
+- ``center_x_px``, :math:`c_x`: the central point  of the image in pixels. Typically about half of the image width in pixels.
+- ``center_y_px``, :math:`c_y`: the central point of the image in pixels. Typically about half of the image height in pixels.
 
 Rectilinear Projection
 ----------------------

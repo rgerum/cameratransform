@@ -1,6 +1,9 @@
 Lens Distortions
 ================
 
+.. tip::
+    Lens distortion transforms from the **distorted** to **image**. Parameters are :math:`k_1, k_2, k_3` or :math:`a, b, c`.
+
 As often the lenses of cameras do not provide a perfect projection on the image plane but introduce some distortions,
 applications that work with images need to include the distortions of the lens. The distortions are mostly radial
 distortions, but some use also skew and tangential components. CameraTransform does currently only allow for radial
