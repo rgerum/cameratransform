@@ -84,7 +84,7 @@ def projection(draw, view_x_deg=st.floats(1, 80), width=st.integers(10, 1000), s
     sensor_width, sensor_height = draw(sensor)
     height = int(width / sensor_width * sensor_height)
     projection_type = draw(projection_type)
-    return projection_type(None, height, width, sensor_height, sensor_width, view_x_deg=view_x_deg)
+    return projection_type(None, image_height_px=height, image_width_px=width, sensor_height_mm=sensor_height, sensor_width_mm=sensor_width, view_x_deg=view_x_deg)
 
 
 @st.composite

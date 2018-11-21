@@ -38,6 +38,9 @@ class LensDistortion(ClassWithParameterSet):  # pragma: no cover
             string += "    %s:\t\t%.3f\n" % (name, getattr(self, name))
         return string
 
+    def setProjection(self, projection):
+        pass
+
 
 class NoDistortion(LensDistortion):
     pass
