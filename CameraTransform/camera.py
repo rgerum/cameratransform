@@ -554,7 +554,7 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=extent, alpha=alpha)
         return image
 
-    def getMap(self, extent=None, scaling=None):
+    def getMap(self, extent=None, scaling=None, Z=0):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             border = self.getImageBorder()
@@ -578,7 +578,7 @@ class Camera(ClassWithParameterSet):
 
         # convert it to a list of points Nx2
         mesh_points = mesh.reshape(2, mesh.shape[1] * mesh.shape[2]).T
-        mesh_points = np.hstack((mesh_points, np.zeros((mesh_points.shape[0], 1))))
+        mesh_points = np.hstack((mesh_points, Z*np.ones((mesh_points.shape[0], 1))))
 
         # transform the space points to the image
         mesh_points_shape = self.imageFromSpace(mesh_points)
@@ -592,8 +592,8 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None):
-        x, y = self.getMap(extent=extent, scaling=scaling)
+    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None, Z=0.):
+        x, y = self.getMap(extent=extent, scaling=scaling, Z=Z)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
         if len(im.shape) == 2:
             pass
