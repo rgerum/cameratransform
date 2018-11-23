@@ -3,62 +3,63 @@ import re
 
 
 def formatGPS(lat, lon, format=None, asLatex=False):
-    """ Formats a latiture, longitude pair in degress according to the format string.
-        The format string can contain a %s, to denote the letter symbol (N, S, W, E) and up to three number formaters (%d or %f), to
-        denote the degrees, minutes and seconds. To not lose precision, the last one can be float number.
+    """
+    Formats a latitude, longitude pair in degrees according to the format string.
+    The format string can contain a %s, to denote the letter symbol (N, S, W, E) and up to three number formaters
+    (%d or %f), to denote the degrees, minutes and seconds. To not lose precision, the last one can be float number.
 
-        common formats are e.g.:
+    common formats are e.g.:
 
-           +--------------------------------+--------------------------------------+
-           | format                         | output                               |
-           +================================+===================+==================+
-           | %2d° %2d' %6.3f" %s (default)  | 70° 37'  4.980" S | 8°  9' 26.280" W |
-           +--------------------------------+-------------------+------------------+
-           | %2d° %2d.3f %s                 | 70° 37.083 S      | 8°  9.438 W      |
-           +--------------------------------+-------------------+------------------+
-           | %2d°                           | -70.618050°       | -8.157300°       |
-           +--------------------------------+-------------------+------------------+
+       +--------------------------------+--------------------------------------+
+       | format                         | output                               |
+       +================================+===================+==================+
+       | %2d° %2d' %6.3f" %s (default)  | 70° 37'  4.980" S | 8°  9' 26.280" W |
+       +--------------------------------+-------------------+------------------+
+       | %2d° %2d.3f %s                 | 70° 37.083 S      | 8°  9.438 W      |
+       +--------------------------------+-------------------+------------------+
+       | %2d°                           | -70.618050°       | -8.157300°       |
+       +--------------------------------+-------------------+------------------+
 
-        Parameters
-        ----------
-        lat: number
-            the latitude in degrees
-        lon: number
-            the longitude in degrees
-        format: string
-            the format string
-        asLatex: bool
-            whether to encode the degree symbol
+    Parameters
+    ----------
+    lat: number
+        the latitude in degrees
+    lon: number
+        the longitude in degrees
+    format: string
+        the format string
+    asLatex: bool
+        whether to encode the degree symbol
 
-        Returns
-        -------
-        lat: string
-            the formatted latitude
-        lon: string
-            the formatted longitude
+    Returns
+    -------
+    lat: string
+        the formatted latitude
+    lon: string
+        the formatted longitude
 
-        Examples
-        --------
+    Examples
+    --------
 
-        >>> import CameraTransform as ct
+    >>> import CameraTransform as ct
 
-        Convert a coordinate pair to a formatted string:
+    Convert a coordinate pair to a formatted string:
 
-        >>> lat, lon = ct.formatGPS(-70.61805, -8.1573)
-        >>> print(lat)
-        70° 37'  4.980" S
-        >>> print(lon)
-         8°  9' 26.280" W
+    >>> lat, lon = ct.formatGPS(-70.61805, -8.1573)
+    >>> print(lat)
+    70° 37'  4.980" S
+    >>> print(lon)
+     8°  9' 26.280" W
 
-        or with a different format:
+    or with a different format:
 
-        >>> lat, lon = ct.formatGPS(-70.61805, -8.1573, format="%2d° %2d.3f %s")
-        >>> print(lat)
-        70° 37.3f S
-        >>> print(lon)
-         8°  9.3f W
+    >>> lat, lon = ct.formatGPS(-70.61805, -8.1573, format="%2d° %2d.3f %s")
+    >>> print(lat)
+    70° 37.3f S
+    >>> print(lon)
+     8°  9.3f W
 
-        """
+    """
     import re
     # default format
     if format is None:
@@ -135,6 +136,23 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     return result
 
 def gpsFromString(gps_string, height=None):
+    """
+    Read a gps coordinate from a text string in different formats, e.g. `70° 37’ 4.980” S 8° 9’ 26.280” W`,
+    `70° 37.083 S 8° 9.438 W`, or `-70.618050° -8.157300°`.
+
+    Parameters
+    ----------
+    gps_string : str
+        the string of the gps point, containing both latitude and longitude.
+    height : float, optional
+        the height of the gps point.
+
+    Returns
+    -------
+    point : list
+        a list containing, lat, lon, (height) of the given point.
+
+    """
     regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)'\s*(?P<sec>[\d.]+)(''|\"| )\s*",
                   r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)'\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
@@ -165,13 +183,35 @@ def gpsFromString(gps_string, height=None):
                 return gps + [height]
 
 
-def getBearing(x, y):
-    lat1, lon1, h1 = splitGPS(x)
-    lat2, lon2, h2 = splitGPS(y)
+def getBearing(point1, point2):
+    r"""
+    The angle relative :math:`\beta` to the north direction from point :math:`(\mathrm{lat}_1, \mathrm{lon}_1)` to point :math:`(\mathrm{lat}_2, \mathrm{lon}_2)`:
+
+    .. math::
+        \Delta\mathrm{lon} &= \mathrm{lon}_2 - \mathrm{lon}_1\\
+        X &= \cos(\mathrm{lat}_2) \cdot \sin(\Delta\mathrm{lon})\\
+        Y &= \cos(\mathrm{lat}_1) \cdot \sin(\mathrm{lat}_2) - \sin(\mathrm{lat}_1) \cdot \cos(\mathrm{lat}_2) \cdot \cos(\Delta\mathrm{lon})\\
+        \beta &= \arctan2(X, Y)
+
+    Parameters
+    ----------
+    point1 : ndarray
+        the first point from which to calculate the bearing, dimensions (2), (3), (Nx2), (Nx3)
+    point2 : ndarray
+        the second point to which to calculate the bearing, dimensions (2), (3), (Nx2), (Nx3)
+
+    Returns
+    -------
+    bearing : float, ndarray
+        the bearing angle in degree, dimensions (), (N)
+
+    """
+    lat1, lon1, h1 = splitGPS(point1)
+    lat2, lon2, h2 = splitGPS(point2)
     dL = lon2-lon1
     X = np.cos(lat2) * np.sin(dL)
     Y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dL)
-    beta = np.arctan2(X, Y)
+    beta = np.arctan(X/Y)
     return np.rad2deg(beta)
 
 def splitGPS(x):
@@ -184,16 +224,32 @@ def splitGPS(x):
         h1 = None
     return lat1, lon1, h1
 
-def getDistance(x, y):
-    """
-    Calculate the great circle distance between two points
+def getDistance(point1, point2):
+    r"""
+    Calculate the great circle distance between two points :math:`(\mathrm{lat}_1, \mathrm{lon}_1)` and :math:`(\mathrm{lat}_2, \mathrm{lon}_2)`
     on the earth (specified in decimal degrees)
 
-    All args must be of equal length.
+    .. math::
+        \Delta\mathrm{lon} &= \mathrm{lon}_2 - \mathrm{lon}_1\\
+        \Delta\mathrm{lat} &= \mathrm{lat}_2 - \mathrm{lat}_1\\
+        a &= \sin(\Delta\mathrm{lat}/2)^2 + \cos(\mathrm{lat}_1) \cdot \cos(\mathrm{lat}_2) \cdot \sin(\Delta\mathrm{lat}/2)^2\\
+        d &= 6371\,\mathrm{km} \cdot 2 \arccos(\sqrt a)
+
+    Parameters
+    ----------
+    point1 : ndarray
+        the start point from which to calculate the distance, dimensions (2), (3), (Nx2), (Nx3)
+    point2 : ndarray
+        the end point to which to calculate the distance, dimensions (2), (3), (Nx2), (Nx3)
+
+    Returns
+    -------
+    distance : float, ndarray
+        the distance in m, dimensions (), (N)
 
     """
-    lat1, lon1, h1 = splitGPS(x)
-    lat2, lon2, h2 = splitGPS(y)
+    lat1, lon1, h1 = splitGPS(point1)
+    lat2, lon2, h2 = splitGPS(point2)
 
     dlon = lon2 - lon1
     dlat = lat2 - lat1
@@ -209,19 +265,49 @@ def getDistance(x, y):
 
     return km
 
-def spaceFromGPS(gps, gps0):
-    distance = getDistance(gps0, gps)
-    bearing = getBearing(gps0, gps)
-    return np.array([distance * np.sin(np.deg2rad(bearing)), distance * np.cos(np.deg2rad(bearing)), gps[..., 2]]).T
+def moveDistance(start, distance, bearing):
+    r"""
+    Moving from :math:`(\mathrm{lat}_1, \mathrm{lon}_1)` a distance of :math:`d` in the direction of :math:`\beta`:
 
-def gpsFromSpace(space, gps0):
-    lat1, lon1, h1 = splitGPS(gps0)
-    bearing = np.arctan2(space[..., 1], space[..., 0])
-    distance = np.linalg.norm(space, axis=-1)
+    .. math::
+        R &= 6371\,\mathrm{km}\\
+        \mathrm{lat}_2 &= \arcsin(\sin(\mathrm{lat}_1) \cdot \cos(d / R) +
+                         \cos(\mathrm{lat}_1) \cdot \sin(d / R) \cdot \cos(\beta))\\
+        \mathrm{lon}_2 &= \mathrm{lon}_1 + \arctan\left(\frac{\sin(\beta) \cdot \sin(d / R) \cdot \cos(\mathrm{lat}_1)}{
+                                 \cos(d / R) - \sin(\mathrm{lat}_1) \cdot \sin(\mathrm{lat}_2)}\right)
+
+    Parameters
+    ----------
+    start : ndarray
+        the start point from which to calculate the distance, dimensions (2), (3), (Nx2), (Nx3)
+    distance : float, ndarray
+        the distance to move in m, dimensions (), (N)
+    bearing : float, ndarray
+        the bearing angle, specifiing in which direction to move, dimensions (), (N)
+
+    Returns
+    -------
+    target : ndarray
+        the target point, dimensions (2), (3), (Nx2), (Nx3)
+    """
+    lat1, lon1, h1 = splitGPS(start)
     R = 6371e3
     lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) +
                      np.cos(lat1) * np.sin(distance / R) * np.cos(bearing))
 
     lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
                              np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
-    return np.array([np.rad2deg(lat2), np.rad2deg(lon2), space[..., 2]]).T
+    return np.array([np.rad2deg(lat2), np.rad2deg(lon2)]).T
+
+def spaceFromGPS(gps, gps0):
+    distance = getDistance(gps0, gps)
+    bearing = getBearing(gps0, gps)
+    return np.array([distance * np.sin(np.deg2rad(bearing)), distance * np.cos(np.deg2rad(bearing)), gps[..., 2]]).T
+
+def gpsFromSpace(space, gps0):
+    bearing = np.arctan2(space[..., 1], space[..., 0])
+    distance = np.linalg.norm(space, axis=-1)
+    target = moveDistance(gps0, distance, bearing).T
+    if space.shape[-1] == 3:
+        return np.array([target[..., 0], target[..., 1], space[..., 2]]).T
+    return target
