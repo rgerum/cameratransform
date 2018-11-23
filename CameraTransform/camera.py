@@ -246,8 +246,7 @@ class Camera(ClassWithParameterSet):
         if lens is None:
             lens = NoDistortion()
         self.lens = lens
-        self.lens.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
-        self.lens.offset = np.array([self.projection.image_width_px, self.projection.image_height_px]) / 2
+        self.lens.setProjection(projection)
 
         params = dict(gps_lat=Parameter(0, default=0, type=TYPE_GPS), gps_lon=Parameter(0, default=0, type=TYPE_GPS))
         params.update(self.projection.parameters.parameters)
@@ -264,6 +263,32 @@ class Camera(ClassWithParameterSet):
         return string
 
     def setGPSpos(self, lat, lon=None, elevation=None):
+        """
+        Provide the earth position for the camera.
+
+        Parameters
+        ----------
+        lat: number, string
+            the latitude of the camera or the string representing the gps position.
+        lon: number, optional
+            the longitude of the camera.
+        elevation: number, optional
+            the elevation of the camera.
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> cam = ct.Camera()
+
+        Supply the gps position of the camera as floats:
+
+        >>> cam.setGPSpos(-66.66, 140.00, 19)
+
+        or as a string:
+
+        >>> cam.setGPSpos("66°39'53.4\"S	140°00'34.8\"")
+        """
         # if it is a string
         if isinstance(lat, str):
             lat, lon, elevation = gps.gpsFromString(lat, height=elevation)
@@ -432,12 +457,40 @@ class Camera(ClassWithParameterSet):
         return np.array(border)
 
     def imageFromSpace(self, points):
+        """
+        Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **space** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **image** coordinate system, dimensions (2), (Nx2)
+        """
         # ensure that the points are provided as an array
         points = np.array(points)
         # project the points from the space to the camera and from the camera to the image
         return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points)))
 
     def getRay(self, points, normed=False):
+        """
+        Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **image** coordinates to transform, dimensions (2), (Nx2)
+
+        Returns
+        -------
+        offset : ndarray
+            the origin of the camera (= starting point of the rays) in **space** coordinates, dimensions (3)
+        rays : ndarray
+            the rays in the **space** coordinate system, dimensions (3), (Nx3)
+        """
         # ensure that the points are provided as an array
         points = np.array(points)
         # get the camera position in space (the origin of the camera coordinate system)
@@ -449,6 +502,28 @@ class Camera(ClassWithParameterSet):
         return offset, direction
 
     def spaceFromImage(self, points, X=None, Y=None, Z=0, D=None):
+        """
+        Convert points (Nx2) from the **image** coordinate system to the **space** coordinate system. This is not a unique
+        transformation, therefore an additional constraint has to be provided. The X, Y, or Z coordinate(s) of the target
+        points can be provided or the distance D from the camera.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **image** coordinates to transform, dimensions (2), (Nx2)
+        X : number, ndarray, optional
+            the X coordinate in **space** coordinates of the target points, dimensions scalar, (N)
+        Y : number, ndarray, optional
+            the Y coordinate in **space** coordinates of the target points, dimensions scalar, (N)
+        Z : number, ndarray, optional
+            the Z coordinate in **space** coordinates of the target points, dimensions scalar, (N), default 0
+        D : number, ndarray, optional
+            the distance in **space** coordinates of the target points from the camera, dimensions scalar, (N)
+        Returns
+        -------
+        points : ndarray
+            the points in the **space** coordinate system, dimensions (3), (Nx3)
+        """
         # ensure that the points are provided as an array
         points = np.array(points)
         # get the index which coordinate to force to the given value
@@ -483,15 +558,67 @@ class Camera(ClassWithParameterSet):
         return points
 
     def gpsFromSpace(self, points):
+        """
+        Convert points (Nx3) from the **space** coordinate system to the **gps** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **space** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **gps** coordinate system, dimensions (3), (Nx3)
+        """
         return gps.gpsFromSpace(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
 
     def spaceFromGPS(self, points):
+        """
+        Convert points (Nx3) from the **gps** coordinate system to the **space** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **gps** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **space** coordinate system, dimensions (3), (Nx3)
+        """
         return gps.spaceFromGPS(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
 
     def gpsFromImage(self, points, X=None, Y=None, Z=0, D=None):
+        """
+        Convert points (Nx2) from the **image** coordinate system to the **gps** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **image** coordinates to transform, dimensions (2), (Nx2)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **gps** coordinate system, dimensions (3), (Nx3)
+        """
         return self.gpsFromSpace(self.spaceFromImage(points, X=X, Y=Y, Z=Z, D=D))
 
     def imageFromGPS(self, points):
+        """
+        Convert points (Nx3) from the **gps** coordinate system to the **image** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **gps** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **image** coordinate system, dimensions (2), (Nx2)
+        """
         return self.imageFromSpace(self.spaceFromGPS(points))
 
     def getObjectHeight(self, point_feet, point_heads, Z=0):

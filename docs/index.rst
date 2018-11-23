@@ -15,6 +15,7 @@ the camera space to the world space and back.
    lens_distortion
    projections
    spatial
+   gps
    fitting
    api
 

@@ -4,24 +4,61 @@ import json
 
 
 class SpatialOrientation(ClassWithParameterSet):
-    """
-        CameraTransform class to calculate the position of objects from an image in 3D based
-        on camera intrinsic parameters and observer position
+    r"""
+    The orientation can be represented as a matrix multiplication in *projective coordinates*. First, we define rotation
+    matrices around the three angles: *tilt*, *roll*, *heading*:
 
-        Parameters
-        ----------
-        focal_length: number
-            focal length of the camera in mm
-        sensor_size: tuple or number
-            sensor size in mm, can be either a tuple (width, height) or just a the width, then the height
-            is inferred from the aspect ratio of the image
-        image_size: tuple or ndarray
-            image size in pixel [width, height] or a numpy array representing the image
-        observer_height: number
-            observer elevation in m
-        angel_to_horizon: number
-            angle between the z-axis and the horizon
-        """
+    .. math::
+        R_{\mathrm{tilt}} &=
+        \begin{pmatrix}
+        1 & 0 & 0\\
+        0 & \cos(\alpha_\mathrm{tilt}) & \sin(\alpha_\mathrm{tilt}) \\
+        0 & -\sin(\alpha_\mathrm{tilt}) & \cos(\alpha_\mathrm{tilt}) \\
+         \end{pmatrix}\\
+         R_{\mathrm{roll}} &=
+        \begin{pmatrix}
+        \cos(\alpha_\mathrm{roll}) & \sin(\alpha_\mathrm{roll}) & 0\\
+        -\sin(\alpha_\mathrm{roll}) & \cos(\alpha_\mathrm{roll}) & 0\\
+        0 & 0 & 1\\
+         \end{pmatrix}\\
+         R_{\mathrm{heading}} &=
+        \begin{pmatrix}
+        \cos(\alpha_\mathrm{heading}) & \sin(\alpha_\mathrm{heading}) & 0\\
+        -\sin(\alpha_\mathrm{heading}) & \cos(\alpha_\mathrm{heading}) & 0\\
+        0 & 0 & 1\\
+         \end{pmatrix}
+
+    And the position *x*, *y*, *z* (=elevation):
+
+    .. math::
+        t &=
+        \begin{pmatrix}
+        x\\
+        y\\
+        -\mathrm{elevation}
+         \end{pmatrix}
+
+    We combine the rotation matrices to a single rotation matrix and apply heading and tilt rotation to the translation vector:
+
+    .. math::
+        R &=  R_{\mathrm{roll}} \cdot  R_{\mathrm{tilt}} \cdot  R_{\mathrm{heading}}\\
+        T &= R_{\mathrm{tilt}} \cdot  R_{\mathrm{heading}} \cdot t\\
+
+    Finally, we compose the rotation and the translation to a single matrix in *projective coordinates*.
+
+    .. math::
+        C_{\mathrm{extr.}} &=  \left(\begin{array}{c|c}
+        R & T \\
+        \hline
+        0 & 1
+        \end{array}
+        \right)
+
+    which is equivalent to:
+
+    .. math::
+        x_\mathrm{space} = R \cdot x_\mathrm{camera} + T
+    """
 
     t = None
     R = None

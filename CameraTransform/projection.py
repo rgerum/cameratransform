@@ -4,6 +4,68 @@ from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_
 
 
 class CameraProjection(ClassWithParameterSet):
+    """
+    Defines a camera projection. The necessary parameters are:
+    focalllength_x_px, focalllength_y_px, center_x_px, center_y_px, image_width_px, image_height_px. Depending on the
+    information available different initialisation routines can be used.
+
+    .. note::
+        This is the base class for projections. it the should not be instantiated. Available projections are
+        :py:class:`RectilinearProjection`, :py:class:`CylindricalProjection`, or :py:class:`EquirectangularProjection`.
+
+    Examples
+    --------
+
+    This section provides some examples how the projections can be initialized.
+
+    >>> import CameraTransform as ct
+
+    **Image Dimensions**:
+
+    The image dimensions can be provided as two values:
+
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, image_width_px=4608, image_height_px=3456)
+
+    or as a tuple:
+
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, image=(4608, 3456))
+
+    or by providing a numpy array of an example image:
+
+    >>> import matplotlib.pyplot as plt
+    >>> im = plt.imread("test.jpg")
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, image=im)
+
+    **Focal Length**:
+
+    The focal length can be provided in mm, when also a sensor size is provided:
+
+    >>> projection = ct.RectilinearProjection(focallength_mm=14, sensor=(17.3, 9.731), image=(4608, 3456))
+
+    or directly in pixels without the sensor size:
+
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, image=(4608, 3456))
+
+    or as a tuple to give different focal lengths in x and y direction, if the pixels on the sensor are not square:
+
+    >>> projection = ct.RectilinearProjection(focallength_px=(3772, 3774), image=(4608, 3456))
+
+    or the focal length is given by providing a field of view angle:
+
+    >>> projection = ct.RectilinearProjection(view_x_deg=61.617, image=(4608, 3456))
+
+    >>> projection = ct.RectilinearProjection(view_y_deg=48.192, image=(4608, 3456))
+
+    **Central Point**:
+
+    If the position of the optical axis or center of the image is not provided, it is assumed to be in the middle of the
+    image. But it can be specifided, as two values or a tuple:
+
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, center=(2304, 1728), image=(4608, 3456))
+
+    >>> projection = ct.RectilinearProjection(focallength_px=3863.64, center_x_px=2304, center_y_px=1728, image=(4608, 3456))
+
+    """
 
     def __init__(self, focallength_px=None, center_x_px=None, center_y_px=None, center=None, focallength_mm=None, image_width_px=None, image_height_px=None,
                  sensor_width_mm=None, sensor_height_mm=None, image=None, sensor=None, view_x_deg=None, view_y_deg=None):
@@ -90,8 +152,80 @@ class CameraProjection(ClassWithParameterSet):
         for key in variables:
             setattr(self, key, variables[key])
 
+    def getFieldOfView(self):
+        """
+        The field of view of the projection in x (width, horizontal) and y (height, vertical) direction.
+
+        Returns
+        -------
+        view_x_deg : float
+            the horizontal field of view in degree.
+        view_y_deg : float
+            the vertical field of view in degree.
+        """
+        # to be overloaded by the child class.
+        return 0, 0
+
+    def focallengthFromFOV(self, view_x=None, view_y=None):
+        """
+        The focal length (in x or y direction) based on the given field of view.
+
+        Parameters
+        ----------
+        view_x : float
+            the field of view in x direction in degrees. If not given only view_y is processed.
+        view_y : float
+            the field of view in y direction in degrees. If not given only view_y is processed.
+
+        Returns
+        -------
+        focallength_px : float
+            the focal length in pixels.
+        """
+        # to be overloaded by the child class.
+        return 0
+
+    def imageFromFOV(self, view_x=None, view_y=None):
+        """
+        The image width or height in pixel based on the given field of view.
+
+        Parameters
+        ----------
+        view_x : float
+            the field of view in x direction in degrees. If not given only view_y is processed.
+        view_y : float
+            the field of view in y direction in degrees. If not given only view_y is processed.
+
+        Returns
+        -------
+        width/height : float
+            the width or height in pixels.
+        """
+        # to be overloaded by the child class.
+        return 0
+
 
 class RectilinearProjection(CameraProjection):
+    r"""
+    This projection is the standard "pin-hole", or frame camera model, which is the most common projection for single images. The angles
+    :math:`\pm 180°` are projected to :math:`\pm \infty`. Therefore, the maximal possible field of view in this projection
+    would be 180° for an infinitely large image.
+
+    **Projection**:
+
+    .. math::
+        x_\mathrm{im} &= f_x \cdot \frac{x}{z} + c_x\\
+        y_\mathrm{im} &= f_y \cdot \frac{y}{z} + c_y
+
+    **Rays**:
+
+    .. math::
+        \vec{r} = \begin{pmatrix}
+            (x_\mathrm{im} - c_x/f_x\\
+            (y_\mathrm{im} - c_y/f_y\\
+            1\\
+        \end{pmatrix}
+    """
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
@@ -141,6 +275,26 @@ class RectilinearProjection(CameraProjection):
 
 
 class CylindricalProjection(CameraProjection):
+    r"""
+    This projection is a common projection used for panoranic images. This projection is often used
+    for wide panoramic images, as it can cover the full 360° range in the x-direction. The poles cannot
+    be represented in this projection, as they would be projected to :math:`y = \pm\infty`.
+
+    **Projection**:
+
+    .. math::
+        x_\mathrm{im} &= f_x \cdot \arctan{\left(\frac{x}{z}\right)} + c_x\\
+        y_\mathrm{im} &= f_y \cdot \frac{y}{\sqrt{x^2+z^2}} + c_y
+
+    **Rays**:
+
+    .. math::
+        \vec{r} = \begin{pmatrix}
+            \sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
+            \frac{y_\mathrm{im} - c_y}{f_y}\\
+            \cos\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)
+        \end{pmatrix}
+    """
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
@@ -198,6 +352,25 @@ class CylindricalProjection(CameraProjection):
 
 
 class EquirectangularProjection(CameraProjection):
+    r"""
+    This projection is a common projection used for panoranic images. The projection can cover the
+    full range of angles in both x and y direction.
+
+    **Projection**:
+
+    .. math::
+        x_\mathrm{im} &= f_x \cdot \arctan{\left(\frac{x}{z}\right)} + c_x\\
+        y_\mathrm{im} &= f_y \cdot \arctan{\left(\frac{y}{\sqrt{x^2+z^2}}\right)} + c_y
+
+    **Rays**:
+
+    .. math::
+        \vec{r} = \begin{pmatrix}
+            \sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
+            \tan\left(\frac{y_\mathrm{im} - c_y}{f_y}\right)\\
+            \cos\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)
+        \end{pmatrix}
+    """
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array

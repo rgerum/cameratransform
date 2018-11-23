@@ -17,7 +17,7 @@ the world.
 
 The coordinates :math:`x_\mathrm{im},y_\mathrm{im}` represent a point in the image pixel coordinates, :math:`x,y,z` the
 same point in the camera coordinate system. The center of the image is
-:math:`x_\mathrm{center},y_\mathrm{center}` and :math:`f_x` and :math:`f_y` are the focal lengths in pixel (focal length in mm divided by
+:math:`c_x,c_y` and :math:`f_x` and :math:`f_y` are the focal lengths in pixel (focal length in mm divided by
 the sensor width/height in mm times the image width/height in pixel), both focal lengths are the same for quadratic pixels on the sensor.
 
 Parameters
@@ -26,75 +26,49 @@ Parameters
 - ``focallength_y_px``, :math:`f_y`: the focal length of the camera relative to the height of a pixel on the sensor.
 - ``center_x_px``, :math:`c_x`: the central point  of the image in pixels. Typically about half of the image width in pixels.
 - ``center_y_px``, :math:`c_y`: the central point of the image in pixels. Typically about half of the image height in pixels.
+- ``image_width_px``, :math:`\mathrm{im}_\mathrm{width}`: the width of the image in pixels.
+- ``image_height_px``, :math:`\mathrm{im}_\mathrm{height}`: the height of the image in pixels.
+
+Indirect Parameters
+-------------------
+- ``focallength_mm``, :math:`f_\mathrm{mm}`: the focal length of the camera in mm.
+- ``sensor_width_mm``, :math:`\mathrm{sensor}_\mathrm{width}`: the width of the sensor in mm.
+- ``sensor_height_mm``, :math:`\mathrm{sensor}_\mathrm{height}`: the height of the sensor in mm.
+- ``view_x_deg``, :math:`\alpha_x`: the field of view in x direction (width) in degree.
+- ``view_y_deg``, :math:`\alpha_y`: the field of view in y direction (height) in degree.
+
+Functions
+---------
+
+.. currentmodule:: CameraTransform
+
+.. autoclass:: CameraProjection
+
+.. automethod:: Camera.imageFromSpace
+.. automethod:: Camera.getRay
+.. automethod:: Camera.spaceFromImage
+.. automethod:: CameraProjection.getFieldOfView
+.. automethod:: CameraProjection.focallengthFromFOV
+.. automethod:: CameraProjection.imageFromFOV
+
+Projections
+-----------
+
+All projections share the same interface, as explained above, but implement different image projections.
 
 Rectilinear Projection
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
-**Class**: :py:class:`RectilinearProjection`
-
-This projection is the standard "pin-hole" camera model, which is the most common projection for single images. The angles
-:math:`\pm 180°` are projected to :math:`\pm \infty`. Therefore, the maximal possible field of view in this projection
-would be 180° for an infinitely large image.
-
-**Projection**:
-
-.. math::
-    x_\mathrm{im} = f_x \cdot \frac{x}{z} + x_\mathrm{center}\\
-    y_\mathrm{im} = f_y \cdot \frac{y}{z} + y_\mathrm{center}
-
-**Rays**:
-
-.. math::
-    \vec{r} = \begin{pmatrix}
-        (x_\mathrm{im} - x_\mathrm{center}/f_x\\
-        (y_\mathrm{im} - y_\mathrm{center}/f_y\\
-        1\\
-    \end{pmatrix}
-
+.. autoclass:: RectilinearProjection
 
 Cylindrical Projection
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
-**Class**: :py:class:`CylindricalProjection`
+.. autoclass:: CylindricalProjection
 
-This projection is a common projection used for panoranic images. This projection is often used
-for wide panoramic images, as it can cover the full 360° range in the x-direction. The poles cannot
-be represented in this projection, as they would be projected to :math:`y = \pm\infty`.
-
-**Projection**:
-
-.. math::
-    x_\mathrm{im} = f_x \cdot \arctan{\left(\frac{x}{z}\right)} + x_\mathrm{center}\\
-    y_\mathrm{im} = f_y \cdot \frac{y}{\sqrt{x^2+z^2}} + y_\mathrm{center}
-
-**Rays**:
-
-.. math::
-    \vec{r} = \begin{pmatrix}
-        \sin\left(\frac{x_\mathrm{im} - x_\mathrm{center}}{f_x}\right)\\
-        \frac{y_\mathrm{im} - y_\mathrm{center}}{f_y}\\
-        \cos\left(\frac{x_\mathrm{im} - x_\mathrm{center}}{f_x}\right)
-    \end{pmatrix}
 
 Equirectangular Projection
---------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Class**: :py:class:`EquirectangularProjection`
+.. autoclass:: EquirectangularProjection
 
-This projection is a common projection used for panoranic images. The projection can cover the
-full range of angles in both x and y direction.
-
-**Projection**:
-
-.. math::
-    x_\mathrm{im} = f_x \cdot \arctan{\left(\frac{x}{z}\right)} + x_\mathrm{center}\\
-    y_\mathrm{im} = f_y \cdot \arctan{\left(\frac{y}{\sqrt{x^2+z^2}}\right)} + y_\mathrm{center}
-
-**Rays**:
-
-.. math::
-    \vec{r} = \begin{pmatrix}
-        \sin\left(\frac{x_\mathrm{im} - x_\mathrm{center}}{f_x}\right)\\
-        \tan\left(\frac{y_\mathrm{im} - y_\mathrm{center}}{f_y}\right)\\
-        \cos\left(\frac{x_\mathrm{im} - x_\mathrm{center}}{f_x}\right)
-    \end{pmatrix}

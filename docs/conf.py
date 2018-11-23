@@ -7,8 +7,26 @@ import os
 import shlex
 
 import mock
-MOCK_MODULES = ['numpy', 'scipy', 'scipy.optimize', 'numpy.core.multiarray']
-sys.modules.update((mod_name, mock.MagicMock()) for mod_name in MOCK_MODULES)
+# try to import the modules of the package and mock everything that is not found
+while True:
+    try:
+        # here are the modules that should be imported for the documentation
+        import CameraTransform
+        import CameraTransform.projection
+        import CameraTransform.spatial
+        import CameraTransform.lens_distortion
+        from CameraTransform import camera
+    # if an import error occurs
+    except ImportError as err:
+        # get the module name from the error message
+        name = str(err).split("'")[1]
+        print("Mock:", name)
+        # and mock it
+        sys.modules.update((mod_name, mock.MagicMock()) for mod_name in [name])
+        # then try again to import it
+        continue
+    else:
+        break
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
