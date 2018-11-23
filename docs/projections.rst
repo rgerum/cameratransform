@@ -44,9 +44,8 @@ Functions
 
 .. autoclass:: CameraProjection
 
-.. automethod:: Camera.imageFromSpace
-.. automethod:: Camera.getRay
-.. automethod:: Camera.spaceFromImage
+.. automethod:: CameraProjection.imageFromCamera
+.. automethod:: CameraProjection.getRay
 .. automethod:: CameraProjection.getFieldOfView
 .. automethod:: CameraProjection.focallengthFromFOV
 .. automethod:: CameraProjection.imageFromFOV

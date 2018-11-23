@@ -97,7 +97,7 @@ class CameraProjection(ClassWithParameterSet):
         if focallength_px is not None:
             try:
                 focallength_x_px, focallength_y_px = focallength_px
-            except IndexError:
+            except TypeError:
                 focallength_x_px = focallength_px
                 focallength_y_px = focallength_px
         elif focallength_mm is not None:
@@ -151,6 +151,75 @@ class CameraProjection(ClassWithParameterSet):
             variables = json.loads(fp.read())
         for key in variables:
             setattr(self, key, variables[key])
+
+    def imageFromCamera(self, points):
+        """
+        Convert points (Nx3) from the **camera** coordinate system to the **image** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **camera** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **image** coordinate system, dimensions (2), (Nx2)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> proj = ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592))
+
+        transform a single point from the **camera** coordinates to the image:
+
+        >>> proj.imageFromCamera([-0.09, -0.27, -1.00])
+        [2639.61 2302.83]
+
+        or multiple points in one go:
+
+        >>> proj.imageFromCamera([[-0.09, -0.27, -1.00], [-0.18, -0.24, -1.00]])
+        [[2639.61 2302.83]
+         [2975.22 2190.96]]
+        """
+        # to be overloaded by the child class.
+        return None
+
+    def getRay(self, points, normed=False):
+        """
+        As the transformation from the **image** coordinate system to the **camera** coordinate system is not unique,
+        **image** points can only be uniquely mapped to a ray in **camera** coordinates.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **image** coordinates for which to get the ray, dimensions (2), (Nx2)
+
+        Returns
+        -------
+        rays : ndarray
+            the rays in the **camera** coordinate system, dimensions (3), (Nx3)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> proj = ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592))
+
+        get the ray of a point in the image:
+
+        >>> proj.getRay([1968, 2291])
+        [0.09 -0.27 -1.00]
+
+        or the rays of multiple points in the image:
+
+        >>> proj.getRay([[1968, 2291], [1650, 2189]])
+        [[0.09 -0.27 -1.00]
+         [0.18 -0.24 -1.00]]
+        """
+        # to be overloaded by the child class.
+        return None
 
     def getFieldOfView(self):
         """

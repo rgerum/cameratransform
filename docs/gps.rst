@@ -1,3 +1,5 @@
+.. _gps:
+
 Earth Position (GPS)
 ====================
 

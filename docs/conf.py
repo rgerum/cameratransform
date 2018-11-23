@@ -67,7 +67,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'CameraTransform'
-copyright = u'2017, Richard Gerum, Sebastian Richter'
+copyright = u'2017-2018, Richard Gerum, Sebastian Richter'
 author = u'Richard Gerum, Sebastian Richter'
 
 # The version info for the project you're documenting, acts as replacement for
