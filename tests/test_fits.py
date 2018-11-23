@@ -16,7 +16,7 @@ while True:
     except ImportError as err:
         # get the module name from the error message
         name = str(err).split("'")[1]
-        print("Mock:", name)
+        print("Mock:", name, file=sys.stderr)
         # and mock it
         sys.modules.update((mod_name, mock.MagicMock()) for mod_name in [name])
         # then try again to import it
@@ -31,7 +31,7 @@ class TestFits(unittest.TestCase):
     def test_fitCamParametersFromObjects(self):
         # setup the camera
         # setup the camera
-        cam = ct.Camera(ct.RectilinearProjection(6.2, 2448, 3264, 4.55, 6.17), ct.SpatialOrientation())
+        cam = ct.Camera(ct.RectilinearProjection(focallength_mm=6.2, image_height_px=2448, image_width_px=3264, sensor_width_mm=4.55, sensor_height_mm=6.17))
         # set the parameters
         cam.elevation_m = 34.025954
         cam.roll_deg = -1.933622

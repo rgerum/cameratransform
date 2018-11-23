@@ -17,7 +17,7 @@ while True:
     except ImportError as err:
         # get the module name from the error message
         name = str(err).split("'")[1]
-        print("Mock:", name)
+        print("Mock:", name, file=sys.stderr)
         # and mock it
         sys.modules.update((mod_name, mock.MagicMock()) for mod_name in [name])
         # then try again to import it
