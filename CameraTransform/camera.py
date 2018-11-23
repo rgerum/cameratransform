@@ -226,6 +226,11 @@ class CameraGroup(ClassWithParameterSet):
 
 
 class Camera(ClassWithParameterSet):
+    """
+    This class is the core of the CameraTransform package and represents a camera. Each camera has a projection
+    (subclass of :py:class:`CameraProjection`), a spatial orientation (:py:class:`SpatialOrientation`) and optionally
+    a lens distortion (subclass of :py:class:`LensDistortion`).
+    """
     map = None
     last_extent = None
     last_scaling = None
@@ -469,6 +474,24 @@ class Camera(ClassWithParameterSet):
         -------
         points : ndarray
             the points in the **image** coordinate system, dimensions (2), (Nx2)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
+        >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
+
+        transform a single point from the space to the image:
+
+        >>> cam.imageFromSpace([-4.17, 45.32, 0.])
+        [1969.52 2209.73]
+
+        or multiple points in one go:
+
+        >>> cam.imageFromSpace([[-4.03, 43.96,  0.], [-8.57, 47.91, 0.]]))
+        [[1971.05 2246.95]
+         [1652.73 2144.53]]
         """
         # ensure that the points are provided as an array
         points = np.array(points)
@@ -477,12 +500,13 @@ class Camera(ClassWithParameterSet):
 
     def getRay(self, points, normed=False):
         """
-        Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
+        As the transformation from the **image** coordinate system to the **space** coordinate system is not unique,
+        **image** points can only be uniquely mapped to a ray in **space** coordinates.
 
         Parameters
         ----------
         points : ndarray
-            the points in **image** coordinates to transform, dimensions (2), (Nx2)
+            the points in **image** coordinates for which to get the ray, dimensions (2), (Nx2)
 
         Returns
         -------
@@ -490,6 +514,30 @@ class Camera(ClassWithParameterSet):
             the origin of the camera (= starting point of the rays) in **space** coordinates, dimensions (3)
         rays : ndarray
             the rays in the **space** coordinate system, dimensions (3), (Nx3)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
+        >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
+
+        get the ray of a point in the image:
+
+        >>> offset, ray = cam.getRay([1968, 2291]))
+        >>> offset
+        [0.00 0.00 15.40]
+        >>> ray
+        [-0.09 0.97 -0.35]
+
+        or the rays of multiple points in the image:
+
+        >>> offset, ray, cam.getRay([[1968, 2291], [1650, 2189]])
+        >>> offset
+        [0.00 0.00 15.40]
+        >>> ray
+        [[-0.09 0.97 -0.35]
+         [-0.18 0.98 -0.33]]
         """
         # ensure that the points are provided as an array
         points = np.array(points)
@@ -523,6 +571,42 @@ class Camera(ClassWithParameterSet):
         -------
         points : ndarray
             the points in the **space** coordinate system, dimensions (3), (Nx3)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
+        >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
+
+        transform a single point (impliying the condition Z=0):
+
+        >>> cam.spaceFromImage([1968 , 2291])
+        [-3.93 42.45 0.00]
+
+        transform multiple points:
+
+        >>> cam.spaceFromImage([[1968 , 2291], [1650, 2189]])
+        [[-3.93 42.45 0.00]
+         [-8.29 46.11 -0.00]]
+
+        points that cannot be projected on the image, because they are behind the camera (for the RectilinearProjection)
+        are returned with nan entries:
+
+        >>> cam.imageFromSpace([-4.17, -10.1, 0.])
+        [nan nan]
+
+        specify a y coordinate as for the back projection.
+
+        >>> cam.spaceFromImage([[1968 , 2291], [1650, 2189]], Y=45)
+        [[-4.17 45.00 -0.93]
+         [-8.09 45.00 0.37]]
+
+        or different y coordinates for each point:
+
+        >>> cam.spaceFromImage([[1968 , 2291], [1650, 2189]], Y=[43, 45])
+        [[-3.98 43.00 -0.20]
+         [-8.09 45.00 0.37]]
         """
         # ensure that the points are provided as an array
         points = np.array(points)
@@ -776,12 +860,28 @@ class Camera(ClassWithParameterSet):
         return y_lookup
 
     def save(self, filename):
+        """
+        Saves the camera parameters to a json file.
+
+        Parameters
+        ----------
+        filename : str
+            the filename where to store the parameters.
+        """
         keys = self.parameters.parameters.keys()
         export_dict = {key: getattr(self, key) for key in keys}
         with open(filename, "w") as fp:
             fp.write(json.dumps(export_dict, indent=4))
 
     def load(self, filename):
+        """
+        Load the camera parameters from a json file.
+
+        Parameters
+        ----------
+        filename : str
+            the filename of the file to load.
+        """
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
         for key in variables:
@@ -789,6 +889,19 @@ class Camera(ClassWithParameterSet):
 
 
 def load_camera(filename):
+    """
+    Create a :py:class:`Camera` instance with the parameters from the file.
+
+    Parameters
+    ----------
+    filename : str
+        the filename of the file to load.
+
+    Returns
+    -------
+    camera : :py:class:`Camera`
+        the camera with the given parameters.
+    """
     cam = Camera(RectilinearProjection(), SpatialOrientation())
     cam.load(filename)
     return cam
