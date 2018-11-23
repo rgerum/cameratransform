@@ -137,9 +137,71 @@ class SpatialOrientation(ClassWithParameterSet):
         return np.dot(points, self.C_inv.T)[..., :-1]
 
     def cameraFromSpace(self, points):
+        """
+        Convert points (Nx3) from the **space** coordinate system to the **camera** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **space** coordinates to transform, dimensions (3), (Nx3)
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **camera** coordinate system, dimensions (3), (Nx3)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> orientation = ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85)
+
+        transform a single point from the space to the image:
+
+        >>> orientation.spaceFromCamera([-0.09, -0.27, -1.00])
+        [0.09 0.97 15.04]
+
+        or multiple points in one go:
+
+        >>> orientation.spaceFromCamera([[-0.09, -0.27, -1.00], [-0.18, -0.24, -1.00]])
+        [[0.09 0.97 15.04]
+         [0.18 0.98 15.07]]
+        """
         return self.transformPoints(points)
 
     def spaceFromCamera(self, points, direction=False):
+        """
+        Convert points (Nx3) from the **camera** coordinate system to the **space** coordinate system.
+
+        Parameters
+        ----------
+        points : ndarray
+            the points in **camera** coordinates to transform, dimensions (3), (Nx3)
+        direction : bool, optional
+            whether to transform a direction vector (used for the rays) which should just be rotated and not translated. Default False
+
+        Returns
+        -------
+        points : ndarray
+            the points in the **space** coordinate system, dimensions (3), (Nx3)
+
+        Examples
+        --------
+
+        >>> import CameraTransform as ct
+        >>> orientation = ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85)
+
+        transform a single point from the space to the image:
+
+        >>> orientation.spaceFromCamera([0.09 0.97 15.04])
+        [-0.09 -0.27 -1.00]
+
+        or multiple points in one go:
+
+        >>> orientation.spaceFromCamera([[0.09, 0.97, 15.04], [0.18, 0.98, 15.07]])
+        [[-0.09 -0.27 -1.00]
+         [-0.18 -0.24 -1.00]]
+        """
         return self.transformInvertedPoints(points, direction)
 
     def save(self, filename):

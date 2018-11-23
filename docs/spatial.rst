@@ -24,3 +24,6 @@ Transformation
 .. currentmodule:: CameraTransform
 
 .. autoclass:: SpatialOrientation
+
+.. automethod:: SpatialOrientation.cameraFromSpace
+.. automethod:: SpatialOrientation.spaceFromCamera
