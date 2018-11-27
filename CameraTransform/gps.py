@@ -168,7 +168,9 @@ def gpsFromString(gps_string, height=None):
                 sec = data[part+"_sec"]
                 sign = data[part+"_sign"]
                 if deg is not None:
-                    value += float(deg)
+                    value += abs(float(deg))
+                    if deg[0] == "-":
+                        sign = "S"
                 if min is not None:
                     value += float(min)/60
                 if sec is not None:
