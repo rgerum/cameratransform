@@ -549,7 +549,7 @@ class Camera(ClassWithParameterSet):
         # return the offset point and the direction of the ray
         return offset, direction
 
-    def spaceFromImage(self, points, X=None, Y=None, Z=0, D=None):
+    def spaceFromImage(self, points, X=None, Y=None, Z=0, D=None, mesh=None):
         """
         Convert points (Nx2) from the **image** coordinate system to the **space** coordinate system. This is not a unique
         transformation, therefore an additional constraint has to be provided. The X, Y, or Z coordinate(s) of the target
@@ -567,6 +567,9 @@ class Camera(ClassWithParameterSet):
             the Z coordinate in **space** coordinates of the target points, dimensions scalar, (N), default 0
         D : number, ndarray, optional
             the distance in **space** coordinates of the target points from the camera, dimensions scalar, (N)
+        mesh : ndarray, optional
+            project the image coordinates onto the mesh in **space** coordinates. The mesh is a list of M triangles,
+            consisting of three 3D points each. Dimensions, (3x3), (Mx3x3)
         Returns
         -------
         points : ndarray
@@ -619,6 +622,11 @@ class Camera(ClassWithParameterSet):
         elif Z is not None:
             index = 2
 
+        # if a mesh is provided, intersect the rays with the mesh
+        if mesh is not None:
+            # get the rays from the image points
+            offset, direction = self.getRay(points)
+            return ray.ray_intersect_triangle(offset, direction, mesh)
         # transform to a given distance
         if D is not None:
             # get the rays from the image points (in this case it has to be normed)
