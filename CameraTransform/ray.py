@@ -147,3 +147,8 @@ def extrudeLine(points, z0, z1):
             mesh.append([point + [z0], last_point + [z0], last_point + [z1]])
         last_point = point
     return np.array(mesh)
+
+def getClosestPointFromLine(origin, ray, point):
+    delta = point-origin
+    factor = np.sum(ray*delta, axis=1)
+    return origin[None, :] + factor[:, None] * ray
