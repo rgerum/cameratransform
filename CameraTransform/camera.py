@@ -867,6 +867,13 @@ class Camera(ClassWithParameterSet):
 
         return y_lookup
 
+    def rotateSpace(self, delta_heading):
+        self.heading_deg += delta_heading
+        delta_heading_rad = np.deg2rad(delta_heading)
+        pos = np.array([self.pos_x_m, self.pos_y_m])
+        s, c = np.sin(delta_heading_rad), np.cos(delta_heading_rad)
+        self.pos_x_m, self.pos_y_m = np.dot(np.array([[c, s], [-s, c]]), pos)
+
     def save(self, filename):
         """
         Saves the camera parameters to a json file.
