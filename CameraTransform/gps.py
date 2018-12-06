@@ -216,10 +216,14 @@ def getBearing(point1, point2):
     beta = np.arctan(X/Y)
     return np.rad2deg(beta)
 
-def splitGPS(x):
+def splitGPS(x, keep_deg=False):
     x = np.array(x)
-    lat1 = np.deg2rad(x[..., 0])
-    lon1 = np.deg2rad(x[..., 1])
+    if keep_deg is False:
+        lat1 = np.deg2rad(x[..., 0])
+        lon1 = np.deg2rad(x[..., 1])
+    else:
+        lat1 = x[..., 0]
+        lon1 = x[..., 1]
     try:
         h1 = x[..., 2]
     except IndexError:
@@ -307,9 +311,9 @@ def spaceFromGPS(gps, gps0):
     return np.array([distance * np.sin(np.deg2rad(bearing)), distance * np.cos(np.deg2rad(bearing)), gps[..., 2]]).T
 
 def gpsFromSpace(space, gps0):
-    bearing = np.arctan2(space[..., 1], space[..., 0])
+    bearing = np.arctan2(space[..., 0], space[..., 1])
     distance = np.linalg.norm(space, axis=-1)
-    target = moveDistance(gps0, distance, bearing).T
+    target = moveDistance(gps0, distance, bearing)
     if space.shape[-1] == 3:
         return np.array([target[..., 0], target[..., 1], space[..., 2]]).T
     return target

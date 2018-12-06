@@ -300,7 +300,7 @@ class Camera(ClassWithParameterSet):
         else:
             # if it is a tuple
             try:
-                lat, lon, elevation = gps.splitGPS(lat)
+                lat, lon, elevation = gps.splitGPS(lat, keep_deg=True)
             # or if it is just a single value
             except AttributeError:
                 pass
@@ -663,7 +663,7 @@ class Camera(ClassWithParameterSet):
         points : ndarray
             the points in the **gps** coordinate system, dimensions (3), (Nx3)
         """
-        return gps.gpsFromSpace(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
+        return gps.gpsFromSpace(points, np.array([self.gps_lat, self.gps_lon, self.elevation_m]))
 
     def spaceFromGPS(self, points):
         """
