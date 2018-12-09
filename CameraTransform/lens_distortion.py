@@ -170,17 +170,31 @@ class ABCDistortion(LensDistortion):  # pragma: no cover
 
 
     """
+    projection = None
 
     def __init__(self, a=None, b=None, c=None):
         self.parameters = ParameterSet(
             # the intrinsic parameters
             a=Parameter(a, default=0, type=TYPE_DISTORTION),
             b=Parameter(b, default=0, type=TYPE_DISTORTION),
-            c=Parameter(c, default=0, type=TYPE_DISTORTION),
-            image_width_px=self.projection.parameters["image_width_px"],
-            image_height_px=self.projection.parameters["image_height_px"],
-            focalllength_mm=self.projection.parameters["focalllength_mm"],
-            sensor_width_mm=self.projection.parameters["sensor_width_mm"],
+            c=Parameter(c, default=0, type=TYPE_DISTORTION)
+        )
+        for name in self.parameters.parameters:
+            self.parameters.parameters[name].callback = self._init_inverse
+        self._init_inverse()
+
+    def setProjection(self, projection):
+        self.projection = projection
+        self.parameters = ParameterSet(
+            a=self.parameters.parameters["a"],
+            b=self.parameters.parameters["b"],
+            c=self.parameters.parameters["c"],
+            image_width_px=self.projection.parameters.parameters["image_width_px"],
+            image_height_px=self.projection.parameters.parameters["image_height_px"],
+            focallength_x_px=self.projection.parameters.parameters["focallength_x_px"],
+            focallength_y_px=self.projection.parameters.parameters["focallength_y_px"],
+            center_x_px=self.projection.parameters.parameters["center_x_px"],
+            center_y_px=self.projection.parameters.parameters["center_y_px"],
         )
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._init_inverse
@@ -191,8 +205,9 @@ class ABCDistortion(LensDistortion):  # pragma: no cover
         r = np.arange(0, 2, 0.1)
         self._convert_radius_inverse = invert_function(r, self._convert_radius)
 
-        self.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
-        self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
+        if self.projection is not None:
+            self.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
+            self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
 
     def _convert_radius(self, r):
         return self.d * r + self.c * r**2 + self.b * r**3 + self.a * r**4
