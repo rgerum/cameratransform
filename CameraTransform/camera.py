@@ -717,11 +717,11 @@ class Camera(ClassWithParameterSet):
         # get the feet positions in the world
         point3D_feet = self.spaceFromImage(point_feet, Z=Z)
         # get the head positions in the world
-        point3D_head1 = self.spaceFromImage(point_heads, Y=point3D_feet[:, 1])
-        point3D_head2 = self.spaceFromImage(point_heads, X=point3D_feet[:, 0])
+        point3D_head1 = self.spaceFromImage(point_heads, Y=point3D_feet[..., 1])
+        point3D_head2 = self.spaceFromImage(point_heads, X=point3D_feet[..., 0])
         point3D_head = np.mean([point3D_head1, point3D_head2], axis=0)
         # the z difference between these two points
-        return point3D_head[:, 2] - point3D_feet[:, 2]
+        return point3D_head[..., 2] - point3D_feet[..., 2]
 
     def getUndistortMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
