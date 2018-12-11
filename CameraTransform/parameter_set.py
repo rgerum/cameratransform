@@ -19,6 +19,7 @@ class Parameter(object):
 
     def __init__(self, value=None, range=None, default=None, state=None, type=TYPE_INTRINSIC, callback=None):
         self.value = value
+        self.mean = None
         if range is not None:
             self.range = range
         else:
@@ -68,6 +69,7 @@ class DefaultAccess(object):
 
 
 class ParameterSet(object):
+    trace = None
     parameters = {}
 
     def __init__(self, **kwargs):
@@ -106,13 +108,18 @@ class ParameterSet(object):
                 fit_param_names.append(name)
         return fit_param_names
 
-    def set_fit_parameters(self, names, values):
+    def set_fit_parameters(self, names, values=None):
+        if isinstance(names, dict):
+            iterator = names.items()
+        else:
+            iterator = zip(names, values)
         callbacks = set()
-        for n, v in zip(names, values):
-            self.parameters[n].value = v
-            self.parameters[n].state = STATE_FIT
-            if self.parameters[n].callback is not None:
-                callbacks.add(self.parameters[n].callback)
+        for n, v in iterator:
+            if n in self.parameters:
+                self.parameters[n].value = v
+                self.parameters[n].state = STATE_FIT
+                if self.parameters[n].callback is not None:
+                    callbacks.add(self.parameters[n].callback)
         for call in callbacks:
             call()
 
@@ -138,19 +145,35 @@ class ClassWithParameterSet(object):
         return object.__setattr__(self, key, value)
 
     def sample(self):
-        callbacks = set()
-        for name, parameter_obj in self.parameters.parameters.items():
-            parameter_obj.sample()
-            if parameter_obj.callback is not None:
-                callbacks.add(parameter_obj.callback)
-        for call in callbacks:
-            call()
+        if self.parameters.trace is not None:
+            parameter_set = dict(self.parameters.trace.loc[np.random.randint(len(self.parameters.trace))])
+            prob = parameter_set["probability"]
+            del parameter_set["probability"]
+            self.parameters.set_fit_parameters(parameter_set.keys(), parameter_set.values())
+            return prob
+        else:
+            callbacks = set()
+            for name, parameter_obj in self.parameters.parameters.items():
+                parameter_obj.sample()
+                if parameter_obj.callback is not None:
+                    callbacks.add(parameter_obj.callback)
+            for call in callbacks:
+                call()
 
     def set_to_mean(self):
-        callbacks = set()
-        for name, parameter_obj in self.parameters.parameters.items():
-            parameter_obj.set_to_mean()
-            if parameter_obj.callback is not None:
-                callbacks.add(parameter_obj.callback)
-        for call in callbacks:
-            call()
+        if self.parameters.trace is not None:
+            most_probable_index = self.parameters.trace["probability"].idxmax()
+            parameter_set = dict(self.parameters.trace.loc[most_probable_index])
+            del parameter_set["probability"]
+            self.parameters.set_fit_parameters(parameter_set.keys(), parameter_set.values())
+        else:
+            callbacks = set()
+            for name, parameter_obj in self.parameters.parameters.items():
+                parameter_obj.set_to_mean()
+                if parameter_obj.callback is not None:
+                    callbacks.add(parameter_obj.callback)
+            for call in callbacks:
+                call()
+
+    def set_trace(self, trace):
+        self.parameters.trace = trace
