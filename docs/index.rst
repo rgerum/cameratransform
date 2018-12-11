@@ -11,6 +11,7 @@ the camera space to the world space and back.
    :maxdepth: 2
 
    installation
+   getting_started
    camera
    lens_distortion
    projections
