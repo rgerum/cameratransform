@@ -9,7 +9,8 @@ setup(name='CameraTransform',
       packages=['CameraTransform'],
       install_requires=[
           'numpy',
-          'scipy'
+          'scipy',
+          'tqdm'
       ],
       extras_require={
         'projecting_top_view':  ["cv2", "matplotlib"],
