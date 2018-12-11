@@ -294,6 +294,19 @@ class RectilinearProjection(CameraProjection):
             (y_\mathrm{im} - c_y)/f_y\\
             1\\
         \end{pmatrix}
+
+    **Matrix**:
+
+    The rectilinear projection can also be represented in matrix notation:
+
+    .. math::
+        C_{\mathrm{intr.}} &=
+        \begin{pmatrix}
+         f_x & 0   & c_x \\
+         0   & f_y & c_y \\
+         0   & 0   &   1 \\
+         \end{pmatrix}\\
+
     """
 
     def getRay(self, points, normed=False):
