@@ -6,10 +6,12 @@ import itertools
 import matplotlib.pyplot as plt
 import cv2
 from scipy.optimize import minimize
+from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion
+from .statistic import normal, normal_bounded, print_mean_std, metropolis
 from . import gps
 from . import ray
 
@@ -137,6 +139,9 @@ class CameraGroup(ClassWithParameterSet):
     projection_list = None
     orientation_list = None
     lens_list = None
+    fit_method = None
+
+    log_prob = None
 
     def __init__(self, projection, orientation=None, lens=None):
         self.N = 1
@@ -172,6 +177,8 @@ class CameraGroup(ClassWithParameterSet):
         self.cameras = [Camera(projection, orientation, lens) for index, projection, orientation, lens in
                         zip(range(self.N), itertools.cycle(self.projection_list), itertools.cycle(self.orientation_list), itertools.cycle(self.lens_list))]
 
+        self.log_prob = []
+
     def getBaseline(self):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
 
@@ -184,22 +191,27 @@ class CameraGroup(ClassWithParameterSet):
             self.parameters.set_fit_parameters(names, p)
             return cost_function()
 
-        p = minimize(cost, estimates, bounds=ranges)
+        p = minimize(cost, estimates, bounds=ranges, method=self.fit_method)
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
     def sampled_fit(self, cost_function, sample_function, N=1000, param_type=None):
         names = self.parameters.get_fit_parameters(param_type)
         fits = []
+        weights = []
         for i in range(N):
             print("Sample", i)
             sample_function()
             r = self.fit(cost_function)
             fits.append(r["x"])
+            weights.append(1/r["fun"])
         fit_data = np.array(fits)
+        weights = np.array(weights)
         for i, name in enumerate(names):
             data = fit_data[:, i]
-            self.parameters.parameters[name].set_stats(np.mean(data), np.std(data))
+            mean = np.average(data, weights=weights)
+            self.parameters.parameters[name].set_stats(mean, np.average((data-mean)**2, weights=weights))
+            print(name, print_mean_std(np.mean(data), np.std(data)))
         return fit_data
 
     def spaceFromImages(self, points1, points2):
@@ -224,6 +236,26 @@ class CameraGroup(ClassWithParameterSet):
     def __iter__(self):
         return iter(self.cameras)
 
+    def addBaselineInformation(self, target_baseline, uncertainty=6):
+        def baselineInformation(target_baseline=target_baseline, uncertainty=uncertainty):
+            # baseline
+            return np.sum(stats.norm(loc=target_baseline, scale=uncertainty).logpdf(self.getBaseline()))
+        self.log_prob.append(baselineInformation)
+
+    def addPointCorrespondenceInformation(self, corresponding1, corresponding2, uncertainty=1):
+        def pointCorrespondenceInformation(corresponding1=corresponding1,
+                                           corresponding2=corresponding2):
+            distances = self.discanteBetweenRays(corresponding1, corresponding2)
+            return np.sum(stats.norm(loc=0, scale=uncertainty).logpdf(distances))
+
+        self.log_prob.append(pointCorrespondenceInformation)
+
+    def addCustomoLogProbability(self, logProbability):
+        self.log_prob.append(logProbability)
+
+    def getLogProbability(self):
+        return np.sum([logProb() for logProb in self.log_prob])+np.sum([logProb() for cam in self for logProb in cam.log_prob])
+
 
 class Camera(ClassWithParameterSet):
     """
@@ -243,6 +275,8 @@ class Camera(ClassWithParameterSet):
 
     R_earth = 6371e3
 
+    log_prob = []
+
     def __init__(self, projection, orientation=None, lens=None):
         self.projection = projection
         if orientation is None:
@@ -258,6 +292,8 @@ class Camera(ClassWithParameterSet):
         params.update(self.orientation.parameters.parameters)
         params.update(self.lens.parameters.parameters)
         self.parameters = ParameterSet(**params)
+
+        log_prob = []
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -322,19 +358,132 @@ class Camera(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def sampled_fit(self, cost_function, sample_function, N=1000, param_type=None):
+    def sampled_fit(self, cost_function, sample_function, N=10000, param_type=None):
         names = self.parameters.get_fit_parameters(param_type)
         fits = []
+        weights = []
         for i in range(N):
             print("Sample", i)
             sample_function()
             r = self.fit(cost_function)
             fits.append(r["x"])
+            weights.append(1 / r["fun"])
         fit_data = np.array(fits)
+        weights = np.array(weights)
+        #print("non-weighted")
         for i, name in enumerate(names):
             data = fit_data[:, i]
-            self.parameters.parameters[name].set_stats(np.mean(data), np.std(data))
+            mean = np.average(data, weights=weights)
+            self.parameters.parameters[name].set_stats(mean, np.average((data - mean) ** 2, weights=weights))
+            print(name, print_mean_std(np.mean(data), np.std(data)))
         return fit_data
+
+    def addHeightInformation(self, points_feet, points_head, height, variation):
+        def heigthInformation(points_feet=points_feet, points_head=points_head, height=height, variation=variation):
+            # get the height of the penguins
+            heights = self.getObjectHeight(points_feet, points_head)
+
+            height_distribution = stats.norm(loc=height, scale=variation)
+
+            # the probability that the objects have this height
+            return np.sum(height_distribution.logpdf(heights))
+        self.log_prob.append(heigthInformation)
+
+    def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties):
+        offset = np.max(uncertainties)
+        sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
+        lm_points_space = lm_points_space[..., None]
+        if len(uncertainties.shape) == 1:
+            uncertainties = uncertainties[None, ..., None]
+        else:
+            uncertainties = uncertainties[..., None]
+
+        def landmarkInformation(lm_points_image=lm_points_image, lm_points_space=lm_points_space, uncertainties=uncertainties):
+            origins, lm_rays = self.getRay(lm_points_image, normed=True)
+            nearest_point = ray.getClosestPointFromLine(origins, lm_rays, lm_points_space)
+            distance_from_camera = np.linalg.norm(nearest_point-np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]), axis=-1)
+            factor = distance_from_camera[..., None] + sampled_offsets
+
+            distribution = stats.norm(lm_points_space, uncertainties)
+
+            points_on_rays = origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+
+            return np.sum(distribution.logpdf(points_on_rays))
+        self.log_prob.append(landmarkInformation)
+
+    def addHorizonInformation(self, horizon, uncertainty):
+        def horizonInformation(horizon=horizon, uncertainty=uncertainty):
+            # evaluate the horizon at the provided x coordinates
+            image_horizon = self.getImageHorizon(horizon[:, 0])
+            # calculate the difference of the provided to the estimated horizon in y pixels
+            horizon_deviation = horizon[:, 1] - image_horizon[:, 1]
+            # the distribution for the uncertainties
+            distribution = stats.norm(loc=0, scale=uncertainty)
+            # calculated the summed log probability
+            return np.sum(distribution.logpdf(horizon_deviation))
+
+        self.log_prob.append(horizonInformation)
+
+    def addBaselineInformation(self, target_baseline, uncertainty):
+        def baselineInformation(self, target_baseline=target_baseline, uncertainty=uncertainty):
+            # baseline
+            return np.sum(stats.norm(loc=target_baseline, scale=uncertainty).logpdf(self.getBaseline()))
+        self.log_prob.append(baselineInformation)
+
+    def addCustomoLogProbability(self, logProbability):
+        self.log_prob.append(logProbability)
+
+    def getLogProbability(self):
+        return np.sum([logProb() for logProb in self.log_prob])
+
+    def metropolis(self, parameter, getLogProbability, step=1, iterations=1e5, burn=0.1):
+        start = []
+        parameter_names = []
+        for param in parameter:
+            parameter_names.append(param)
+            start.append(parameter[param])
+        start = np.array(start)
+
+        def getLogProb(position):
+            self.parameters.set_fit_parameters(parameter_names, position)
+            return getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+
+        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn)
+
+        # convert the trace to a pandas dataframe
+        trace = pd.DataFrame(trace, columns=list(parameter_names)+["probability"])
+        self.set_trace(trace)
+        self.set_to_mean()
+        return trace
+
+    def fridge(self, parameter, iterations=10000, **kwargs):
+        import pymc
+        from bayesianfridge import sample
+
+        param_dict = {str(p): p for p in parameter}
+
+        @pymc.observed
+        def Ylike(value=1, param_dict=param_dict):
+            self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
+
+            return self.getLogProbability()
+
+        model = pymc.Model(parameter + [Ylike])
+
+        samples, marglike = sample(model, iterations, **kwargs)
+
+        columns = [str(p) for p in parameter]
+
+        data = np.array([samples[c] for c in columns]).T
+        probability = []
+        import tqdm
+        for values in tqdm.tqdm(data):
+            self.parameters.set_fit_parameters(columns, values)
+            logprob = self.getLogProbability()
+            probability.append(logprob)
+        trace = pd.DataFrame(np.hstack((data, np.array(probability)[:, None])), columns=columns + ["probability"])
+
+        return trace
 
     def fitCamParametersFromObjects(self, points_foot, points_head, object_height=1, object_elevation=0, points_horizon=None):
         """
@@ -360,6 +509,7 @@ class Camera(ClassWithParameterSet):
         p: list
             the fitted parameters.
         """
+        global object_height_sampled
         points_foot = np.array(points_foot)
         points_head = np.array(points_head)
         if points_horizon is not None:
@@ -370,6 +520,10 @@ class Camera(ClassWithParameterSet):
         self.pos_x_m = 0
         self.pos_y_m = 0
 
+        object_height_sampled = object_height
+        points_foot_sampled = points_foot
+        points_head_sampled = points_head
+
         def cost():
             if points_horizon is not None:
                 horizon_points_fit = self.getImageHorizon(points_horizon[:, 0])
@@ -379,20 +533,29 @@ class Camera(ClassWithParameterSet):
                 error_horizon = 0
 
             # project the feet from the image to the space with the provided elevation
-            estimated_foot_space = self.spaceFromImage(points_foot.copy(), Z=object_elevation)
+            estimated_foot_space = self.spaceFromImage(points_foot_sampled.copy(), Z=object_elevation)
             # add the object height to the z position
-            estimated_foot_space[:, 2] = object_elevation + object_height
+            estimated_foot_space[:, 2] += object_height_sampled
             # transform the "head" positions back
             estimated_head_image = self.imageFromSpace(estimated_foot_space)
             # calculate the distance between real pixel position and estimated position
-            pixels = np.linalg.norm(points_head - estimated_head_image, axis=1)
+            pixels = np.linalg.norm(points_head_sampled - estimated_head_image, axis=1)
             # the error is the squared sum
             #print(np.mean(pixels ** 2), error_horizon*10, self.roll_deg)
             #return error_horizon
             return np.mean(pixels ** 2)+error_horizon
 
-        # fit with the given cost function
-        return self.fit(cost)
+        if height_uncertainty is None:
+            # fit with the given cost function
+            return self.fit(cost)
+        else:
+            def sample():
+                global object_height_sampled, points_foot_sampled, points_head_sampled
+                object_height_sampled = object_height + normal_bounded(height_uncertainty, 0.5, 1.2)#normal(height_uncertainty)
+                points_foot_sampled = points_foot + normal(1)
+                points_head_sampled = points_head + normal(1)
+
+            return self.sampled_fit(cost, sample)
 
     def distanceToHorizon(self):
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.elevation_m)))
@@ -920,3 +1083,5 @@ def load_camera(filename):
     cam = Camera(RectilinearProjection(), SpatialOrientation())
     cam.load(filename)
     return cam
+
+CameraGroup.metropolis = Camera.metropolis
