@@ -290,8 +290,8 @@ class RectilinearProjection(CameraProjection):
 
     .. math::
         \vec{r} = \begin{pmatrix}
-            (x_\mathrm{im} - c_x/f_x\\
-            (y_\mathrm{im} - c_y/f_y\\
+            (x_\mathrm{im} - c_x)/f_x\\
+            (y_\mathrm{im} - c_y)/f_y\\
             1\\
         \end{pmatrix}
     """
