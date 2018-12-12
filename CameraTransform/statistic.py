@@ -84,9 +84,11 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
             next_prob = getLogProb(list(next_pos) + next_prior_trace)
             # calculate the acceptance ratio
             ratio = next_prob - last_prob
+            if np.isinf(next_prob) and np.isinf(last_prob):
+                ratio = 0
             # accept depending on the ratio (>1 means accept always, 0 never)
             r = np.random.rand()
-            if ratio > 0 or r < np.exp(ratio):
+            if ratio >= 0 or r < np.exp(ratio):
                 # count accepted values
                 accepted += 1
                 # store position
