@@ -139,7 +139,6 @@ class CameraGroup(ClassWithParameterSet):
     projection_list = None
     orientation_list = None
     lens_list = None
-    fit_method = None
 
     log_prob = None
 
@@ -181,38 +180,6 @@ class CameraGroup(ClassWithParameterSet):
 
     def getBaseline(self):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
-
-    def fit(self, cost_function, param_type=None):
-        names = self.parameters.get_fit_parameters(param_type)
-        ranges = self.parameters.get_parameter_ranges(names)
-        estimates = self.parameters.get_parameter_defaults(names)
-
-        def cost(p):
-            self.parameters.set_fit_parameters(names, p)
-            return cost_function()
-
-        p = minimize(cost, estimates, bounds=ranges, method=self.fit_method)
-        self.parameters.set_fit_parameters(names, p["x"])
-        return p
-
-    def sampled_fit(self, cost_function, sample_function, N=1000, param_type=None):
-        names = self.parameters.get_fit_parameters(param_type)
-        fits = []
-        weights = []
-        for i in range(N):
-            print("Sample", i)
-            sample_function()
-            r = self.fit(cost_function)
-            fits.append(r["x"])
-            weights.append(1/r["fun"])
-        fit_data = np.array(fits)
-        weights = np.array(weights)
-        for i, name in enumerate(names):
-            data = fit_data[:, i]
-            mean = np.average(data, weights=weights)
-            self.parameters.parameters[name].set_stats(mean, np.average((data-mean)**2, weights=weights))
-            print(name, print_mean_std(np.mean(data), np.std(data)))
-        return fit_data
 
     def spaceFromImages(self, points1, points2):
         p1, v1 = self.cameras[0].getRay(points1)
@@ -270,8 +237,6 @@ class Camera(ClassWithParameterSet):
     map_undistort = None
     last_extent_undistort = None
     last_scaling_undistort = None
-
-    fit_method = None
 
     R_earth = 6371e3
 
@@ -345,40 +310,22 @@ class Camera(ClassWithParameterSet):
         if elevation is not None:
             self.elevation_m = elevation
 
-    def fit(self, cost_function, param_type=None):
-        names = self.parameters.get_fit_parameters(param_type)
-        ranges = self.parameters.get_parameter_ranges(names)
-        estimates = self.parameters.get_parameter_defaults(names)
-
-        def cost(p):
-            self.parameters.set_fit_parameters(names, p)
-            return cost_function()
-
-        p = minimize(cost, estimates, bounds=ranges, method=self.fit_method)
-        self.parameters.set_fit_parameters(names, p["x"])
-        return p
-
-    def sampled_fit(self, cost_function, sample_function, N=10000, param_type=None):
-        names = self.parameters.get_fit_parameters(param_type)
-        fits = []
-        weights = []
-        for i in range(N):
-            print("Sample", i)
-            sample_function()
-            r = self.fit(cost_function)
-            fits.append(r["x"])
-            weights.append(1 / r["fun"])
-        fit_data = np.array(fits)
-        weights = np.array(weights)
-        #print("non-weighted")
-        for i, name in enumerate(names):
-            data = fit_data[:, i]
-            mean = np.average(data, weights=weights)
-            self.parameters.parameters[name].set_stats(mean, np.average((data - mean) ** 2, weights=weights))
-            print(name, print_mean_std(np.mean(data), np.std(data)))
-        return fit_data
-
     def addHeightInformation(self, points_feet, points_head, height, variation):
+        """
+        Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
+        with the given feet and head positions and a known height and height variation.
+
+        Parameters
+        ----------
+        points_feet : ndarray
+            the position of the objects feet, dimension (2) or (Nx2)
+        points_head : ndarray
+            the position of the objects head, dimension (2) or (Nx2)
+        height : number, ndarray
+            the mean height of the objects, dimensions scalar or (N)
+        variation : number, ndarray
+            the standard deviation of the heights of the objects, dimensions scalar or (N)
+        """
         def heigthInformation(points_feet=points_feet, points_head=points_head, height=height, variation=variation):
             # get the height of the penguins
             heights = self.getObjectHeight(points_feet, points_head)
@@ -390,6 +337,20 @@ class Camera(ClassWithParameterSet):
         self.log_prob.append(heigthInformation)
 
     def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties):
+        """
+        Add a term to the camera probability used for fitting. This term includes the probability to observe the given
+        landmarks and the specified positions in the image.
+
+        Parameters
+        ----------
+        lm_points_image : ndarray
+            the pixel positions of the landmarks in the image, dimension (2) or (Nx2)
+        lm_points_space : ndarray
+            the **space** positions of the landmarks, dimension (3) or (Nx3)
+        uncertainties : number, ndarray
+            the standard deviation uncertainty of the positions in the **space** coordinates. Typically for landmarks
+            obtained by gps, it could be e.g. [3, 3, 5], dimensions scalar, (3) or (Nx3)
+        """
         offset = np.max(uncertainties)
         sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
         lm_points_space = lm_points_space[..., None]
@@ -412,6 +373,17 @@ class Camera(ClassWithParameterSet):
         self.log_prob.append(landmarkInformation)
 
     def addHorizonInformation(self, horizon, uncertainty):
+        """
+        Add a term to the camera probability used for fitting. This term includes the probability to observe the horizon
+        at the given pixel positions.
+
+        Parameters
+        ----------
+        horizon : ndarray
+            the pixel positions of points on the horizon in the image, dimension (2) or (Nx2)
+        uncertainty : ndarray
+            the pixels offset, how clear the horizon is visible in the image, dimensions () or (N)
+        """
         def horizonInformation(horizon=horizon, uncertainty=uncertainty):
             # evaluate the horizon at the provided x coordinates
             image_horizon = self.getImageHorizon(horizon[:, 0])
@@ -424,17 +396,36 @@ class Camera(ClassWithParameterSet):
 
         self.log_prob.append(horizonInformation)
 
-    def addBaselineInformation(self, target_baseline, uncertainty):
-        def baselineInformation(self, target_baseline=target_baseline, uncertainty=uncertainty):
-            # baseline
-            return np.sum(stats.norm(loc=target_baseline, scale=uncertainty).logpdf(self.getBaseline()))
-        self.log_prob.append(baselineInformation)
-
     def addCustomoLogProbability(self, logProbability):
+        """
+        Add a custom term to the camera probability used for fitting. It takes a function that should return the
+        logprobability of the observables with respect to the current camera parameters.
+
+        Parameters
+        ----------
+        logProbability : function
+            the function that returns a legitimized probability.
+        """
         self.log_prob.append(logProbability)
 
     def getLogProbability(self):
+        """
+        Gives the sum of all terms of the log probability. This function is used for samling and fitting.
+        """
         return np.sum([logProb() for logProb in self.log_prob])
+
+    def fit(self, param_type=None, **kwargs):
+        names = self.parameters.get_fit_parameters(param_type)
+        ranges = self.parameters.get_parameter_ranges(names)
+        estimates = self.parameters.get_parameter_defaults(names)
+
+        def cost(p):
+            self.parameters.set_fit_parameters(names, p)
+            return -self.getLogProbability()
+
+        p = minimize(cost, estimates, bounds=ranges, **kwargs)
+        self.parameters.set_fit_parameters(names, p["x"])
+        return p
 
     def metropolis(self, parameter, getLogProbability, step=1, iterations=1e5, burn=0.1):
         start = []
@@ -483,81 +474,21 @@ class Camera(ClassWithParameterSet):
             probability.append(logprob)
         trace = pd.DataFrame(np.hstack((data, np.array(probability)[:, None])), columns=columns + ["probability"])
 
+        self.set_trace(trace)
+        self.set_to_mean()
+
         return trace
 
-    def fitCamParametersFromObjects(self, points_foot, points_head, object_height=1, object_elevation=0, points_horizon=None):
+    def distanceToHorizon(self):
         """
-        Fit the camera parameters for given objects of equal heights. The foot positions are given in points_foot and
-        the heads are given in points_head. The height of each objects is given in object_height, and if the objects are
-        not at sea level, an object_elevation can be given.
-
-        For an example see: `Fit from object heights <fit_heights.html>`_
-
-        Parameters
-        ----------
-        points_foot: ndarray
-            The pixel positions of the feet of the objects in the image.
-        points_head: ndarray
-            The pixel positions of the heads of the objects in the image.
-        object_height: number, optional
-            The height of the objects. Default = 1m
-        object_elevation: number, optional
-            The elevation of the feet ot the objects.
+        Calculates the distance of the camera's position to the horizon of the earth. The horizon depends on the radius
+        of the earth and the elevation of the camera.
 
         Returns
         -------
-        p: list
-            the fitted parameters.
+        distance : number
+            the distance to the horizon.
         """
-        global object_height_sampled
-        points_foot = np.array(points_foot)
-        points_head = np.array(points_head)
-        if points_horizon is not None:
-            points_horizon = np.array(points_horizon)
-
-        # the heading and position cannot be fitted using just relative distances
-        self.heading_deg = 0
-        self.pos_x_m = 0
-        self.pos_y_m = 0
-
-        object_height_sampled = object_height
-        points_foot_sampled = points_foot
-        points_head_sampled = points_head
-
-        def cost():
-            if points_horizon is not None:
-                horizon_points_fit = self.getImageHorizon(points_horizon[:, 0])
-                #print("horizon_points_fit", horizon_points_fit)
-                error_horizon = np.mean(np.linalg.norm(points_horizon - horizon_points_fit, axis=1)**2)
-            else:
-                error_horizon = 0
-
-            # project the feet from the image to the space with the provided elevation
-            estimated_foot_space = self.spaceFromImage(points_foot_sampled.copy(), Z=object_elevation)
-            # add the object height to the z position
-            estimated_foot_space[:, 2] += object_height_sampled
-            # transform the "head" positions back
-            estimated_head_image = self.imageFromSpace(estimated_foot_space)
-            # calculate the distance between real pixel position and estimated position
-            pixels = np.linalg.norm(points_head_sampled - estimated_head_image, axis=1)
-            # the error is the squared sum
-            #print(np.mean(pixels ** 2), error_horizon*10, self.roll_deg)
-            #return error_horizon
-            return np.mean(pixels ** 2)+error_horizon
-
-        if height_uncertainty is None:
-            # fit with the given cost function
-            return self.fit(cost)
-        else:
-            def sample():
-                global object_height_sampled, points_foot_sampled, points_head_sampled
-                object_height_sampled = object_height + normal_bounded(height_uncertainty, 0.5, 1.2)#normal(height_uncertainty)
-                points_foot_sampled = points_foot + normal(1)
-                points_head_sampled = points_head + normal(1)
-
-            return self.sampled_fit(cost, sample)
-
-    def distanceToHorizon(self):
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.elevation_m)))
 
     def getImageHorizon(self, pointsX=None):
@@ -588,6 +519,19 @@ class Camera(ClassWithParameterSet):
         return np.array(points)
 
     def getImageBorder(self, resolution=1):
+        """
+        Get the border of the image in a top view. Useful for drawing the field of view of the camera in a map.
+
+        Parameters
+        ----------
+        resolution : number, optional
+            the pixel distance between neighbouring points.
+
+        Returns
+        -------
+        border : ndarray
+            the border of the image in **space** coordinates, dimensions (Nx3)
+        """
         w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
         border = []
         for y in np.arange(0, h, resolution):
@@ -601,6 +545,15 @@ class Camera(ClassWithParameterSet):
         return self.spaceFromImage(border, Z=0)
 
     def getCameraCone(self):
+        """
+        The cone of the camera's field of view. This includes the border of the image and lines to the origin of the
+        camera.
+
+        Returns
+        -------
+        cone: ndarray
+            the cone of the camera in **space** coordinates, dimensions (Nx3)
+        """
         w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
         border = []
         corner_indices = [0]
@@ -877,6 +830,24 @@ class Camera(ClassWithParameterSet):
         return self.imageFromSpace(self.spaceFromGPS(points))
 
     def getObjectHeight(self, point_feet, point_heads, Z=0):
+        """
+        Calculate the height of objects in the image, assuming the Z position of the objects is known, e.g. they are
+        assumed to stand on the Z=0 plane.
+
+        Parameters
+        ----------
+        point_feet : ndarray
+            the positions of the feet, dimensions: (2) or (Nx2)
+        point_heads : ndarray
+            the positions of the heads, dimensions: (2) or (Nx2)
+        Z : number, ndarray, optional
+            the Z position of the objects, dimensions: scalar or (N), default 0
+
+        Returns
+        -------
+        heights: ndarray
+            the height of the objects in meters, dimensions: () or (N)
+        """
         # get the feet positions in the world
         point3D_feet = self.spaceFromImage(point_feet, Z=Z)
         # get the head positions in the world
@@ -886,7 +857,7 @@ class Camera(ClassWithParameterSet):
         # the z difference between these two points
         return point3D_head[..., 2] - point3D_feet[..., 2]
 
-    def getUndistortMap(self, extent=None, scaling=None):
+    def _getUndistortMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             extent = [0, self.image_width_px, 0, self.image_height_px]
@@ -920,14 +891,45 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map_undistort
 
-    def undistortImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None):
-        x, y = self.getUndistortMap(extent=extent, scaling=scaling)
+    def undistortImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, skip_size_check=False):
+        """
+        Applies the undistortion of the lens model to the image. The purpose of this function is mainly to check the
+        sanity of a lens transformation. As CameraTransform includes the lens transformation in any calculations, it
+        is not necessary to undistort images before using them.
+
+        Parameters
+        ----------
+        image : ndarray
+            the image to undistort.
+        extent : list, optional
+            the extent in pixels of the resulting image. This can be used to crop the resulting undistort image.
+        scaling : number, optional
+            the number of old pixels that are used to calculate a new pixel. A higher value results in a smaller target
+            image.
+        do_plot : bool, optional
+            whether to plot the resulting image directly in a matplotlib plot.
+        alpha : number, optional
+            when plotting an alpha value can be specified, useful when comparing multiple images.
+        skip_size_check : bool, optional
+            if true, the size of the image is not checked to match the size of the cameras image.
+
+        Returns
+        -------
+        image : ndarray
+            the undistorted image
+        """
+        # check if the size of the image matches the size of the camera
+        if not skip_size_check:
+            assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
+            assert image.shape[0] == self.image_height_px, "The height of the image (%d) does not match the image height of the camera (%d)." % (image.shape[0], self.image_height_px)
+
+        x, y = self._getUndistortMap(extent=extent, scaling=scaling)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
-        if len(im.shape) == 2:
+        if len(image.shape) == 2:
             pass
-        elif im.shape[2] == 3:
-            im = np.dstack((im, np.ones(shape=(im.shape[0], im.shape[1], 1), dtype="uint8") * 255))
-        image = cv2.remap(im, x, y,
+        elif image.shape[2] == 3:
+            image = np.dstack((image, np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8") * 255))
+        image = cv2.remap(image, x, y,
                           interpolation=cv2.INTER_NEAREST,
                           borderValue=[0, 1, 0, 0])[::-1]  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
@@ -936,7 +938,7 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=extent, alpha=alpha)
         return image
 
-    def getMap(self, extent=None, scaling=None, Z=0):
+    def _getMap(self, extent=None, scaling=None, Z=0):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             border = self.getImageBorder()
@@ -974,14 +976,50 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, im, extent=None, scaling=None, do_plot=False, alpha=None, Z=0.):
-        x, y = self.getMap(extent=extent, scaling=scaling, Z=Z)
+    def getTopViewOfImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, Z=0., skip_size_check=False):
+        """
+        Project an image to a top view projection. This will be done using a grid with the dimensions of the extent
+        ([x_min, x_max, y_min, y_max]) in meters and the scaling, giving a resolution. For convenience, the image can
+        be plotted directly. The projected grid is cached, so if the function is called a second time with the same
+        parameters, the second call will be faster.
+
+        Parameters
+        ----------
+        image : ndarray
+            the image as a numpy array.
+        extent : list, optional
+            the extent of the resulting top view in meters: [x_min, x_max, y_min, y_max]. If no extent is given a suitable
+            extent is guessed. If a horizon is visible in the image, the guessed extent will in most cases be too streched.
+        scaling : number, optional
+            the scaling factor, how many meters is the side length of each pixel in the top view. If no scaling factor is
+            given, a good scaling factor is guessed, trying to get about the same number of pixels in the top view as in
+            the original image.
+        do_plot : bool, optional
+            whether to directly plot the resulting image in a matplotlib figure.
+        alpha : number, optional
+            an alpha value used when plotting the image. Useful if multiple images should be overlaid.
+        Z : number, optional
+            the "height" of the plane on which to project.
+        skip_size_check : bool, optional
+            if true, the size of the image is not checked to match the size of the cameras image.
+
+        Returns
+        -------
+        image : ndarray
+            the top view projected image
+        """
+        # check if the size of the image matches the size of the camera
+        if not skip_size_check:
+            assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
+            assert image.shape[0] == self.image_height_px, "The height of the image (%d) does not match the image height of the camera (%d)." % (image.shape[0], self.image_height_px)
+        # get the mapping
+        x, y = self._getMap(extent=extent, scaling=scaling, Z=Z)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
-        if len(im.shape) == 2:
+        if len(image.shape) == 2:
             pass
-        elif im.shape[2] == 3:
-            im = np.dstack((im, np.ones(shape=(im.shape[0], im.shape[1], 1), dtype="uint8") * 255))
-        image = cv2.remap(im, x, y,
+        elif image.shape[2] == 3:
+            image = np.dstack((image, np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8") * 255))
+        image = cv2.remap(image, x, y,
                           interpolation=cv2.INTER_NEAREST,
                           borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
@@ -1031,6 +1069,15 @@ class Camera(ClassWithParameterSet):
         return y_lookup
 
     def rotateSpace(self, delta_heading):
+        """
+        Rotates the whole camera setup, this will turn the heading and rotate the camera position (pos_x_m, pos_y_m)
+        around the origin.
+
+        Parameters
+        ----------
+        delta_heading : number
+            the number of degrees to rotate the camera clockwise.
+        """
         self.heading_deg += delta_heading
         delta_heading_rad = np.deg2rad(delta_heading)
         pos = np.array([self.pos_x_m, self.pos_y_m])
