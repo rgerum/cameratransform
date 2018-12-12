@@ -521,6 +521,12 @@ class Camera(ClassWithParameterSet):
 
         return trace
 
+    def plotTrace(self):
+        """
+        Generate a trace plot (matplotlib window) of the current trace of the camera.
+        """
+        plotTrace(self.parameters.trace)
+
     def distanceToHorizon(self):
         """
         Calculates the distance of the camera's position to the horizon of the earth. The horizon depends on the radius
