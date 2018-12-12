@@ -11,7 +11,7 @@ from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion
-from .statistic import normal, normal_bounded, print_mean_std, metropolis
+from .statistic import normal, normal_bounded, print_mean_std, metropolis, plotTrace
 from . import gps
 from . import ray
 
@@ -258,7 +258,7 @@ class Camera(ClassWithParameterSet):
         params.update(self.lens.parameters.parameters)
         self.parameters = ParameterSet(**params)
 
-        log_prob = []
+        self.log_prob = []
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -310,7 +310,7 @@ class Camera(ClassWithParameterSet):
         if elevation is not None:
             self.elevation_m = elevation
 
-    def addHeightInformation(self, points_feet, points_head, height, variation):
+    def addObjectHeightInformation(self, points_feet, points_head, height, variation):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with the given feet and head positions and a known height and height variation.
@@ -381,14 +381,17 @@ class Camera(ClassWithParameterSet):
         ----------
         horizon : ndarray
             the pixel positions of points on the horizon in the image, dimension (2) or (Nx2)
-        uncertainty : ndarray
+        uncertainty : number, ndarray
             the pixels offset, how clear the horizon is visible in the image, dimensions () or (N)
         """
+        # ensure that input is an numpy array
+        horizon = np.array(horizon)
+
         def horizonInformation(horizon=horizon, uncertainty=uncertainty):
             # evaluate the horizon at the provided x coordinates
-            image_horizon = self.getImageHorizon(horizon[:, 0])
+            image_horizon = self.getImageHorizon(horizon[..., 0])
             # calculate the difference of the provided to the estimated horizon in y pixels
-            horizon_deviation = horizon[:, 1] - image_horizon[:, 1]
+            horizon_deviation = horizon[:, 1] - image_horizon[..., 1]
             # the distribution for the uncertainties
             distribution = stats.norm(loc=0, scale=uncertainty)
             # calculated the summed log probability
@@ -408,16 +411,47 @@ class Camera(ClassWithParameterSet):
         """
         self.log_prob.append(logProbability)
 
+    def _getLogProbability_raw(self):
+        """
+        The same as getLogProbability, but ZeroProbability is returned as np.nan
+        """
+        prob = np.sum([logProb() for logProb in self.log_prob])
+        return prob
+
     def getLogProbability(self):
         """
-        Gives the sum of all terms of the log probability. This function is used for samling and fitting.
+        Gives the sum of all terms of the log probability. This function is used for sampling and fitting.
         """
-        return np.sum([logProb() for logProb in self.log_prob])
+        prob = np.sum([logProb() for logProb in self.log_prob])
+        return prob if not np.isnan(prob) else -np.inf
 
-    def fit(self, param_type=None, **kwargs):
-        names = self.parameters.get_fit_parameters(param_type)
-        ranges = self.parameters.get_parameter_ranges(names)
-        estimates = self.parameters.get_parameter_defaults(names)
+    def fit(self, parameter, **kwargs):
+        estimates = []
+        names = []
+        ranges = []
+        for param in parameter:
+            names.append(param.__name__)
+            estimates.append(param.value[()])
+            ranges.append([param.parents.get("lower"), param.parents.get("upper")])
+
+        def getLogProb(position):
+            self.parameters.set_fit_parameters(names, position)
+            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+
+        trys = 0
+        max_tries = 1000
+        while np.isinf(getLogProb(estimates)) and trys < max_tries:
+            estimates = [param.random()[()] for param in parameter]
+            trys += 1
+        if trys >= max_tries:
+            raise ValueError("Could not find a starting position with non-zero probability.")
+
+        #names = self.parameters.get_fit_parameters(param_type)
+        #ranges = self.parameters.get_parameter_ranges(names)
+        #estimates = self.parameters.get_parameter_defaults(names)
+        if "iterations" in kwargs:
+            kwargs["options"] = dict(maxiter=kwargs["iterations"])
+            del kwargs["iterations"]
 
         def cost(p):
             self.parameters.set_fit_parameters(names, p)
@@ -427,17 +461,25 @@ class Camera(ClassWithParameterSet):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def metropolis(self, parameter, getLogProbability, step=1, iterations=1e5, burn=0.1):
+    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1):
         start = []
         parameter_names = []
         for param in parameter:
-            parameter_names.append(param)
-            start.append(parameter[param])
+            parameter_names.append(param.__name__)
+            start.append(param.value[()])
         start = np.array(start)
 
         def getLogProb(position):
             self.parameters.set_fit_parameters(parameter_names, position)
-            return getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+
+        trys = 0
+        max_tries = 1000
+        while np.isinf(getLogProb(start)) and trys < max_tries:
+            start = [param.random()[()] for param in parameter]
+            trys += 1
+        if trys >= max_tries:
+            raise ValueError("Could not find a starting position with non-zero probability.")
 
         trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn)
 
@@ -457,13 +499,13 @@ class Camera(ClassWithParameterSet):
         def Ylike(value=1, param_dict=param_dict):
             self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
 
-            return self.getLogProbability()
+            return self._getLogProbability_raw()
 
         model = pymc.Model(parameter + [Ylike])
 
         samples, marglike = sample(model, iterations, **kwargs)
 
-        columns = [str(p) for p in parameter]
+        columns = [p.__name__ for p in parameter]
 
         data = np.array([samples[c] for c in columns]).T
         probability = []
