@@ -6,19 +6,6 @@ API
 CameraTransform
 ---------------
 
-.. autoclass:: CameraTransform
+.. autoclass:: Camera
    :members:
 
-Initialisation Routines
------------------------
-
-.. autofunction:: MapTransform
-
-.. autofunction:: LoadTransform
-
-Helpers
--------
-
-.. autofunction:: formatGPS
-
-.. autofunction:: getCameraParametersFromExif
