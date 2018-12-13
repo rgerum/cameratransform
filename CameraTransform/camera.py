@@ -391,7 +391,7 @@ class Camera(ClassWithParameterSet):
             # evaluate the horizon at the provided x coordinates
             image_horizon = self.getImageHorizon(horizon[..., 0])
             # calculate the difference of the provided to the estimated horizon in y pixels
-            horizon_deviation = horizon[:, 1] - image_horizon[..., 1]
+            horizon_deviation = horizon[..., 1] - image_horizon[..., 1]
             # the distribution for the uncertainties
             distribution = stats.norm(loc=0, scale=uncertainty)
             # calculated the summed log probability
@@ -544,12 +544,26 @@ class Camera(ClassWithParameterSet):
         This function calculates the position of the horizon in the image sampled at the points x=0, x=im_width/2,
         x=im_width.
 
-        :return: The points im camera image coordinates of the horizon in the format of [2xN].
+        Parameters
+        ----------
+        pointsX : ndarray, optional
+            the x positions of the horizon to determine, default is [0, image_width/2, image_width], dimensions () or (N)
+
+        Returns
+        -------
+        horizon : ndarray
+            the points im camera image coordinates of the horizon, dimensions (2), or (Nx2).
         """
         d = self.distanceToHorizon()
         if pointsX is None:
             pointsX = [0, self.image_width_px/2, self.image_width_px]
         pointsY = np.arange(0, self.image_height_px)
+
+        if len(pointsX.shape) == 0:
+            pointsX = np.array([pointsX])
+            single_point = True
+        else:
+            single_point = False
 
         points = []
         # for every x-coordinate where we want to determine the horizon
@@ -564,6 +578,8 @@ class Camera(ClassWithParameterSet):
                 y = np.nan
             # add the found point to the list
             points.append([x, y])
+            if single_point:
+                return np.array([x, y])
         return np.array(points)
 
     def getImageBorder(self, resolution=1):
