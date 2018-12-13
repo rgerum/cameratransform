@@ -212,3 +212,12 @@ def printTraceSummary(trace, logarithmic=False):
         else:
             data = trace[name]
         print(name, print_mean_std(np.mean(data), np.std(data)))
+
+def get_all_pymc_parameters(par):
+    import pymc
+    parameters = []
+    if isinstance(par, pymc.Stochastic):
+        parameters += [par]
+        for parent in par.parents.values():
+            parameters += get_all_pymc_parameters(parent)
+    return parameters
