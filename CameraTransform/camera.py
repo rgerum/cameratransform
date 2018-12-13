@@ -5,13 +5,13 @@ import json
 import itertools
 import matplotlib.pyplot as plt
 import cv2
-from scipy.optimize import minimize
+import pymc
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion
-from .statistic import normal, normal_bounded, print_mean_std, metropolis, plotTrace
+from .statistic import get_all_pymc_parameters
 from . import gps
 from . import ray
 
@@ -140,9 +140,8 @@ class CameraGroup(ClassWithParameterSet):
     orientation_list = None
     lens_list = None
 
-    log_prob = None
-
     def __init__(self, projection, orientation=None, lens=None):
+        ClassWithParameterSet.__init__(self)
         self.N = 1
 
         def checkCount(parameter, class_type, parameter_name, default):
@@ -175,8 +174,6 @@ class CameraGroup(ClassWithParameterSet):
 
         self.cameras = [Camera(projection, orientation, lens) for index, projection, orientation, lens in
                         zip(range(self.N), itertools.cycle(self.projection_list), itertools.cycle(self.orientation_list), itertools.cycle(self.lens_list))]
-
-        self.log_prob = []
 
     def getBaseline(self):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
@@ -217,12 +214,6 @@ class CameraGroup(ClassWithParameterSet):
 
         self.log_prob.append(pointCorrespondenceInformation)
 
-    def addCustomoLogProbability(self, logProbability):
-        self.log_prob.append(logProbability)
-
-    def getLogProbability(self):
-        return np.sum([logProb() for logProb in self.log_prob])+np.sum([logProb() for cam in self for logProb in cam.log_prob])
-
 
 class Camera(ClassWithParameterSet):
     """
@@ -240,9 +231,8 @@ class Camera(ClassWithParameterSet):
 
     R_earth = 6371e3
 
-    log_prob = []
-
     def __init__(self, projection, orientation=None, lens=None):
+        ClassWithParameterSet.__init__(self)
         self.projection = projection
         if orientation is None:
             orientation = SpatialOrientation()
@@ -257,8 +247,6 @@ class Camera(ClassWithParameterSet):
         params.update(self.orientation.parameters.parameters)
         params.update(self.lens.parameters.parameters)
         self.parameters = ParameterSet(**params)
-
-        self.log_prob = []
 
     def __str__(self):
         string = "CameraTransform(\n"
@@ -297,7 +285,10 @@ class Camera(ClassWithParameterSet):
         """
         # if it is a string
         if isinstance(lat, str):
-            lat, lon, elevation = gps.gpsFromString(lat, height=elevation)
+            try:
+                lat, lon, elevation = gps.gpsFromString(lat, height=elevation)
+            except ValueError:
+                lat, lon = gps.gpsFromString(lat, height=elevation)
         else:
             # if it is a tuple
             try:
@@ -397,135 +388,32 @@ class Camera(ClassWithParameterSet):
             # calculated the summed log probability
             return np.sum(distribution.logpdf(horizon_deviation))
 
-        self.log_prob.append(horizonInformation)
+        if not only_plot:
+            self.log_prob.append(horizonInformation)
 
-    def addCustomoLogProbability(self, logProbability):
-        """
-        Add a custom term to the camera probability used for fitting. It takes a function that should return the
-        logprobability of the observables with respect to the current camera parameters.
+        def plotHorizonPoints(horizon=horizon, color=plot_color):
+            image_horizon = self.getImageHorizon(horizon[..., 0])
+            if 0:
+                p, = plt.plot(image_horizon[..., 0], image_horizon[..., 1], "+", label="horizon fitted", color=color)
 
-        Parameters
-        ----------
-        logProbability : function
-            the function that returns a legitimized probability.
-        """
-        self.log_prob.append(logProbability)
+                plt.scatter(horizon[..., 0], horizon[..., 1], label="horizon", facecolors='none', edgecolors=p.get_color())
+            else:
+                p, = plt.plot(horizon[..., 0], horizon[..., 1], "+", label="horizon", color=color)
 
-    def _getLogProbability_raw(self):
-        """
-        The same as getLogProbability, but ZeroProbability is returned as np.nan
-        """
-        prob = np.sum([logProb() for logProb in self.log_prob])
-        return prob
+                plt.scatter(image_horizon[..., 0], image_horizon[..., 1], label="horizon fitted", facecolors='none', edgecolors=p.get_color())
 
-    def getLogProbability(self):
-        """
-        Gives the sum of all terms of the log probability. This function is used for sampling and fitting.
-        """
-        prob = np.sum([logProb() for logProb in self.log_prob])
-        return prob if not np.isnan(prob) else -np.inf
+            image_horizon_line = self.getImageHorizon(np.arange(self.image_width_px))
+            plt.plot(image_horizon_line[..., 0], image_horizon_line[..., 1], "--", color=p.get_color())
 
-    def fit(self, parameter, **kwargs):
-        estimates = []
-        names = []
-        ranges = []
-        for param in parameter:
-            names.append(param.__name__)
-            estimates.append(param.value[()])
-            ranges.append([param.parents.get("lower"), param.parents.get("upper")])
+            data = np.concatenate(([horizon], [image_horizon], [np.ones(horizon.shape) * np.nan]))
+            if len(data.shape) == 3:
+                data = data.transpose(1, 0, 2).reshape((-1, 2))
+            else:
+                data = data.reshape((-1, 2))
 
-        def getLogProb(position):
-            self.parameters.set_fit_parameters(names, position)
-            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+            plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
 
-        trys = 0
-        max_tries = 1000
-        while np.isinf(getLogProb(estimates)) and trys < max_tries:
-            estimates = [param.random()[()] for param in parameter]
-            trys += 1
-        if trys >= max_tries:
-            raise ValueError("Could not find a starting position with non-zero probability.")
-
-        #names = self.parameters.get_fit_parameters(param_type)
-        #ranges = self.parameters.get_parameter_ranges(names)
-        #estimates = self.parameters.get_parameter_defaults(names)
-        if "iterations" in kwargs:
-            kwargs["options"] = dict(maxiter=kwargs["iterations"])
-            del kwargs["iterations"]
-
-        def cost(p):
-            self.parameters.set_fit_parameters(names, p)
-            return -self.getLogProbability()
-
-        p = minimize(cost, estimates, bounds=ranges, **kwargs)
-        self.parameters.set_fit_parameters(names, p["x"])
-        return p
-
-    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1):
-        start = []
-        parameter_names = []
-        for param in parameter:
-            parameter_names.append(param.__name__)
-            start.append(param.value[()])
-        start = np.array(start)
-
-        def getLogProb(position):
-            self.parameters.set_fit_parameters(parameter_names, position)
-            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
-
-        trys = 0
-        max_tries = 1000
-        while np.isinf(getLogProb(start)) and trys < max_tries:
-            start = [param.random()[()] for param in parameter]
-            trys += 1
-        if trys >= max_tries:
-            raise ValueError("Could not find a starting position with non-zero probability.")
-
-        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn)
-
-        # convert the trace to a pandas dataframe
-        trace = pd.DataFrame(trace, columns=list(parameter_names)+["probability"])
-        self.set_trace(trace)
-        self.set_to_mean()
-        return trace
-
-    def fridge(self, parameter, iterations=10000, **kwargs):
-        import pymc
-        from bayesianfridge import sample
-
-        param_dict = {str(p): p for p in parameter}
-
-        @pymc.observed
-        def Ylike(value=1, param_dict=param_dict):
-            self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
-
-            return self._getLogProbability_raw()
-
-        model = pymc.Model(parameter + [Ylike])
-
-        samples, marglike = sample(model, iterations, **kwargs)
-
-        columns = [p.__name__ for p in parameter]
-
-        data = np.array([samples[c] for c in columns]).T
-        probability = []
-        import tqdm
-        for values in tqdm.tqdm(data):
-            self.parameters.set_fit_parameters(columns, values)
-            logprob = self.getLogProbability()
-            probability.append(logprob)
-        trace = pd.DataFrame(np.hstack((data, np.array(probability)[:, None])), columns=columns + ["probability"])
-
-        self.set_trace(trace)
-        self.set_to_mean()
-
-        return trace
-
-    def plotTrace(self):
-        """
-        Generate a trace plot (matplotlib window) of the current trace of the camera.
-        """
-        plotTrace(self.parameters.trace)
+        self.info_plot_functions.append(plotHorizonPoints)
 
     def distanceToHorizon(self):
         """
@@ -859,7 +747,7 @@ class Camera(ClassWithParameterSet):
         points : ndarray
             the points in the **space** coordinate system, dimensions (3), (Nx3)
         """
-        return gps.spaceFromGPS(points, np.array(self.gps_lat, self.gps_lon, self.elevation_m))
+        return gps.spaceFromGPS(points, np.array([self.gps_lat, self.gps_lon, self.elevation_m]))
 
     def gpsFromImage(self, points, X=None, Y=None, Z=0, D=None):
         """
@@ -1194,5 +1082,3 @@ def load_camera(filename):
     cam = Camera(RectilinearProjection(), SpatialOrientation())
     cam.load(filename)
     return cam
-
-CameraGroup.metropolis = Camera.metropolis
