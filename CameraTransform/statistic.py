@@ -183,7 +183,7 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
         try:
             y = gaussian_kde(data)(x)
             plt.plot(x, y, "-")
-            plt.ylim(top=[plt.gca().get_ylim()[0], np.max(y) * 1.1])
+            plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
         except Exception as err:
             print(err)
             pass
