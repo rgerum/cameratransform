@@ -1,4 +1,8 @@
 import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+from .statistic import metropolis, plotTrace
 
 STATE_DEFAULT = 0
 STATE_USER_SET = 1
@@ -133,6 +137,15 @@ class ParameterSet(object):
 class ClassWithParameterSet(object):
     parameters = None
 
+    log_prob = None
+    additional_parameters = None
+    info_plot_functions = None
+
+    def __init__(self):
+        self.log_prob = []
+        self.additional_parameters = []
+        self.info_plot_functions = []
+
     def __getattr__(self, item):
         if self.parameters is not None:
             if item == "defaults" or item in self.parameters.parameters:
@@ -177,3 +190,152 @@ class ClassWithParameterSet(object):
 
     def set_trace(self, trace):
         self.parameters.trace = trace
+
+    def addCustomoLogProbability(self, logProbability, additional_parameters=None):
+        """
+        Add a custom term to the camera probability used for fitting. It takes a function that should return the
+        logprobability of the observables with respect to the current camera parameters.
+
+        Parameters
+        ----------
+        logProbability : function
+            the function that returns a legitimized probability.
+        """
+        self.log_prob.append(logProbability)
+        if additional_parameters is not None:
+            self.additional_parameters += list(additional_parameters)
+
+    def clearLogProbability(self):
+        self.log_prob = []
+        self.additional_parameters = []
+
+    def _getLogProbability_raw(self):
+        """
+        The same as getLogProbability, but ZeroProbability is returned as np.nan
+        """
+        prob = np.sum([logProb() for logProb in self.log_prob])
+        return prob
+
+    def getLogProbability(self):
+        """
+        Gives the sum of all terms of the log probability. This function is used for sampling and fitting.
+        """
+        prob = np.sum([logProb() for logProb in self.log_prob])
+        return prob if not np.isnan(prob) else -np.inf
+
+    def fit(self, parameter, **kwargs):
+        estimates = []
+        names = []
+        ranges = []
+        for param in parameter:
+            names.append(param.__name__)
+            estimates.append(param.value[()])
+            ranges.append([param.parents.get("lower"), param.parents.get("upper")])
+
+        def getLogProb(position):
+            self.parameters.set_fit_parameters(names, position)
+            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+
+        trys = 0
+        max_tries = 1000
+        while np.isinf(getLogProb(estimates)) and trys < max_tries:
+            estimates = [param.random()[()] for param in parameter]
+            trys += 1
+        if trys >= max_tries:
+            raise ValueError("Could not find a starting position with non-zero probability.")
+
+        #names = self.parameters.get_fit_parameters(param_type)
+        #ranges = self.parameters.get_parameter_ranges(names)
+        #estimates = self.parameters.get_parameter_defaults(names)
+        if "iterations" in kwargs:
+            kwargs["options"] = dict(maxiter=kwargs["iterations"])
+            del kwargs["iterations"]
+
+        def cost(p):
+            self.parameters.set_fit_parameters(names, p)
+            return -self.getLogProbability()
+
+        p = minimize(cost, estimates, bounds=ranges, **kwargs)
+        self.parameters.set_fit_parameters(names, p["x"])
+        return p
+
+    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1):
+        start = []
+        parameter_names = []
+        additional_parameter_names = []
+        for param in parameter:
+            parameter_names.append(param.__name__)
+            start.append(param.value[()])
+        for param in self.additional_parameters:
+            additional_parameter_names.append(param.__name__)
+            start.append(param.value[()])
+        start = np.array(start)
+
+        def getLogProb(position):
+            self.parameters.set_fit_parameters(parameter_names, position[:len(parameter_names)])
+            for param, value in zip(self.additional_parameters, position[len(parameter_names):]):
+                param.set_value(value)
+            return self.getLogProbability()
+
+        trys = 0
+        max_tries = 1000
+        while np.isinf(getLogProb(start)) and trys < max_tries:
+            start = [param.random()[()] for param in parameter+self.additional_parameters]
+            trys += 1
+        if trys >= max_tries:
+            raise ValueError("Could not find a starting position with non-zero probability.")
+
+        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn)
+
+        # convert the trace to a pandas dataframe
+        trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])
+        self.set_trace(trace)
+        self.set_to_mean()
+        return trace
+
+    def fridge(self, parameter, iterations=10000, **kwargs):
+        import pymc
+        from bayesianfridge import sample
+
+        param_dict = {str(p): p for p in parameter}
+        additional_param_dict = {str(p): p for p in self.additional_parameters}
+
+        @pymc.observed
+        def Ylike(value=1, param_dict=param_dict, additional_param_dict=additional_param_dict):
+            self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
+
+            return self._getLogProbability_raw()
+
+        model = pymc.Model(parameter + self.additional_parameters + [Ylike])
+
+        samples, marglike = sample(model, int(iterations), **kwargs)
+
+        columns = [p.__name__ for p in parameter + self.additional_parameters]
+
+        data = np.array([samples[c] for c in columns]).T
+        probability = []
+        import tqdm
+        for values in tqdm.tqdm(data):
+            self.parameters.set_fit_parameters(columns, values)
+            logprob = self.getLogProbability()
+            probability.append(logprob)
+        trace = pd.DataFrame(np.hstack((data, np.array(probability)[:, None])), columns=columns + ["probability"])
+
+        self.set_trace(trace)
+        self.set_to_mean()
+
+        return trace
+
+    def plotTrace(self):
+        """
+        Generate a trace plot (matplotlib window) of the current trace of the camera.
+        """
+        plotTrace(self.parameters.trace)
+
+    def plotFitInformation(self, image=None):
+        if image is not None:
+            plt.imshow(image)
+        for func in self.info_plot_functions:
+            func()
+        plt.xlim(0, self.image_width_px)
+        plt.ylim(self.image_height_px, 0)
