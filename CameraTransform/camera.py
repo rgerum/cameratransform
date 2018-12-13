@@ -301,7 +301,7 @@ class Camera(ClassWithParameterSet):
         if elevation is not None:
             self.elevation_m = elevation
 
-    def addObjectHeightInformation(self, points_feet, points_head, height, variation):
+    def addObjectHeightInformation(self, points_feet, points_head, height, variation, only_plot=False, plot_color=None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with the given feet and head positions and a known height and height variation.
@@ -315,19 +315,58 @@ class Camera(ClassWithParameterSet):
         height : number, ndarray
             the mean height of the objects, dimensions scalar or (N)
         variation : number, ndarray
-            the standard deviation of the heights of the objects, dimensions scalar or (N)
+            the standard deviation of the heights of the objects, dimensions scalar or (N). If the variation is not known
+            a pymc2 stochastic variable object can be used.
+        only_plot : bool, optional
+            when true, the information will be ignored for fitting and only be used to plot.
         """
-        def heigthInformation(points_feet=points_feet, points_head=points_head, height=height, variation=variation):
-            # get the height of the penguins
-            heights = self.getObjectHeight(points_feet, points_head)
+        if not only_plot:
+            if isinstance(variation, pymc.Stochastic):
+                self.additional_parameters += get_all_pymc_parameters(variation)
+                def heigthInformation(points_feet=points_feet, points_head=points_head, height=height,
+                                      variation=variation):
+                    height_distribution = stats.norm(loc=height, scale=variation.value)
 
-            height_distribution = stats.norm(loc=height, scale=variation)
+                    # get the height of the penguins
+                    heights = self.getObjectHeight(points_feet, points_head)
 
-            # the probability that the objects have this height
-            return np.sum(height_distribution.logpdf(heights))
-        self.log_prob.append(heigthInformation)
+                    # the probability that the objects have this height
+                    return np.sum(height_distribution.logpdf(heights))
 
-    def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties):
+            else:
+                height_distribution = stats.norm(loc=height, scale=variation)
+                def heigthInformation(points_feet=points_feet, points_head=points_head, height_distribution=height_distribution):
+                    # get the height of the penguins
+                    heights = self.getObjectHeight(points_feet, points_head)
+
+                    # the probability that the objects have this height
+                    return np.sum(height_distribution.logpdf(heights))
+
+            self.log_prob.append(heigthInformation)
+
+        def plotHeightPoints(points_feet=points_feet, points_head=points_head, color=plot_color):
+            p, = plt.plot(points_feet[..., 0], points_feet[..., 1], "_", label="feet", color=color)
+
+            # get the feet positions in the world
+            point3D_feet = self.spaceFromImage(points_feet, Z=0)
+            point3D_feet[..., 2] += height
+            projected_head = self.imageFromSpace(point3D_feet)
+
+            plt.scatter(projected_head[..., 0], projected_head[..., 1], label="heads", facecolors='none',
+                        edgecolors=p.get_color())
+            plt.plot(points_head[..., 0], points_head[..., 1], "+", label="heads fitted", color=p.get_color())
+
+            data = np.concatenate(([points_head], [projected_head], [np.ones(points_head.shape)*np.nan]))
+            if len(data.shape) == 3:
+                data = data.transpose(1, 0, 2).reshape((-1, 2))
+            else:
+                data = data.reshape((-1, 2))
+
+            plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+
+        self.info_plot_functions.append(plotHeightPoints)
+
+    def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties, only_plot=False, plot_color=None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the given
         landmarks and the specified positions in the image.
@@ -341,10 +380,16 @@ class Camera(ClassWithParameterSet):
         uncertainties : number, ndarray
             the standard deviation uncertainty of the positions in the **space** coordinates. Typically for landmarks
             obtained by gps, it could be e.g. [3, 3, 5], dimensions scalar, (3) or (Nx3)
+        only_plot : bool, optional
+            when true, the information will be ignored for fitting and only be used to plot.
         """
+        uncertainties = np.array(uncertainties)
         offset = np.max(uncertainties)
         sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
-        lm_points_space = lm_points_space[..., None]
+        if len(lm_points_image.shape) == 1:
+            lm_points_image = lm_points_image[None, ...]
+        if len(lm_points_space.shape) == 1:
+            lm_points_space = lm_points_space[None, ...]
         if len(uncertainties.shape) == 1:
             uncertainties = uncertainties[None, ..., None]
         else:
@@ -356,14 +401,31 @@ class Camera(ClassWithParameterSet):
             distance_from_camera = np.linalg.norm(nearest_point-np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]), axis=-1)
             factor = distance_from_camera[..., None] + sampled_offsets
 
-            distribution = stats.norm(lm_points_space, uncertainties)
+            distribution = stats.norm(lm_points_space[..., None], uncertainties)
 
             points_on_rays = origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
 
             return np.sum(distribution.logpdf(points_on_rays))
-        self.log_prob.append(landmarkInformation)
 
-    def addHorizonInformation(self, horizon, uncertainty):
+        if not only_plot:
+            self.log_prob.append(landmarkInformation)
+
+        def plotLandmarkPoints(lm_points_image=lm_points_image, lm_points_space=lm_points_space, color=plot_color):
+            lm_projected_image = self.imageFromSpace(lm_points_space)
+
+            p, = plt.plot(lm_points_image[..., 0], lm_points_image[..., 1], "+", label="landmarks fitted", color=color)
+            plt.scatter(lm_projected_image[..., 0], lm_projected_image[..., 1], label="landmarks", facecolors='none', edgecolors=p.get_color())
+
+            data = np.concatenate(([lm_points_image], [lm_projected_image], [np.ones(lm_points_image.shape) * np.nan]))
+            if len(data.shape) == 3:
+                data = data.transpose(1, 0, 2).reshape((-1, 2))
+            else:
+                data = data.reshape((-1, 2))
+
+            plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+        self.info_plot_functions.append(plotLandmarkPoints)
+
+    def addHorizonInformation(self, horizon, uncertainty=1, only_plot=False, plot_color=None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the horizon
         at the given pixel positions.
@@ -374,6 +436,8 @@ class Camera(ClassWithParameterSet):
             the pixel positions of points on the horizon in the image, dimension (2) or (Nx2)
         uncertainty : number, ndarray
             the pixels offset, how clear the horizon is visible in the image, dimensions () or (N)
+        only_plot : bool, optional
+            when true, the information will be ignored for fitting and only be used to plot.
         """
         # ensure that input is an numpy array
         horizon = np.array(horizon)
