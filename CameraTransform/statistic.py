@@ -221,3 +221,52 @@ def get_all_pymc_parameters(par):
         for parent in par.parents.values():
             parameters += get_all_pymc_parameters(parent)
     return parameters
+
+class FitParameter:
+    __name__ = ""
+    value = None
+    distribution = None
+    observed = False
+    dtype = float
+
+    def __init__(self, name, distribution=None, lower=None, upper=None, step=1, value=None, mean=None, std=None):
+        self.__name__ = name
+        if distribution is not None:
+            self.distribution = distribution
+        elif lower is not None and upper is not None:
+            self.parents = dict(lower=lower, upper=upper)
+            self.distribution = stats.uniform(loc=lower, scale=(upper-lower))
+        elif mean is not None and std is not None:
+            self.parents = dict(mean=mean, std=std)
+            self.distribution = stats.norm(loc=mean, scale=std)
+        else:
+            raise ValueError("No valid distribution supplied")
+        self.step = step
+        self.value = np.array(value)
+
+    def random(self):
+        return self.distribution.rvs()
+
+    def set_value(self, value):
+        self.value = np.array(value)
+
+    def logp(self):
+        return self.distribution.logpdf(self.value)
+
+    def __str__(self):
+        return self.__name__
+
+
+class Model:
+    def __init__(self, variables, logp):
+        self.variables = variables
+        self.logp_func = logp
+
+    def draw_from_prior(self):
+        for variable in self.variables:
+            variable.set_value(variable.random())
+
+    def __getattr__(self, item):
+        if item == "logp":
+            return self.logp_func()
+        return object.__getattribute__(self, item)

@@ -5,13 +5,11 @@ import json
 import itertools
 import matplotlib.pyplot as plt
 import cv2
-import pymc
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion
-from .statistic import get_all_pymc_parameters
 from . import gps
 from . import ray
 
@@ -321,8 +319,8 @@ class Camera(ClassWithParameterSet):
             when true, the information will be ignored for fitting and only be used to plot.
         """
         if not only_plot:
-            if isinstance(variation, pymc.Stochastic):
-                self.additional_parameters += get_all_pymc_parameters(variation)
+            if not isinstance(variation, (float, int)):
+                self.additional_parameters += [variation]
                 def heigthInformation(points_feet=points_feet, points_head=points_head, height=height,
                                       variation=variation):
                     height_distribution = stats.norm(loc=height, scale=variation.value)
