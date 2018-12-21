@@ -87,28 +87,28 @@ class TestFits(unittest.TestCase):
         camera.addLandmarkInformation(lm_points_px, lm_points_space, [3, 3, 5])
         camera.addLandmarkInformation(lm_points_px[0], lm_points_space[0], [3, 3, 5])
 
-        import pymc
-
         camera.metropolis([
-            pymc.Uniform("elevation_m", lower=0, upper=100, value=20),
-            pymc.Uniform("tilt_deg", lower=0, upper=180, value=80),
-            pymc.Uniform("heading_deg", lower=-180, upper=180, value=-77),
-            pymc.Uniform("roll_deg", lower=-180, upper=180, value=0)
+            ct.FitParameter("elevation_m", lower=0, upper=100, value=20),
+            ct.FitParameter("tilt_deg", lower=0, upper=180, value=80),
+            ct.FitParameter("heading_deg", lower=-180, upper=180, value=-77),
+            ct.FitParameter("roll_deg", lower=-180, upper=180, value=0)
         ], iterations=1e3)
 
         camera.fit([
-            pymc.Uniform("elevation_m", lower=0, upper=100, value=20),
-            pymc.Uniform("tilt_deg", lower=0, upper=180, value=80),
-            pymc.Uniform("heading_deg", lower=-180, upper=180, value=-77),
-            pymc.Uniform("roll_deg", lower=-180, upper=180, value=0)
+            ct.FitParameter("elevation_m", lower=0, upper=100, value=20),
+            ct.FitParameter("tilt_deg", lower=0, upper=180, value=80),
+            ct.FitParameter("heading_deg", lower=-180, upper=180, value=-77),
+            ct.FitParameter("roll_deg", lower=-180, upper=180, value=0)
         ], iterations=1e3)
 
+        """
         camera.fridge([
-            pymc.Uniform("elevation_m", lower=0, upper=100, value=20),
-            pymc.Uniform("tilt_deg", lower=0, upper=180, value=80),
-            pymc.Uniform("heading_deg", lower=-180, upper=180, value=-77),
-            pymc.Uniform("roll_deg", lower=-180, upper=180, value=0)
+            ct.FitParameter("elevation_m", lower=0, upper=100, value=20),
+            ct.FitParameter("tilt_deg", lower=0, upper=180, value=80),
+            ct.FitParameter("heading_deg", lower=-180, upper=180, value=-77),
+            ct.FitParameter("roll_deg", lower=-180, upper=180, value=0)
         ], iterations=1e2)
+        """
 
         camera.plotTrace()
         camera.plotFitInformation(im)
