@@ -149,6 +149,13 @@ def extrudeLine(points, z0, z1):
     return np.array(mesh)
 
 def getClosestPointFromLine(origin, ray, point):
+    # calculate the difference vector
     delta = point-origin
+    # norm the ray
+    ray /= np.linalg.norm(ray, axis=-1)[..., None]
+    # calculate the scale product
     factor = np.sum(ray*delta, axis=-1)
-    return origin[None, :] + factor[:, None] * ray
+    try:
+        return origin + factor[:, None] * ray
+    except IndexError:
+        return origin + factor * ray
