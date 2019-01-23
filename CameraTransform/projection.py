@@ -313,7 +313,7 @@ class RectilinearProjection(CameraProjection):
         # ensure that the points are provided as an array
         points = np.array(points)
         # set z=focallenth and solve the other equations for x and y
-        ray = np.array([(points[..., 0] - self.center_x_px) / self.focallength_x_px,
+        ray = np.array([-(points[..., 0] - self.center_x_px) / self.focallength_x_px,
                         (points[..., 1] - self.center_y_px) / self.focallength_y_px,
                         np.ones(points[..., 1].shape)]).T
         # norm the ray if desired
@@ -332,7 +332,7 @@ class RectilinearProjection(CameraProjection):
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         # transform the points
-        transformed_points = np.array([points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
+        transformed_points = np.array([-points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
                                        points[..., 1] * self.focallength_y_px / points[..., 2] + self.center_y_px]).T
         transformed_points[points[..., 2] > 0] = np.nan
         return transformed_points
@@ -384,7 +384,7 @@ class CylindricalProjection(CameraProjection):
         # set r=1 and solve the other equations for x and y
         r = 1
         alpha = (points[..., 0] - self.center_x_px) / self.focallength_x_px
-        x = np.sin(alpha) * r
+        x = -np.sin(alpha) * r
         z = np.cos(alpha) * r
         y = r * (points[..., 1] - self.center_y_px) / self.focallength_y_px
         # compose the ray
@@ -407,7 +407,7 @@ class CylindricalProjection(CameraProjection):
         points[np.abs(points[..., 2]) < 1e-10] = 0
         # transform the points
         transformed_points = np.array(
-            [self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
+            [-self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
              -self.focallength_y_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]], axis=-1) + self.center_y_px]).T
         # ensure that points' x values are also nan when the y values are nan
         transformed_points[np.isnan(transformed_points[..., 1])] = np.nan
@@ -460,7 +460,7 @@ class EquirectangularProjection(CameraProjection):
         # set r=1 and solve the other equations for x and y
         r = 1
         alpha = (points[..., 0] - self.center_x_px) / self.focallength_x_px
-        x = np.sin(alpha) * r
+        x = -np.sin(alpha) * r
         z = np.cos(alpha) * r
         y = r * np.tan((points[..., 1] - self.center_y_px) / self.focallength_y_px)
         # compose the ray
@@ -482,7 +482,7 @@ class EquirectangularProjection(CameraProjection):
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         # transform the points
-        transformed_points = np.array([self.focallength_x_px * np.arctan(points[..., 0] / points[..., 2]) + self.center_x_px,
+        transformed_points = np.array([-self.focallength_x_px * np.arctan(points[..., 0] / points[..., 2]) + self.center_x_px,
                                        -self.focallength_y_px * np.arctan(points[..., 1] / np.sqrt(
                                            points[..., 0] ** 2 + points[..., 2] ** 2)) + self.center_y_px]).T
         # return the points
