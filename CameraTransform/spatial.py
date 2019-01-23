@@ -38,26 +38,17 @@ class SpatialOrientation(ClassWithParameterSet):
         -\mathrm{elevation}
          \end{pmatrix}
 
-    We combine the rotation matrices to a single rotation matrix and apply heading and tilt rotation to the translation vector:
+    We combine the rotation matrices to a single rotation matrix:
 
     .. math::
         R &=  R_{\mathrm{roll}} \cdot  R_{\mathrm{tilt}} \cdot  R_{\mathrm{heading}}\\
-        T &= R_{\mathrm{tilt}} \cdot  R_{\mathrm{heading}} \cdot t\\
 
-    Finally, we compose the rotation and the translation to a single matrix in *projective coordinates*.
-
-    .. math::
-        C_{\mathrm{extr.}} &=  \left(\begin{array}{c|c}
-        R & T \\
-        \hline
-        0 & 1
-        \end{array}
-        \right)
-
-    which is equivalent to:
+    and use this matrix to convert from the **camera coordinates** to the **space coordinates** and vice versa:
 
     .. math::
-        x_\mathrm{space} = R \cdot x_\mathrm{camera} + T
+        x_\mathrm{camera} = R \cdot (x_\mathrm{space} + t)\\
+        x_\mathrm{space} = R^{-1} \cdot x_\mathrm{space} - t\\
+    
     """
 
     t = None
@@ -101,7 +92,7 @@ class SpatialOrientation(ClassWithParameterSet):
         heading = np.deg2rad(self.parameters.heading_deg)
 
         # get the translation matrix and rotate it
-        self.t = np.array([[self.parameters.pos_x_m, -self.parameters.pos_y_m, -self.parameters.elevation_m]]).T
+        self.t = np.array([self.parameters.pos_x_m, -self.parameters.pos_y_m, -self.parameters.elevation_m])
 
         # construct the rotation matrices for tilt, roll and heading
         self.R_tilt = np.array([[1, 0, 0],
@@ -114,27 +105,8 @@ class SpatialOrientation(ClassWithParameterSet):
                                 [-np.sin(heading), np.cos(heading), 0],
                                 [0, 0, 1]])
 
-        # rotate the translation around the tilt angle
-        self.t = np.dot(self.R_tilt, np.dot(self.R_head, self.t))
-
-        # get the rotation-translation matrix with the rotation composed with the translation
-        self.R = np.vstack((np.hstack((np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head), self.t)), [0, 0, 0, 1]))
-
-        # compose the camera matrix with the rotation-translation matrix
-        self.C = self.R
-        # to get the x coordinate right, mirror the x direction
-        self.C[:, 0] = -self.C[:, 0]
-        self.C_inv = np.linalg.inv(self.C)
-
-    def transformPoints(self, points):  # transform Space -> Camera
-        points = np.array(points)
-        points = np.hstack((points, points[..., 0:1]*0+1))
-        return np.dot(points, self.C.T)[..., :-1]
-
-    def transformInvertedPoints(self, points, direction=False):  # transform Space -> Camera
-        points = np.array(points)
-        points = np.hstack((points, points[..., 0:1]*0+(1-direction)))
-        return np.dot(points, self.C_inv.T)[..., :-1]
+        self.R = np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head)
+        self.R_inv = np.linalg.inv(self.R)
 
     def cameraFromSpace(self, points):
         """
@@ -167,7 +139,8 @@ class SpatialOrientation(ClassWithParameterSet):
         [[0.09 0.97 15.04]
          [0.18 0.98 15.07]]
         """
-        return self.transformPoints(points)
+        points = np.array(points)
+        return np.dot(points + self.t, self.R.T)
 
     def spaceFromCamera(self, points, direction=False):
         """
@@ -202,7 +175,11 @@ class SpatialOrientation(ClassWithParameterSet):
         [[-0.09 -0.27 -1.00]
          [-0.18 -0.24 -1.00]]
         """
-        return self.transformInvertedPoints(points, direction)
+        points = np.array(points)
+        if direction:
+            return np.dot(points, self.R_inv.T)
+        else:
+            return np.dot(points, self.R_inv.T) - self.t
 
     def save(self, filename):
         keys = self.parameters.parameters.keys()
