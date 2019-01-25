@@ -9,24 +9,26 @@ class SpatialOrientation(ClassWithParameterSet):
     matrices around the three angles: *tilt*, *roll*, *heading*:
 
     .. math::
+        R_{\mathrm{roll}} &=
+        \begin{pmatrix}
+        \cos(\alpha_\mathrm{roll}) & \sin(\alpha_\mathrm{roll}) & 0\\
+        -\sin(\alpha_\mathrm{roll}) & \cos(\alpha_\mathrm{roll}) & 0\\
+        0 & 0 & 1\\
+         \end{pmatrix}\\
         R_{\mathrm{tilt}} &=
         \begin{pmatrix}
         1 & 0 & 0\\
         0 & \cos(\alpha_\mathrm{tilt}) & \sin(\alpha_\mathrm{tilt}) \\
         0 & -\sin(\alpha_\mathrm{tilt}) & \cos(\alpha_\mathrm{tilt}) \\
          \end{pmatrix}\\
-         R_{\mathrm{roll}} &=
-        \begin{pmatrix}
-        \cos(\alpha_\mathrm{roll}) & \sin(\alpha_\mathrm{roll}) & 0\\
-        -\sin(\alpha_\mathrm{roll}) & \cos(\alpha_\mathrm{roll}) & 0\\
-        0 & 0 & 1\\
-         \end{pmatrix}\\
          R_{\mathrm{heading}} &=
         \begin{pmatrix}
-        \cos(\alpha_\mathrm{heading}) & \sin(\alpha_\mathrm{heading}) & 0\\
-        -\sin(\alpha_\mathrm{heading}) & \cos(\alpha_\mathrm{heading}) & 0\\
+        \cos(\alpha_\mathrm{heading}) & -\sin(\alpha_\mathrm{heading}) & 0\\
+        \sin(\alpha_\mathrm{heading}) & \cos(\alpha_\mathrm{heading}) & 0\\
         0 & 0 & 1\\
          \end{pmatrix}
+
+    These angles correspond to ZXZ-Euler angles.
 
     And the position *x*, *y*, *z* (=elevation):
 
@@ -35,7 +37,7 @@ class SpatialOrientation(ClassWithParameterSet):
         \begin{pmatrix}
         x\\
         y\\
-        -\mathrm{elevation}
+        \mathrm{elevation}
          \end{pmatrix}
 
     We combine the rotation matrices to a single rotation matrix:
@@ -46,9 +48,9 @@ class SpatialOrientation(ClassWithParameterSet):
     and use this matrix to convert from the **camera coordinates** to the **space coordinates** and vice versa:
 
     .. math::
-        x_\mathrm{camera} = R \cdot (x_\mathrm{space} + t)\\
-        x_\mathrm{space} = R^{-1} \cdot x_\mathrm{space} - t\\
-    
+        x_\mathrm{camera} = R \cdot (x_\mathrm{space} - t)\\
+        x_\mathrm{space} = R^{-1} \cdot x_\mathrm{space} + t\\
+
     """
 
     t = None
@@ -92,17 +94,17 @@ class SpatialOrientation(ClassWithParameterSet):
         heading = np.deg2rad(self.parameters.heading_deg)
 
         # get the translation matrix and rotate it
-        self.t = np.array([self.parameters.pos_x_m, -self.parameters.pos_y_m, -self.parameters.elevation_m])
+        self.t = np.array([self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m])
 
         # construct the rotation matrices for tilt, roll and heading
-        self.R_tilt = np.array([[1, 0, 0],
-                                [0, np.cos(tilt), np.sin(tilt)],
-                                [0, -np.sin(tilt), np.cos(tilt)]])
         self.R_roll = np.array([[+np.cos(roll), np.sin(roll), 0],
                                 [-np.sin(roll), np.cos(roll), 0],
                                 [0, 0, 1]])
-        self.R_head = np.array([[+np.cos(heading), np.sin(heading), 0],
-                                [-np.sin(heading), np.cos(heading), 0],
+        self.R_tilt = np.array([[1, 0, 0],
+                                [0, np.cos(tilt), np.sin(tilt)],
+                                [0, -np.sin(tilt), np.cos(tilt)]])
+        self.R_head = np.array([[np.cos(heading), -np.sin(heading), 0],
+                                [np.sin(heading), np.cos(heading), 0],
                                 [0, 0, 1]])
 
         self.R = np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head)
@@ -140,7 +142,7 @@ class SpatialOrientation(ClassWithParameterSet):
          [0.18 0.98 15.07]]
         """
         points = np.array(points)
-        return np.dot(points + self.t, self.R.T)
+        return np.dot(points - self.t, self.R.T)
 
     def spaceFromCamera(self, points, direction=False):
         """
@@ -179,7 +181,7 @@ class SpatialOrientation(ClassWithParameterSet):
         if direction:
             return np.dot(points, self.R_inv.T)
         else:
-            return np.dot(points, self.R_inv.T) - self.t
+            return np.dot(points, self.R_inv.T) + self.t
 
     def save(self, filename):
         keys = self.parameters.parameters.keys()
