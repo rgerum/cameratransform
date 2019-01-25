@@ -629,7 +629,7 @@ class Camera(ClassWithParameterSet):
             border.append(border[corner_index])
         return np.array(border)
 
-    def imageFromSpace(self, points):
+    def imageFromSpace(self, points, hide_backpoints=True):
         """
         Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
 
@@ -664,7 +664,7 @@ class Camera(ClassWithParameterSet):
         # ensure that the points are provided as an array
         points = np.array(points)
         # project the points from the space to the camera and from the camera to the image
-        return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points)))
+        return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points), hide_backpoints=hide_backpoints))
 
     def getRay(self, points, normed=False):
         """
