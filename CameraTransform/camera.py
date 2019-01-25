@@ -322,22 +322,34 @@ class CameraGroup(ClassWithParameterSet):
         cam1 = self[0]
         cam2 = self[1]
 
-        def drawEpilines(camA, camB, points):
-            for point in points:
-                origin, ray = camB.getRay(point, normed=True)
+        def drawEpilines(camA, camB, pointsA, pointsB):
+            for pointA, pointB in zip(pointsA, pointsB):
+
+                origin, world_ray = camB.getRay(pointB, normed=True)
                 pixel_points = []
                 for i in np.arange(-10000, 10000, 100):
-                    pixel_points.append(camA.imageFromSpace(origin + ray*i, hide_backpoints=False))
+                    pixel_points.append(camA.imageFromSpace(origin + world_ray*i, hide_backpoints=False))
                 pixel_points = np.array(pixel_points)
                 p, = plt.plot(pixel_points[:, 0], pixel_points[:, 1], "-")
-                plt.plot(point[0], point[1], "o", color=p.get_color())
+                plt.plot(pointA[0], pointA[1], "o", color=p.get_color())
+
+                # find the perpendicular point from the epipolar lines to the correspondes point
+                perpendicular_point = ray.getClosestPointFromLine(pixel_points[0], pixel_points[1] - pixel_points[0], pointA)
+
+                plt.plot(perpendicular_point[0], perpendicular_point[1], "+", color=p.get_color())
+
+                plt.plot([pointA[0], perpendicular_point[0]], [pointA[1], perpendicular_point[1]], "--", color=p.get_color())
+
+                # calculate the distances
+                distances = np.linalg.norm(perpendicular_point - pointA, axis=-1)
+                plt.text(pointA[0], pointA[1], "%.1f" % distances, color=p.get_color())
 
         plt.subplot(121)
-        drawEpilines(cam1, cam2, corresponding1)
+        drawEpilines(cam1, cam2, corresponding1, corresponding2)
         plt.imshow(im1)
 
         plt.subplot(122)
-        drawEpilines(cam2, cam1, corresponding2)
+        drawEpilines(cam2, cam1, corresponding2, corresponding1)
         plt.imshow(im2)
 
 
