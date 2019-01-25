@@ -233,6 +233,113 @@ class CameraGroup(ClassWithParameterSet):
         prob = np.sum([logProb() for logProb in self.log_prob]) + np.sum([logProb() for cam in self for logProb in cam.log_prob])
         return prob if not np.isnan(prob) else -np.inf
 
+    def setCameraParametersByPointCorrespondence(self, corresponding1, corresponding2, baseline):
+        cam1 = self[0]
+        cam2 = self[1]
+        f, cx, cy = cam1.focallength_x_px, cam1.center_x_px, cam1.center_y_px
+        K = np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
+        mat, mask = cv2.findEssentialMat(corresponding1, corresponding2, cam1.focallength_x_px,
+                                         (cam1.center_x_px, cam1.center_y_px))
+        n, rot, t, mask = cv2.recoverPose(mat, corresponding1, corresponding2, K)
+        cam1.heading_deg = 0
+        cam1.tilt_deg = 0
+        cam1.roll_deg = 0
+
+        def rotationToEuler(R):
+            alpha = np.rad2deg(np.arctan2(R[0, 2], -R[1, 2]))
+            beta = np.rad2deg(np.arccos(R[2, 2]))
+            gamma = np.rad2deg(np.arctan2(R[2, 0], R[2, 1]))
+            return np.array([180 + alpha, beta, 180 + gamma])
+
+        roll, tilt, heading = rotationToEuler(rot)
+        data = dict(roll_deg=roll,
+                    tilt_deg=tilt,
+                    heading_deg=heading,
+                    pos_x_m=cam1.pos_x_m + t[0, 0]*baseline,
+                    pos_y_m=cam1.pos_y_m + t[1, 0]*baseline,
+                    elevation_m=cam1.elevation_m + t[2, 0]*baseline)
+        print(data)
+        cam2.parameters.set_fit_parameters(data.keys(), data.values())
+
+    def plotEpilines(self, corresponding1, corresponding2, im1, im2):
+        cam1 = self[0]
+        cam2 = self[1]
+        F, mask = cv2.findFundamentalMat(corresponding1, corresponding2, method=cv2.FM_8POINT )
+
+        lines1 = cv2.computeCorrespondEpilines(corresponding2, 2, F)[:, 0, :]
+        lines2 = cv2.computeCorrespondEpilines(corresponding1, 1, F)[:, 0, :]
+
+        def drawLine(line, x_min, x_max, y_min, y_max):
+            a, b, c = line
+            points = []
+            y_x_min = -(a * x_min + c) / b
+            if y_min < y_x_min < y_max:
+                points.append([x_min, y_x_min])
+
+            y_x_max = -(a * x_max + c) / b
+            if y_min < y_x_max < y_max:
+                points.append([x_max, y_x_max])
+
+            x_y_min = -(b * y_min + c) / a
+            if x_min < x_y_min < x_max:
+                points.append([x_y_min, y_min])
+
+            x_y_max = -(b * y_max + c) / a
+            if x_min < x_y_max < x_max:
+                points.append([x_y_max, y_max])
+
+            if len(points) == 0:
+                return
+            points = np.array(points)
+            p, = plt.plot(points[:, 0], points[:, 1], "-")
+            return p
+
+        def drawEpilines(camA, camB, lines, points):
+            border = camA.getImageBorder()
+            plt.plot(border[:, 0], border[:, 1], "r-")
+
+            for point, line in zip(points, lines):
+                line = drawLine(line, 0, camA.image_width_px, 0, camA.image_height_px)
+                plt.plot(point[0], point[1], "o", color=line.get_color())
+
+            p = camA.imageFromSpace(camB.getPos())
+            print("p", p)
+            plt.plot(p[0], p[1], "r+", ms=5)
+
+            plt.axis("equal")
+
+        plt.subplot(121)
+        drawEpilines(cam1, cam2, lines1, corresponding1)
+        plt.imshow(im1)
+
+        plt.subplot(122)
+        drawEpilines(cam2, cam1, lines2, corresponding2)
+        plt.imshow(im2)
+
+        plt.show()
+
+    def plotMyEpiploarLines(self, corresponding1, corresponding2, im1, im2):
+        cam1 = self[0]
+        cam2 = self[1]
+
+        def drawEpilines(camA, camB, points):
+            for point in points:
+                origin, ray = camB.getRay(point, normed=True)
+                pixel_points = []
+                for i in np.arange(-10000, 10000, 100):
+                    pixel_points.append(camA.imageFromSpace(origin + ray*i, hide_backpoints=False))
+                pixel_points = np.array(pixel_points)
+                p, = plt.plot(pixel_points[:, 0], pixel_points[:, 1], "-")
+                plt.plot(point[0], point[1], "o", color=p.get_color())
+
+        plt.subplot(121)
+        drawEpilines(cam1, cam2, corresponding1)
+        plt.imshow(im1)
+
+        plt.subplot(122)
+        drawEpilines(cam2, cam1, corresponding2)
+        plt.imshow(im2)
+
 
 class Camera(ClassWithParameterSet):
     """
@@ -553,6 +660,9 @@ class Camera(ClassWithParameterSet):
             if single_point:
                 return np.array([x, y])
         return np.array(points)
+
+    def getPos(self):
+        return np.array([self.pos_x_m, self.pos_y_m, self.elevation_m])
 
     def getImageBorder(self, resolution=1):
         """
