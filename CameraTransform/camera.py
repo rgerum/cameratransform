@@ -528,6 +528,7 @@ class Camera(ClassWithParameterSet):
         d = self.distanceToHorizon()
         if pointsX is None:
             pointsX = [0, self.image_width_px/2, self.image_width_px]
+        pointsX = np.array(pointsX)
         pointsY = np.arange(0, self.image_height_px)
 
         if len(pointsX.shape) == 0:
@@ -577,9 +578,9 @@ class Camera(ClassWithParameterSet):
             border.append([w, y])
         for x in np.arange(w, 0, -resolution):
             border.append([x, 0])
-        return self.spaceFromImage(border, Z=0)
+        return np.array(border)#self.spaceFromImage(border, Z=0)
 
-    def getCameraCone(self):
+    def getCameraCone(self, project_to_ground=False):
         """
         The cone of the camera's field of view. This includes the border of the image and lines to the origin of the
         camera.
@@ -590,21 +591,37 @@ class Camera(ClassWithParameterSet):
             the cone of the camera in **space** coordinates, dimensions (Nx3)
         """
         w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
-        border = []
-        corner_indices = [0]
-        for y in range(h):
-            border.append([0, y])
-        corner_indices.append(len(border))
-        for x in range(w):
-            border.append([x, h])
-        corner_indices.append(len(border))
-        for y in np.arange(h, 0, -1):
-            border.append([w, y])
-        corner_indices.append(len(border))
-        for x in np.arange(w, 0, -1):
-            border.append([x, 0])
-        corner_indices.append(len(border))
-        border = list(self.spaceFromImage(border, Z=0))
+        if project_to_ground:
+            border = []
+            corner_indices = [0]
+            for y in range(h):
+                border.append([0, y])
+            corner_indices.append(len(border))
+            for x in range(w):
+                border.append([x, h])
+            corner_indices.append(len(border))
+            for y in np.arange(h, 0, -1):
+                border.append([w, y])
+            corner_indices.append(len(border))
+            for x in np.arange(w, 0, -1):
+                border.append([x, 0])
+            corner_indices.append(len(border))
+            border = list(self.spaceFromImage(border, Z=0))
+        else:
+            border = []
+            corner_indices = [0]
+            border.append([0, h])
+            corner_indices.append(len(border))
+            border.append([w, h])
+            corner_indices.append(len(border))
+            border.append([w, 0])
+            corner_indices.append(len(border))
+            border.append([0, 0])
+            corner_indices.append(len(border))
+            border.append([0, h])
+            corner_indices.append(len(border))
+            border = list(self.spaceFromImage(border, D=1))
+
         origin = self.orientation.spaceFromCamera([0, 0, 0])
         for corner_index in corner_indices:
             border.append([np.nan, np.nan, np.nan])

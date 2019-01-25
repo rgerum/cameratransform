@@ -16,27 +16,38 @@ class Scene:  # pragma: no cover
         self.objects.append(object)
 
     def plotSceneViews(self):
+        cone = self.camera.getCameraCone()
+
         plt.subplot(221)
         plt.xlabel("x")
         plt.ylabel("y")
         plt.axis("equal")
+        plt.plot(cone[:, 0], cone[:, 1], "r-")
+
         plt.subplot(222)
         plt.xlabel("x")
         plt.ylabel("z")
         plt.axis("equal")
+        plt.plot(cone[:, 0], cone[:, 2], "r-")
+
         plt.subplot(223)
         plt.xlabel("y")
         plt.ylabel("z")
         plt.axis("equal")
+        plt.plot(cone[:, 1], cone[:, 2], "r-")
+
         if self.camera is not None:
             plt.subplot(224)
             plt.xlabel("image x")
             plt.ylabel("image y")
-            im = np.zeros(
-                [self.camera.projection.parameters.image_height_px, self.camera.projection.parameters.image_width_px])
+            im = np.zeros([self.camera.projection.parameters.image_height_px,
+                           self.camera.projection.parameters.image_width_px])
             plt.imshow(im)
+            horizon = self.camera.getImageHorizon(np.linspace(0, self.camera.projection.parameters.image_width_px, 100))
+            plt.plot(horizon[:, 0], horizon[:, 1], "c-")
             plt.xlim(0, im.shape[1])
             plt.ylim(im.shape[0], 0)
+
         for object in self.objects:
             plt.subplot(221)
             plt.plot(object[:, 0], object[:, 1], "-")
@@ -63,3 +74,49 @@ class Scene:  # pragma: no cover
         plt.ylim(self.camera.projection.parameters.image_height_px, 0)
         plt.savefig(filename, dpi=100)
         fig.clear()
+
+    def addCube(self, pos, width):
+        points = []
+        x, y, z = pos
+        r = width/2
+        points.append([x + r, y + r, z - r])
+        points.append([x + r, y - r, z - r])
+        points.append([x - r, y - r, z - r])
+        points.append([x - r, y + r, z - r])
+        points.append([x + r, y + r, z - r])
+        points.append([np.nan, np.nan, np.nan])
+        points.append([x + r, y + r, z - r])
+        points.append([x + r, y + r, z + r])
+        points.append([np.nan, np.nan, np.nan])
+        points.append([x + r, y - r, z - r])
+        points.append([x + r, y - r, z + r])
+        points.append([np.nan, np.nan, np.nan])
+        points.append([x - r, y - r, z - r])
+        points.append([x - r, y - r, z + r])
+        points.append([np.nan, np.nan, np.nan])
+        points.append([x - r, y + r, z - r])
+        points.append([x - r, y + r, z + r])
+        points.append([np.nan, np.nan, np.nan])
+        points.append([x + r, y + r, z + r])
+        points.append([x + r, y - r, z + r])
+        points.append([x - r, y - r, z + r])
+        points.append([x - r, y + r, z + r])
+        points.append([x + r, y + r, z + r])
+        points.append([np.nan, np.nan, np.nan])
+
+        self.add(np.array(points))
+        return np.array(points)
+
+    def addRect(self, pos, width):
+        points = []
+        x, y, z = pos
+        r = width / 2
+        points.append([x + r, y, z - r])
+        points.append([x + r, y, z + r])
+        points.append([x - r, y, z + r])
+        points.append([x - r, y, z - r])
+        points.append([x + r, y, z - r])
+        points.append([np.nan, np.nan, np.nan])
+
+        self.add(np.array(points))
+        return np.array(points)
