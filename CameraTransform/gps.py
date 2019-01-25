@@ -159,7 +159,7 @@ def gpsFromString(gps_string, height=None):
             return np.array([gpsFromString(data) for data in gps_string])
         else:
             return np.array([gpsFromString(*data) for data in gps_string])
-    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)'\s*(?P<sec>[\d.]+)(''|\"| )\s*",
+    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′)\s*(?P<sec>[\d.]+)(''|\"| )\s*",
                   r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)'\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
     for string in regex_list:
@@ -171,7 +171,10 @@ def gpsFromString(gps_string, height=None):
                 value = 0
                 deg = data[part+"_deg"]
                 min = data[part+"_min"]
-                sec = data[part+"_sec"]
+                try:
+                    sec = data[part+"_sec"]
+                except KeyError:
+                    sec = 0
                 sign = data[part+"_sign"]
                 if deg is not None:
                     value += abs(float(deg))
