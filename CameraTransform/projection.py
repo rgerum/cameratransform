@@ -322,7 +322,7 @@ class RectilinearProjection(CameraProjection):
         # return the ray
         return -ray
 
-    def imageFromCamera(self, points):
+    def imageFromCamera(self, points, hide_backpoints=True):
         """
                           x                                y
             x_im = f_x * --- + offset_x      y_im = f_y * --- + offset_y
@@ -334,7 +334,8 @@ class RectilinearProjection(CameraProjection):
         # transform the points
         transformed_points = np.array([-points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
                                        points[..., 1] * self.focallength_y_px / points[..., 2] + self.center_y_px]).T
-        transformed_points[points[..., 2] > 0] = np.nan
+        if hide_backpoints:
+            transformed_points[points[..., 2] > 0] = np.nan
         return transformed_points
 
     def getFieldOfView(self):
@@ -395,7 +396,7 @@ class CylindricalProjection(CameraProjection):
         # return the rey
         return -ray
 
-    def imageFromCamera(self, points):
+    def imageFromCamera(self, points, hide_backpoints=True):
         """
                                ( x )                                     y
             x_im = f_x * arctan(---) + offset_x      y_im = f_y * --------------- + offset_y
@@ -471,7 +472,7 @@ class EquirectangularProjection(CameraProjection):
         # return the rey
         return -ray
 
-    def imageFromCamera(self, points):
+    def imageFromCamera(self, points, hide_backpoints=True):
         """
                                ( x )                                    (       y       )
             x_im = f_x * arctan(---) + offset_x      y_im = f_y * arctan(---------------) + offset_y
