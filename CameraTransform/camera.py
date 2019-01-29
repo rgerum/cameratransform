@@ -1036,15 +1036,15 @@ class Camera(ClassWithParameterSet):
         if extent is None:
             extent = [0, self.image_width_px, 0, self.image_height_px]
 
+        # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
+        if scaling is None:
+            scaling = 1
+
         # if we have cached the map, use the cached map
         if self.map_undistort is not None and \
                 self.last_extent_undistort == extent and \
                 self.last_scaling_undistort == scaling:
             return self.map_undistort
-
-        # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
-        if scaling is None:
-            scaling = 1
 
         # get a mesh grid
         mesh = np.array(np.meshgrid(np.arange(extent[0], extent[1], scaling),
