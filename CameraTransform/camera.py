@@ -226,6 +226,26 @@ class CameraGroup(ClassWithParameterSet):
 
         self.log_prob.append(pointCorrespondenceInformation)
 
+    def pointCorrespondenceError(self, corresponding1, corresponding2):
+        sum = 0
+        corresponding = [corresponding1, corresponding2]
+        distances_list = []
+        # iterate over cam1 -> cam2 and cam2 -> cam1
+        for i in [0, 1]:
+            # get the ray from the correspondences in the first camera's image
+            world_epipole, world_ray = self[i].getRay(corresponding[i])
+            # project them to the image of the second camera
+            p1 = self[1 - i].imageFromSpace(world_epipole + world_ray * 1, hide_backpoints=False)
+            p2 = self[1 - i].imageFromSpace(world_epipole + world_ray * 2, hide_backpoints=False)
+            # find the perpendicular point from the epipolar lines to the correspondes point
+            perpendicular_point = ray.getClosestPointFromLine(p1, p2 - p1, corresponding[1 - i])
+            # calculate the distances
+            distances = np.linalg.norm(perpendicular_point - corresponding[1 - i], axis=-1)
+            # sum the logprob of these distances
+            distances_list.append(distances)
+        # return the sum of the logprobs
+        return distances_list
+
     def getLogProbability(self):
         """
         Gives the sum of all terms of the log probability. This function is used for sampling and fitting.
@@ -264,7 +284,7 @@ class CameraGroup(ClassWithParameterSet):
     def plotEpilines(self, corresponding1, corresponding2, im1, im2):
         cam1 = self[0]
         cam2 = self[1]
-        F, mask = cv2.findFundamentalMat(corresponding1, corresponding2, method=cv2.FM_8POINT )
+        F, mask = cv2.findFundamentalMat(corresponding1, corresponding2)#, method=cv2.FM_8POINT)
 
         lines1 = cv2.computeCorrespondEpilines(corresponding2, 2, F)[:, 0, :]
         lines2 = cv2.computeCorrespondEpilines(corresponding1, 1, F)[:, 0, :]
@@ -318,7 +338,7 @@ class CameraGroup(ClassWithParameterSet):
 
         plt.show()
 
-    def plotMyEpiploarLines(self, corresponding1, corresponding2, im1, im2):
+    def plotMyEpiploarLines(self, corresponding1, corresponding2, im1=None, im2=None):
         cam1 = self[0]
         cam2 = self[1]
 
@@ -346,11 +366,13 @@ class CameraGroup(ClassWithParameterSet):
 
         plt.subplot(121)
         drawEpilines(cam1, cam2, corresponding1, corresponding2)
-        plt.imshow(im1)
+        if im1 is not None:
+            plt.imshow(im1)
 
         plt.subplot(122)
         drawEpilines(cam2, cam1, corresponding2, corresponding1)
-        plt.imshow(im2)
+        if im2 is not None:
+            plt.imshow(im2)
 
 
 class Camera(ClassWithParameterSet):

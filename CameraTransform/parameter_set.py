@@ -294,14 +294,29 @@ class ClassWithParameterSet(object):
         return trace
 
     def fridge(self, parameter, iterations=10000, **kwargs):
-        import mock
-        import sys
-        # mock pymc.ZeroProbability as this is the only direct import of pymc that Bayesianfridge makes
-        sys.modules.update((mod_name, mock.MagicMock()) for mod_name in ["pymc", "pymc.ZeroProbability"])
-        from bayesianfridge import sample
+        if 1:
+            import mock
+            import sys
+            # mock pymc.ZeroProbability as this is the only direct import of pymc that Bayesianfridge makes
+            sys.modules.update((mod_name, mock.MagicMock()) for mod_name in ["pymc", "pymc.ZeroProbability"])
+            from bayesianfridge import sample
 
-        # we create our own model mimicking a pymc model
-        model = Model(parameter+self.additional_parameters, self.getLogProbability)
+            # we create our own model mimicking a pymc model
+            model = Model(parameter+self.additional_parameters, self.getLogProbability)
+
+        else:
+            import pymc
+            from bayesianfridge import sample
+
+            param_dict = {str(p): p for p in parameter}
+            additional_param_dict = {str(p): p for p in self.additional_parameters}
+
+            @ pymc.observed
+            def Ylike(value=1, param_dict=param_dict, additional_param_dict=additional_param_dict):
+                self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
+                return self._getLogProbability_raw()
+
+            model = pymc.Model(parameter + self.additional_parameters + [Ylike])
 
         samples, marglike = sample(model, int(iterations), **kwargs)
 
