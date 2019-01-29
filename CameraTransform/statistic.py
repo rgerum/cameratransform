@@ -138,22 +138,22 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
 
     def getAxes(name, N):
         try:
-            ax_dict = plt.gcf().trace_ax_dict
+            trace_ax_dict = plt.gcf().trace_ax_dict
         except AttributeError:
-            ax_dict = dict(N=N, next_index=0)
-            plt.gcf().trace_ax_dict = ax_dict
-        if name not in ax_dict:
-            index = ax_dict["next_index"]
-            ax1 = plt.subplot(ax_dict["N"], 2, index * 2 + 1)
+            trace_ax_dict = dict(N=N, next_index=0)
+            plt.gcf().trace_ax_dict = trace_ax_dict
+        if name not in trace_ax_dict:
+            index = trace_ax_dict["next_index"]
+            ax1 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 1)
             if index == 0:
-                ax2 = plt.subplot(ax_dict["N"], 2, index * 2 + 2)
-                ax_dict["top_left"] = ax2
+                ax2 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 2)
+                trace_ax_dict["top_left"] = ax2
             else:
-                ax2 = plt.subplot(ax_dict["N"], 2, index * 2 + 2, sharex=ax_dict["top_left"])
-            ax_dict[name] = (ax1, ax2)
-            ax_dict["next_index"] += 1
+                ax2 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 2, sharex=trace_ax_dict["top_left"])
+            trace_ax_dict[name] = (ax1, ax2)
+            trace_ax_dict["next_index"] += 1
             return ax1, ax2
-        return ax_dict[name]
+        return trace_ax_dict[name]
 
     try:
         most_probable_index = trace["probability"].idxmax()
@@ -170,7 +170,7 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
     for index, name in enumerate(columns):
         if index > N-1:
             continue
-        data = trace[name]
+        data = trace[name][::100]
 
         if axes is None:
             ax1, ax2 = getAxes(name, N)
@@ -183,11 +183,11 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
         try:
             y = gaussian_kde(data)(x)
             plt.plot(x, y, "-")
-            plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
+            #plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
         except Exception as err:
             print(err)
             pass
-        plt.ylim(bottom=0)
+        #plt.ylim(bottom=0)
         plt.ylabel("frequency")
         if show_mean_median:
             plt.axvline(data[most_probable_index], color="r")
