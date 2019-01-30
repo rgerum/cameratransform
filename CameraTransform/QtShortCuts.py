@@ -327,7 +327,7 @@ class QInputColor(QInput):
 class QInputFilename(QInput):
     last_folder = None
 
-    def __init__(self, layout=None, name=None, value=None, dialog_title="Choose File", file_type="All", filename_checker=None, existing=False, **kwargs):
+    def __init__(self, layout=None, name=None, value=None, dialog_title="Choose File", file_type="All", button_text="choose file", filename_checker=None, existing=False, just_button=False, **kwargs):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
@@ -340,9 +340,13 @@ class QInputFilename(QInput):
         self.layout().addWidget(self.line)
         self.line.setEnabled(False)
 
-        self.button = QtWidgets.QPushButton("choose file")
+        self.button = QtWidgets.QPushButton(button_text)
         self.layout().addWidget(self.button)
         self.button.clicked.connect(self._openDialog)
+
+        if just_button:
+            self.label.setHidden(True)
+            self.line.setHidden(True)
 
         # set the color
         self.setValue(value)
