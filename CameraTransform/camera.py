@@ -724,7 +724,7 @@ class Camera(ClassWithParameterSet):
             border.append([x, 0])
         return np.array(border)#self.spaceFromImage(border, Z=0)
 
-    def getCameraCone(self, project_to_ground=False):
+    def getCameraCone(self, project_to_ground=False, D=1):
         """
         The cone of the camera's field of view. This includes the border of the image and lines to the origin of the
         camera.
@@ -764,7 +764,7 @@ class Camera(ClassWithParameterSet):
             corner_indices.append(len(border))
             border.append([0, h])
             corner_indices.append(len(border))
-            border = list(self.spaceFromImage(border, D=1))
+            border = list(self.spaceFromImage(border, D=D))
 
         origin = self.orientation.spaceFromCamera([0, 0, 0])
         for corner_index in corner_indices:
