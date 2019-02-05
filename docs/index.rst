@@ -17,6 +17,7 @@ the camera space to the world space and back.
    projections
    spatial
    gps
+   stereo
    api
 
 
