@@ -133,10 +133,10 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     return trace
 
 
-def plotTrace(trace, N=None, show_mean_median=True, axes=None):
+def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distributions=False, skip=1):
     from scipy.stats import gaussian_kde
 
-    def getAxes(name, N):
+    def getAxes(name, N, width):
         try:
             trace_ax_dict = plt.gcf().trace_ax_dict
         except AttributeError:
@@ -144,12 +144,16 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
             plt.gcf().trace_ax_dict = trace_ax_dict
         if name not in trace_ax_dict:
             index = trace_ax_dict["next_index"]
-            ax1 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 1)
+            ax1 = plt.subplot(trace_ax_dict["N"], width, index * width + 1, label=name)
+            if width == 1:
+                trace_ax_dict[name] = ax1
+                trace_ax_dict["next_index"] += 1
+                return ax1
             if index == 0:
-                ax2 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 2)
+                ax2 = plt.subplot(trace_ax_dict["N"], width, index * width + 2, label=name+"_B")
                 trace_ax_dict["top_left"] = ax2
             else:
-                ax2 = plt.subplot(trace_ax_dict["N"], 2, index * 2 + 2, sharex=trace_ax_dict["top_left"])
+                ax2 = plt.subplot(trace_ax_dict["N"], width, index * width + 2, sharex=trace_ax_dict["top_left"], label=name+"_B")
             trace_ax_dict[name] = (ax1, ax2)
             trace_ax_dict["next_index"] += 1
             return ax1, ax2
@@ -170,18 +174,24 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
     for index, name in enumerate(columns):
         if index > N-1:
             continue
-        data = trace[name][::100]
+        data = trace[name]
 
-        if axes is None:
-            ax1, ax2 = getAxes(name, N)
+        if just_distributions:
+            if axes is None:
+                ax1 = getAxes(name, N, 1)
+            else:
+                ax1 = axes[index * 2]
         else:
-            ax1, ax2 = axes[index*2:(index+1)*2]
+            if axes is None:
+                ax1, ax2 = getAxes(name, N, 2)
+            else:
+                ax1, ax2 = axes[index*2:(index+1)*2]
 
         plt.sca(ax1)
-        plt.title(name)
+        #plt.title(name)
         x = np.linspace(min(data), max(data), 1000)
         try:
-            y = gaussian_kde(data)(x)
+            y = gaussian_kde(data[::skip])(x)
             plt.plot(x, y, "-")
             #plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
         except Exception as err:
@@ -189,17 +199,19 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None):
             pass
         #plt.ylim(bottom=0)
         plt.ylabel("frequency")
+        plt.xlabel(name)
         if show_mean_median:
             plt.axvline(data[most_probable_index], color="r")
             plt.axvline(np.mean(data), color="k")
 
-        plt.sca(ax2)
-        plt.title(name)
-        plt.plot(data)
-        if show_mean_median:
-            plt.axhline(data[most_probable_index], color="r")
-            plt.axhline(np.mean(data), color="k")
-        plt.ylabel("sampled value")
+        if not just_distributions:
+            plt.sca(ax2)
+            plt.title(name)
+            plt.plot(data[::skip])
+            if show_mean_median:
+                plt.axhline(data[most_probable_index], color="r")
+                plt.axhline(np.mean(data), color="k")
+            plt.ylabel("sampled value")
     #plt.tight_layout()
     return trace
 
