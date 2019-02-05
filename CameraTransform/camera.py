@@ -374,6 +374,10 @@ class CameraGroup(ClassWithParameterSet):
         if im2 is not None:
             plt.imshow(im2)
 
+    def scaleSpace(self, scale):
+        for cam in self:
+            cam.pos_x_m, cam.pos_y_m, cam.elevation_m = np.array([cam.pos_x_m, cam.pos_y_m, cam.elevation_m]) * scale
+
 
 class Camera(ClassWithParameterSet):
     """
