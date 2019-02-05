@@ -336,11 +336,11 @@ class ClassWithParameterSet(object):
 
         return trace
 
-    def plotTrace(self):
+    def plotTrace(self, **kwargs):
         """
         Generate a trace plot (matplotlib window) of the current trace of the camera.
         """
-        plotTrace(self.parameters.trace)
+        plotTrace(self.parameters.trace, **kwargs)
 
     def plotFitInformation(self, image=None):
         if image is not None:
