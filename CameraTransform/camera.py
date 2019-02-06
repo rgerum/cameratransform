@@ -726,7 +726,7 @@ class Camera(ClassWithParameterSet):
             border.append([w, y])
         for x in np.arange(w, 0, -resolution):
             border.append([x, 0])
-        return np.array(border)#self.spaceFromImage(border, Z=0)
+        return np.array(border)
 
     def getCameraCone(self, project_to_ground=False, D=1):
         """

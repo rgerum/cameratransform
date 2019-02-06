@@ -69,7 +69,7 @@ class TestParameterSet(unittest.TestCase):
         assert np.all(np.isnan(cone_image))
 
         cone = cam.getImageBorder()
-        cone_image = np.round(cam.imageFromSpace(cone))
+        cone_image = np.round(cone).astype("float")
         cone_image[cone_image[:, 0] == 0] = np.nan
         cone_image[cone_image[:, 0] == cam.projection.image_width_px] = np.nan
         cone_image[cone_image[:, 1] == cam.projection.image_height_px] = np.nan
