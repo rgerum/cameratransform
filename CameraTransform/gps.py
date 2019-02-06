@@ -15,9 +15,9 @@ def formatGPS(lat, lon, format=None, asLatex=False):
        +================================+===================+==================+
        | %2d° %2d' %6.3f" %s (default)  | 70° 37'  4.980" S | 8°  9' 26.280" W |
        +--------------------------------+-------------------+------------------+
-       | %2d° %2d.3f %s                 | 70° 37.083 S      | 8°  9.438 W      |
+       | %2d° %2.3f' %s                 | 70° 37.083' S     | 8°  9.438' W     |
        +--------------------------------+-------------------+------------------+
-       | %2d°                           | -70.618050°       | -8.157300°       |
+       | %2.3f°                         | -70.618050°       | -8.157300°       |
        +--------------------------------+-------------------+------------------+
 
     Parameters
@@ -163,14 +163,18 @@ def gpsFromString(gps_string, height=None):
                   r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)'\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
     for string in regex_list:
-        match = re.match(string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+"\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?", gps_string)
+        pattern = "\s*"+string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+"\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?"+"\s*"
+        match = re.match(pattern, gps_string)
         if match:
             data = match.groupdict()
             gps = []
             for part in ["lat", "lon"]:
                 value = 0
                 deg = data[part+"_deg"]
-                min = data[part+"_min"]
+                try:
+                    min = data[part+"_min"]
+                except KeyError:
+                    min = 0
                 try:
                     sec = data[part+"_sec"]
                 except KeyError:
@@ -181,9 +185,9 @@ def gpsFromString(gps_string, height=None):
                     if deg[0] == "-":
                         sign = "S"
                 if min is not None:
-                    value += float(min)/60
+                    value += float(min)/60.
                 if sec is not None:
-                    value += float(sec)/3600
+                    value += float(sec)/3600.
                 if sign is not None:
                     if sign in "SW":
                         value *= -1
