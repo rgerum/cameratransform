@@ -177,7 +177,8 @@ class ClassWithParameterSet(object):
         if self.parameters.trace is not None:
             most_probable_index = self.parameters.trace["probability"].idxmax()
             parameter_set = dict(self.parameters.trace.loc[most_probable_index])
-            del parameter_set["probability"]
+            if "probability" in parameter_set:
+                del parameter_set["probability"]
             self.parameters.set_fit_parameters(parameter_set.keys(), parameter_set.values())
         else:
             callbacks = set()
@@ -289,6 +290,7 @@ class ClassWithParameterSet(object):
 
         # convert the trace to a pandas dataframe
         trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])
+        print(trace)
         self.set_trace(trace)
         self.set_to_mean()
         return trace
