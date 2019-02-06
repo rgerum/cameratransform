@@ -87,12 +87,13 @@ class TestFits(unittest.TestCase):
         camera.addLandmarkInformation(lm_points_px, lm_points_space, [3, 3, 5])
         camera.addLandmarkInformation(lm_points_px[0], lm_points_space[0], [3, 3, 5])
 
-        camera.metropolis([
+        trace = camera.metropolis([
             ct.FitParameter("elevation_m", lower=0, upper=100, value=20),
             ct.FitParameter("tilt_deg", lower=0, upper=180, value=80),
             ct.FitParameter("heading_deg", lower=-180, upper=180, value=-77),
             ct.FitParameter("roll_deg", lower=-180, upper=180, value=0)
         ], iterations=1e3)
+        print(trace)
 
         camera.fit([
             ct.FitParameter("elevation_m", lower=0, upper=100, value=20),
