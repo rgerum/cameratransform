@@ -4,13 +4,13 @@ Projections
 .. tip::
     Projections transforms from the **image** to **camera** coordinate system. Parameters are :math:`f_x, f_y, c_x, c_y` and the image size in px.
 
-This section describes the different projections which are available for the projection of the objects in the camera
-**coordinate system** to the **image coordinates**.
+This section describes the different projections which are available for the projection of the objects in the **camera
+coordinate** system to the **image coordinates**.
 
-In the camera coordinate system, the camera is positioned at (0,0,0) and is pointing in :math:`z` direction.
+In the **camera coordinate** system, the camera is positioned at (0,0,0) and is pointing in :math:`z` direction.
 
-For each projection the projection formula is provided which allows to transform from the camera coordinate system (3D)
-to the image coordinate system (2D). As information is lost from transforming from 3D to 2D, the back transformation
+For each projection the projection formula is provided which allows to transform from the **camera coordinate** system (3D)
+to the **image coordinate** system (2D). As information is lost from transforming from 3D to 2D, the back transformation
 is not unique. All points that are projected on one image pixel lie on one line or ray. Therefore, for the
 "backtransformation", only a ray can be provided. To obtain a point this ray has e.g. to be intersected with a plane in
 the world.
