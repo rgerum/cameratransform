@@ -226,7 +226,7 @@ def getBearing(point1, point2):
     dL = lon2-lon1
     X = np.cos(lat2) * np.sin(dL)
     Y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dL)
-    beta = np.arctan(X/Y)
+    beta = -np.arctan2(X, -Y)
     return np.rad2deg(beta)
 
 def splitGPS(x, keep_deg=False):
