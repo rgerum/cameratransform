@@ -319,9 +319,14 @@ def moveDistance(start, distance, bearing):
     return np.array([np.rad2deg(lat2), np.rad2deg(lon2)]).T
 
 def spaceFromGPS(gps, gps0):
+    if len(gps[..., :]) == 2:
+        height = np.zeros_like(gps[..., 0])
+    else:
+        height = gps[..., 2]
     distance = getDistance(gps0, gps)
     bearing = getBearing(gps0, gps)
-    return np.array([distance * np.sin(np.deg2rad(bearing)), distance * np.cos(np.deg2rad(bearing)), gps[..., 2]]).T
+    return np.array([distance * np.sin(np.deg2rad(bearing)), distance * np.cos(np.deg2rad(bearing)), height]).T
+
 
 def gpsFromSpace(space, gps0):
     bearing = np.arctan2(space[..., 0], space[..., 1])
