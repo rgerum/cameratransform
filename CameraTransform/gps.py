@@ -302,13 +302,14 @@ def moveDistance(start, distance, bearing):
     distance : float, ndarray
         the distance to move in m, dimensions (), (N)
     bearing : float, ndarray
-        the bearing angle, specifiing in which direction to move, dimensions (), (N)
+        the bearing angle in degrees, specifying in which direction to move, dimensions (), (N)
 
     Returns
     -------
     target : ndarray
         the target point, dimensions (2), (3), (Nx2), (Nx3)
     """
+    bearing = np.deg2rad(bearing)
     lat1, lon1, h1 = splitGPS(start)
     R = 6371e3
     lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) +
@@ -317,6 +318,7 @@ def moveDistance(start, distance, bearing):
     lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
                              np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
     return np.array([np.rad2deg(lat2), np.rad2deg(lon2)]).T
+
 
 def spaceFromGPS(gps, gps0):
     if len(gps[..., :]) == 2:
