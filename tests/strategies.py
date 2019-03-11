@@ -94,6 +94,10 @@ def orientation(draw, elevation=st.floats(0, 1000), tilt_deg=st.floats(0, 90), r
                                  draw(y_m))
 
 
+def lens():
+    return st.one_of(st.just(ct.NoDistortion), st.just(ct.BrownLensDistortion), st.just(ct.ABCDistortion))
+
+
 @st.composite
 def simple_orientation(draw, elevation=st.floats(0, 1000), tilt_deg=st.floats(0, 90)):
     return ct.SpatialOrientation(draw(elevation), draw(tilt_deg))

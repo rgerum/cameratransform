@@ -93,6 +93,20 @@ class TestTransforms(unittest.TestCase):
     def test_print(self, cam):
         str(cam)
 
+    @given(ct_st.lens(), ct_st.projection(), st.floats(0, 0.01))
+    def test_lens(self, lens, proj, k):
+        if lens == ct.NoDistortion:
+            lens = lens()
+        else:
+            lens = lens(k)
+        cam = ct.Camera(projection=proj, lens=lens)
+        y = [proj.image_height_px*0.5]*100
+        x = np.linspace(0, 1, 100)*proj.image_width_px
+        pos0 = np.round(np.array([x, y]).T).astype(int)
+        pos1 = cam.lens.distortedFromImage(pos0)
+        pos2 = np.round(cam.lens.imageFromDistorted(pos1)).astype(int)
+        np.testing.assert_almost_equal(pos2, pos0, 0, err_msg="Transforming from distorted to undistorted image fails.")
+
     @given(ct_st.camera_image_points(), st.floats(0, 100))
     def test_transWorldToCam(self, params, Z):
         cam, p = params
