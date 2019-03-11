@@ -11,7 +11,8 @@ def invert_function(x, func):
     x = x[dy>=0]
     try:
         inter = interpolate.InterpolatedUnivariateSpline(y, x)
-    except Exception:  # dfitpack.error
+    # dfitpack.error
+    except Exception: # pragma: no cover
         inter = lambda x: x
     return inter
 
@@ -49,7 +50,7 @@ class NoDistortion(LensDistortion):
     pass
 
 
-class BrownLensDistortion(LensDistortion):  # pragma: no cover
+class BrownLensDistortion(LensDistortion):
     r"""
     The most common distortion model is the Brown's distortion model. In CameraTransform, we only consider the radial part
     of the model, as this covers all common cases and the merit of tangential components is disputed. This model relies on
@@ -143,7 +144,7 @@ class BrownLensDistortion(LensDistortion):  # pragma: no cover
         return points * self.scale + self.offset
 
 
-class ABCDistortion(LensDistortion):  # pragma: no cover
+class ABCDistortion(LensDistortion):
     r"""
     The ABC model is a less common distortion model, that just implements radial distortions. Here the radius is transformed
     using a polynomial of 4th order. It is used e.g. in PTGui.
