@@ -1,0 +1,6 @@
+[run]
+omit=
+    */gui_demonstrator.py
+    */scene.py
+    */QtShortCuts.py
+    */scripts/*
