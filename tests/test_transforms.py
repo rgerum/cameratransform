@@ -56,6 +56,43 @@ class TestTransforms(unittest.TestCase):
                                                  sensor_width_mm=sensor_size[1], sensor_height_mm=sensor_size[0]),
                         ct.SpatialOrientation())
 
+    @given(ct_st.projection())
+    def test_initProjection(self, proj):
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px], center=[proj.center_x_px, proj.center_y_px],
+                       focallength_px=proj.focallength_x_px)
+
+        proj.__class__(image=np.zeros([proj.image_height_px, proj.image_width_px]),
+                       center_x_px=proj.center_x_px, center_y_px=proj.center_y_px,
+                       focallength_px=proj.focallength_x_px, focallength_y_px=proj.focallength_y_px)
+
+        proj.__class__(image=np.zeros([proj.image_height_px, proj.image_width_px, 3]),
+                       center=[proj.center_x_px, proj.center_y_px],
+                       focallength_px=proj.focallength_x_px)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       sensor=[proj.sensor_width_mm, proj.sensor_height_mm],
+                       focallength_mm=14)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       sensor_width_mm=proj.sensor_width_mm,
+                       focallength_mm=14)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       sensor_height_mm=proj.sensor_height_mm,
+                       focallength_mm=14)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       view_x_deg=proj.getFieldOfView()[0],
+                       focallength_mm=14)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       view_y_deg=proj.getFieldOfView()[0],
+                       focallength_mm=14)
+
+        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                       view_x_deg=proj.getFieldOfView()[0],
+                       sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
+
     @given(ct_st.camera())
     def test_transFieldOfView(self, cam):
         viewX, viewY = cam.projection.getFieldOfView()
@@ -65,6 +102,9 @@ class TestTransforms(unittest.TestCase):
                                        err_msg="Converting focallength to view and back failed.")
         np.testing.assert_almost_equal(cam.projection.focallength_y_px, focalY, 2,
                                        err_msg="Converting focallength to view and back failed.")
+
+        np.testing.assert_almost_equal(cam.projection.imageFromFOV(viewX), cam.projection.image_width_px, err_msg="imageFromFOV failed for view_x")
+        np.testing.assert_almost_equal(cam.projection.imageFromFOV(view_y=viewY), cam.projection.image_height_px, err_msg="imageFromFOV failed for view_y")
 
     @given(ct_st.camera())
     def test_saveLoad(self, cam):
