@@ -46,18 +46,18 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     Convert a coordinate pair to a formatted string:
 
     >>> lat, lon = ct.formatGPS(-70.61805, -8.1573)
-    >>> print(lat)
-    70° 37'  4.980" S
-    >>> print(lon)
-     8°  9' 26.280" W
+    >>> lat
+    '70° 37\\'  4.980" S'
+    >>> lon
+    ' 8°  9\\' 26.280" W'
 
-    or with a different format:
+    or use a custom format:
 
-    >>> lat, lon = ct.formatGPS(-70.61805, -8.1573, format="%2d° %2d.3f %s")
-    >>> print(lat)
-    70° 37.3f S
-    >>> print(lon)
-     8°  9.3f W
+    >>> lat, lon = ct.formatGPS(-70.61805, -8.1573, format="%2d° %2.3f %s")
+    >>> lat
+    '70° 37.083 S'
+    >>> lon
+    ' 8° 9.438 W'
 
     """
     import re
@@ -189,6 +189,31 @@ def gpsFromString(gps_string, height=None):
     point : list
         a list containing, lat, lon, (height) of the given point.
 
+    Examples
+    --------
+
+    >>> import CameraTransform as ct
+
+    Convert a coordinate string to a tuple:
+
+    >>> ct.gpsFromString("85° 19′ 14″ N, 000° 02′ 43″ E")
+    array([8.53205556e+01, 4.52777778e-02])
+
+    Add a height information:
+
+    >>> ct.gpsFromString("66° 39´56.12862´´S  140°01´20.39562´´ E", 13.769)
+    array([-66.66559128, 140.02233212,  13.769     ])
+
+    Use a tuple:
+
+    >>> ct.gpsFromString(["66°39'56.12862''S", "140°01'20.39562'' E"])
+    array([-66.66559128, 140.02233212])
+
+    Or supply multiple coordinates with height information:
+
+    >>> ct.gpsFromString([["-66.66559128° 140.02233212°", 13.769], ["66°39'58.73922''S  140°01'09.55709'' E", 13.769]])
+    array([[-66.66559128, 140.02233212,  13.769     ],
+           [-66.66631645, 140.01932141,  13.769     ]])
     """
     if not isinstance(gps_string, str):
         # keep a number
@@ -204,8 +229,8 @@ def gpsFromString(gps_string, height=None):
             return data
         else:
             return np.hstack((data, [height]))
-    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´)\s*(?P<sec>[\d.]+)(''|\"| |´´|″)\s*",
-                  r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)'\s*",
+    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´|′)\s*(?P<sec>[\d.]+)(''|\"| |´´|″)\s*",
+                  r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)('|′|´|′)?\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
     for string in regex_list:
         pattern = "\s*"+string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+"\s*,?\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?"+"\s*"
@@ -251,6 +276,21 @@ def getBearing(point1, point2):
     -------
     bearing : float, ndarray
         the bearing angle in degree, dimensions (), (N)
+
+    Examples
+    --------
+
+    >>> import CameraTransform as ct
+
+    Calculate the bearing in degrees between two gps positions:
+
+    >>> ct.getBearing([85.3205556, 4.52777778], [-66.66559128, 140.02233212])
+    53.34214977328738
+
+    or between a list of gps positions:
+
+    >>> ct.getBearing([[85.3205556, 4.52777778], [65.3205556, 7.52777778]], [[-66.66559128, 140.02233212], [-60.66559128, 80.02233212]])
+    array([ 53.34214977, 136.82109976])
 
     """
     lat1, lon1, h1 = splitGPS(point1)
@@ -298,6 +338,21 @@ def getDistance(point1, point2):
     distance : float, ndarray
         the distance in m, dimensions (), (N)
 
+    Examples
+    --------
+
+    >>> import CameraTransform as ct
+
+    Calculate the distance in m between two gps positions:
+
+    >>> ct.getDistance([52.51666667, 13.4], [48.13583333, 11.57988889])
+    503926.75849507266
+
+    or between a list of gps positions:
+
+    >>> ct.getDistance([[52.51666667, 13.4], [52.51666667, 13.4]], [[49.597854, 11.005092], [48.13583333, 11.57988889]])
+    array([365127.04999716, 503926.75849507])
+
     """
     lat1, lon1, h1 = splitGPS(point1)
     lat2, lon2, h2 = splitGPS(point2)
@@ -340,8 +395,31 @@ def moveDistance(start, distance, bearing):
     -------
     target : ndarray
         the target point, dimensions (2), (3), (Nx2), (Nx3)
+
+    Examples
+    --------
+
+    >>> import CameraTransform as ct
+
+    Move from 52.51666667°N 13.4°E, 503.926 km in the direction -164°:
+
+    >>> ct.moveDistance([52.51666667, 13.4], 503926, -164)
+    array([48.14444416, 11.52952357])
+
+    Batch process multiple positions at once:
+
+    >>> ct.moveDistance([[52.51666667, 13.4], [49.597854, 11.005092]], [10, 20], -164)
+    array([[52.51658022, 13.39995926],
+           [49.5976811 , 11.00501551]])
+
+    Or one positions in multiple ways:
+
+    >>> ct.moveDistance([52.51666667, 13.4], [503926, 103926], [-164, -140])
+    array([[48.14444416, 11.52952357],
+           [51.79667095, 12.42859387]])
     """
     start = np.array(start)
+    distance = np.array(distance)
     bearing = np.deg2rad(bearing)
     lat1, lon1, h1 = splitGPS(start)
     R = 6371e3

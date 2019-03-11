@@ -34,22 +34,22 @@ Transformation
 Distance
 ~~~~~~~~
 
-.. automethod:: gps.getDistance
+.. autofunction:: getDistance
 
 Bearing
 ~~~~~~~
 
-.. automethod:: gps.getBearing
+.. autofunction:: getBearing
 
 Move Distance
 ~~~~~~~~~~~~~
 
-.. automethod:: gps.moveDistance
+.. autofunction:: moveDistance
 
 GPS - String Conversion
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automethod:: gps.formatGPS
+.. autofunction:: formatGPS
 
-.. automethod:: gps.gpsFromString
+.. autofunction:: gpsFromString
 
