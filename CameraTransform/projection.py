@@ -67,7 +67,7 @@ class CameraProjection(ClassWithParameterSet):
 
     """
 
-    def __init__(self, focallength_px=None, center_x_px=None, center_y_px=None, center=None, focallength_mm=None, image_width_px=None, image_height_px=None,
+    def __init__(self, focallength_px=None, focallength_x_px=None, focallength_y_px=None, center_x_px=None, center_y_px=None, center=None, focallength_mm=None, image_width_px=None, image_height_px=None,
                  sensor_width_mm=None, sensor_height_mm=None, image=None, sensor=None, view_x_deg=None, view_y_deg=None):
 
         # split image in width and height
@@ -92,15 +92,15 @@ class CameraProjection(ClassWithParameterSet):
             sensor_width_mm = image_width_px / image_height_px * sensor_height_mm
 
         # get the focalllength
-        focallength_x_px = None
-        focallength_y_px = None
+        focallength_x_px = focallength_x_px
+        focallength_y_px = focallength_y_px
         if focallength_px is not None:
             try:
                 focallength_x_px, focallength_y_px = focallength_px
             except TypeError:
                 focallength_x_px = focallength_px
                 focallength_y_px = focallength_px
-        elif focallength_mm is not None:
+        elif focallength_mm is not None and sensor_width_mm is not None:
             focallength_px = focallength_mm / sensor_width_mm * image_width_px
             focallength_x_px = focallength_px
             focallength_y_px = focallength_px
@@ -125,6 +125,10 @@ class CameraProjection(ClassWithParameterSet):
                 elif view_y_deg is not None:
                     self.sensor_height_mm = self.imageFromFOV(view_y=view_y_deg)
                     self.sensor_width_mm = self.image_width_px / self.image_height_px * self.sensor_height_mm
+                if focallength_mm is not None:
+                    self.focallength_px = focallength_mm / self.sensor_width_mm * self.image_width_px
+                    self.focallength_x_px = focallength_px
+                    self.focallength_y_px = focallength_px
             else:
                 self.focallength_x_px = self.focallengthFromFOV(view_x_deg, view_y_deg)
                 self.focallength_y_px = self.focallengthFromFOV(view_x_deg, view_y_deg)
@@ -152,7 +156,7 @@ class CameraProjection(ClassWithParameterSet):
         for key in variables:
             setattr(self, key, variables[key])
 
-    def imageFromCamera(self, points):
+    def imageFromCamera(self, points):  # pragma: no cover
         """
         Convert points (Nx3) from the **camera** coordinate system to the **image** coordinate system.
 
@@ -186,7 +190,7 @@ class CameraProjection(ClassWithParameterSet):
         # to be overloaded by the child class.
         return None
 
-    def getRay(self, points, normed=False):
+    def getRay(self, points, normed=False):  # pragma: no cover
         """
         As the transformation from the **image** coordinate system to the **camera** coordinate system is not unique,
         **image** points can only be uniquely mapped to a ray in **camera** coordinates.
@@ -221,7 +225,7 @@ class CameraProjection(ClassWithParameterSet):
         # to be overloaded by the child class.
         return None
 
-    def getFieldOfView(self):
+    def getFieldOfView(self):  # pragma: no cover
         """
         The field of view of the projection in x (width, horizontal) and y (height, vertical) direction.
 
@@ -235,7 +239,7 @@ class CameraProjection(ClassWithParameterSet):
         # to be overloaded by the child class.
         return 0, 0
 
-    def focallengthFromFOV(self, view_x=None, view_y=None):
+    def focallengthFromFOV(self, view_x=None, view_y=None):  # pragma: no cover
         """
         The focal length (in x or y direction) based on the given field of view.
 
@@ -254,7 +258,7 @@ class CameraProjection(ClassWithParameterSet):
         # to be overloaded by the child class.
         return 0
 
-    def imageFromFOV(self, view_x=None, view_y=None):
+    def imageFromFOV(self, view_x=None, view_y=None):  # pragma: no cover
         """
         The image width or height in pixel based on the given field of view.
 
