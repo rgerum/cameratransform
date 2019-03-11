@@ -31,11 +31,73 @@ import strategies as ct_st
 
 class TestParameterSet(unittest.TestCase):
 
-    @given(st.floats(-90, 90), st.floats(-90, 90), st.sampled_from(["%2d° %2d' %6.3f\" %s", "%2d° %2.3f' %s", "%2.3f°"]))
-    def test_gpsBackForth(self, lat, lon, format):
-        gps_string = " ".join(ct.formatGPS(lat, lon, format=format))
+    @given(st.floats(-90, 90), st.floats(-90, 90), st.sampled_from(["%2d° %2d' %6.3f\" %s", "%2d° %2.3f' %s", "%2.3f°"]), st.floats(0, 100))
+    def test_gpsStringBackForth(self, lat, lon, format, height):
+        gps_string = [" ".join(ct.formatGPS(lat, lon, format=format))]
+        gps_tuple = ct.gpsFromString(gps_string)[0]
+        np.testing.assert_almost_equal(gps_tuple, [lat, lon], 2)
+
+        gps_string = ct.formatGPS(lat, lon, format=format)
         gps_tuple = ct.gpsFromString(gps_string)
         np.testing.assert_almost_equal(gps_tuple, [lat, lon], 2)
+
+        gps_string = " ".join(ct.formatGPS(lat, lon, format=format))
+        gps_tuple = ct.gpsFromString(gps_string, height=height)
+        np.testing.assert_almost_equal(gps_tuple, [lat, lon, height], 2)
+
+        gps_string = ct.formatGPS(lat, lon, format=format)
+        gps_tuple = ct.gpsFromString(gps_string, height=height)
+        np.testing.assert_almost_equal(gps_tuple, [lat, lon, height], 2)
+
+        # test to transform with default format
+        ct.formatGPS(lat, lon)
+
+        # test to raise an error if the format string is not valid
+        self.assertRaises(ValueError, lambda: ct.formatGPS(lat, lon, ""))
+        self.assertRaises(ValueError, lambda: ct.formatGPS(lat, lon, "%2d %2d %2d %2d %2d"))
+        # for latex it should replace the degree symbol
+        ct.formatGPS(lat, lon, asLatex=True)
+
+        # try split gps
+        ct.splitGPS(gps_tuple, keep_deg=True)
+
+    @given(st.floats(-89, 89), st.floats(-89, 89), st.floats(1, 1000), st.floats(-180, 180), st.floats(0, 100))
+    def test_gpsSpaceBackForth(self, lat, lon, distance, bearing, height):
+        # without height
+        gps0 = [lat, lon]
+        gps = ct.moveDistance(gps0, distance, bearing)
+        space = ct.spaceFromGPS(gps, gps0)
+
+        gps_2 = ct.gpsFromSpace(space[..., :2], gps0)
+        # this has to be only exact to 1 decimal, as it neglects the curvature of the earth and therefore is not exact
+        np.testing.assert_almost_equal(min([ct.getDistance(gps, gps_2)/distance, ct.getDistance(gps, gps_2)]), 0, 0)
+
+        np.testing.assert_almost_equal(distance, ct.getDistance(gps0, gps), 0)
+
+        difference_angle = bearing - ct.getBearing(gps0, gps)
+        while difference_angle > 180:
+            difference_angle -= 360
+        while difference_angle < -180:
+            difference_angle += 360
+        np.testing.assert_almost_equal(difference_angle, 0, 0)
+
+        # with height
+        gps0 = [lat, lon, 1]
+        gps = ct.moveDistance(gps0, distance, bearing)
+        space = ct.spaceFromGPS(gps, gps0)
+        gps_2 = ct.gpsFromSpace(space, gps0)
+
+        # this has to be only exact to 1 decimal, as it neglects the curvature of the earth and therefore is not exact
+        np.testing.assert_almost_equal(min([ct.getDistance(gps, gps_2) / distance, ct.getDistance(gps, gps_2)]), 0, 0)
+
+        np.testing.assert_almost_equal(distance, ct.getDistance(gps0, gps), 0)
+
+        difference_angle = bearing - ct.getBearing(gps0, gps)
+        while difference_angle > 180:
+            difference_angle -= 360
+        while difference_angle < -180:
+            difference_angle += 360
+        np.testing.assert_almost_equal(difference_angle, 0, 0)
 
 
 if __name__ == '__main__':
