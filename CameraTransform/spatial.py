@@ -86,7 +86,7 @@ class SpatialOrientation(ClassWithParameterSet):
         return string
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
-        if self.heading_deg < -360 or self.heading_deg > 360:
+        if self.heading_deg < -360 or self.heading_deg > 360:  # pragma: no cover
             self.heading_deg = self.heading_deg % 360
         # convert the angle to radians
         tilt = np.deg2rad(self.parameters.tilt_deg)
