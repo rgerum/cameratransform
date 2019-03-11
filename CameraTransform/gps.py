@@ -179,8 +179,8 @@ def gpsFromString(gps_string, height=None):
     Parameters
     ----------
     gps_string : str, list
-        the string of the ps point, containing both latitude and longitude. To batch process multiple strings, a list of
-        strings can also be provided.
+        the string of the point, containing both latitude and longitude, or a tuple with two strings one for latitude
+        and one for longitude To batch process multiple strings, a list of strings can also be provided.
     height : float, optional
         the height of the gps point.
 
@@ -191,12 +191,20 @@ def gpsFromString(gps_string, height=None):
 
     """
     if not isinstance(gps_string, str):
+        # keep a number
+        if isinstance(gps_string, (float, int)):
+            return gps_string
+        # if it is a string and a number, interpret it as coordinates and height
+        if len(gps_string) == 2 and isinstance(gps_string[0], str) and isinstance(gps_string[1], (float, int)):
+            return gpsFromString(gps_string[0], gps_string[1])
+        # recursively process it
         data = np.array([gpsFromString(data) for data in gps_string])
+        # and optionally add a height
         if height is None:
             return data
         else:
             return np.hstack((data, [height]))
-    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´)\s*(?P<sec>[\d.]+)(''|\"| |´´)\s*",
+    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´)\s*(?P<sec>[\d.]+)(''|\"| |´´|″)\s*",
                   r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)'\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
     for string in regex_list:
