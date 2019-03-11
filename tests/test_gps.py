@@ -99,6 +99,20 @@ class TestParameterSet(unittest.TestCase):
             difference_angle += 360
         np.testing.assert_almost_equal(difference_angle, 0, 0)
 
+    def test_gpsDifferentFormats(self):
+        ct.gpsFromString("060° 37′ 36″")
+        ct.gpsFromString("85° 19′ 14″ N, 000° 02′ 43″ E")
+        gps_tuple = ct.gpsFromString("66°39'56.12862''S,  140°01'20.39562''")
+        gps_tuple = ct.gpsFromString(["66°39'56.12862''S", "140°01'20.39562''"])
+        gps_tuple = ct.gpsFromString("66°39'56.12862''S  140°01'20.39562''", 13.769)
+
+        gps_tuple = ct.gpsFromString(["66°39'56.12862''S  140°01'20.39562''", "66°39'58.73922''S  140°01'09.55709''"])
+
+        gps_tuple = ct.gpsFromString(
+            [["66°39'56.12862''S", "140°01'20.39562''", 13.769], ["66°39'58.73922''S", "140°01'09.55709''", 13.769]])
+
+        gps_tuple = ct.gpsFromString([["66°39'56.12862''S  140°01'20.39562''", 13.769], ["66°39'58.73922''S  140°01'09.55709''", 13.769]])
+
 
 if __name__ == '__main__':
     unittest.main()
