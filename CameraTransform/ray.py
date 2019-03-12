@@ -145,6 +145,28 @@ def areaOfTriangle(triangle):
     # Herons formula
     return np.sqrt(s*(s-a)*(s-b)*(s-c))
 
+
+def areaOfQuadrilateral(rect):
+    """
+    The area of a quadrilateral.
+
+    Parameters
+    ----------
+    rect : ndarray
+        the points of the quadrilateral, dimentions: (2)
+
+    Returns
+    -------
+    area : float
+        the area of the quadrilateral.
+    """
+    A = rect[..., 0, :]
+    B = rect[..., 1, :]
+    C = rect[..., 2, :]
+    D = rect[..., 3, :]
+    return 0.5 * abs((A[1] - C[1]) * (D[0] - B[0]) + (B[1] - D[1]) * (A[0] - C[0]))
+
+
 def extrudeLine(points, z0, z1):
     mesh = []
     last_point = None
