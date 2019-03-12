@@ -85,6 +85,22 @@ def intersectionOfTwoLines(p1, v1, p2, v2):
     """
     Get the point closest to the intersection of two lines. The lines are given by one point (p1 and p2) and a
     direction vector v (v1 and v2). If a batch should be processed, the multiple direction vectors can be given.
+
+    Parameters
+    ----------
+    p1 : ndarray
+        the origin point of the first line, dimensions: (3)
+    v1 : ndarray
+        the direction vector(s) of the first line(s), dimensions: (3), (Nx3)
+    p2 : ndarray
+        the origin point of the second line, dimensions: (3)
+    v2 : ndarray
+        the direction vector(s) of the second line(s), dimensions: (3), (Nx3)
+
+    Returns
+    -------
+    intersection : ndarray
+        the intersection point(s), or the point closes to the two lines if they do no intersect, dimensions: (3), (Nx3)
     """
     # if we transform multiple points in one go
     if len(v1.shape) == 2:
@@ -111,8 +127,24 @@ def intersectionOfTwoLines(p1, v1, p2, v2):
 
 def distanceOfTwoLines(p1, v1, p2, v2):
     """
-    Get the point closest to the intersection of two lines. The lines are given by one point (p1 and p2) and a
-    direction vector v (v1 and v2). If a batch should be processed, the multiple direction vectors can be given.
+    The distance between two lines. The lines are given by one point (p1 and p2) and a direction vector v (v1 and v2).
+    If a batch should be processed, the multiple direction vectors can be given.
+
+    Parameters
+    ----------
+    p1 : ndarray
+        the origin point of the first line, dimensions: (3)
+    v1 : ndarray
+        the direction vector(s) of the first line(s), dimensions: (3), (Nx3)
+    p2 : ndarray
+        the origin point of the second line, dimensions: (3)
+    v2 : ndarray
+        the direction vector(s) of the second line(s), dimensions: (3), (Nx3)
+
+    Returns
+    -------
+    distance : float
+        the closest distance between the two lines.
     """
     # if we transform multiple points in one go
     if len(v1.shape) == 2:
@@ -124,8 +156,7 @@ def distanceOfTwoLines(p1, v1, p2, v2):
         c2 = -np.einsum('ij,j->i', v2, p1 - p2)
         res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]).transpose(2, 0, 1), np.array([c1, c2]).T)
         res = res[:, None, :]
-        #print("res[..., 0]", res[..., 0], res[..., 1], np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1))
-        return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)#+(res[..., 0]<10)*999+(res[..., 1]<10)*999
+        return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)
     else:  # or just one point
         a1 = np.dot(v1, v1)
         a2 = np.dot(v1, v2)
@@ -137,7 +168,21 @@ def distanceOfTwoLines(p1, v1, p2, v2):
         res = res[None, None, :]
         return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)[0]
 
+
 def areaOfTriangle(triangle):
+    """
+    The area of a 2D or 3D triangle.
+
+    Parameters
+    ----------
+    triangle : ndarray
+        the points of the triangle, dimentions: (3), (2)
+
+    Returns
+    -------
+    area : float
+        the area of the triangle.
+    """
     a = np.linalg.norm(triangle[..., 0, :] - triangle[..., 1, :])
     b = np.linalg.norm(triangle[..., 1, :] - triangle[..., 2, :])
     c = np.linalg.norm(triangle[..., 2, :] - triangle[..., 0, :])
@@ -178,7 +223,25 @@ def extrudeLine(points, z0, z1):
         last_point = point
     return np.array(mesh)
 
+
 def getClosestPointFromLine(origin, ray, point):
+    """
+    The point on a line that is closest to a given point.
+
+    Parameters
+    ----------
+    origin : ndarray
+        the origin point of the line, dimensions: (3)
+    ray : ndarray
+        the direction vector(s) of the line(s), dimensions: (3), (Nx3)
+    point : ndarray
+        the point to project on the line, dimensions: (3), (Nx3)
+
+    Returns
+    -------
+    point : ndarray
+        the points projected on the line, dimenstions: (3), (Nx3)
+    """
     # calculate the difference vector
     delta = point-origin
     # norm the ray
