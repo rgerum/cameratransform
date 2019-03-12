@@ -78,6 +78,9 @@ class TestFits(unittest.TestCase):
         camera.addHorizonInformation(horizon[0], uncertainty=10)
 
         camera.setGPSpos("66°39'53.4\"S  140°00'34.8\"")
+        gps = ct.gpsFromString("66°39'53.4\"S  140°00'34.8\"")
+        camera.setGPSpos(gps)
+        camera.setGPSpos(gps[0], gps[1], 0)
 
         lm_points_px = np.array([[2091.300935, 892.072126], [2935.904577, 824.364956]])
         lm_points_gps = ct.gpsFromString([("66°39'56.12862''S  140°01'20.39562''", 13.769),
