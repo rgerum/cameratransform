@@ -1248,10 +1248,6 @@ class Camera(ClassWithParameterSet):
             p3 = [x - 0.5, y + 0.5]
             return np.array([p0, p1, p2, p3])
 
-        def calc_quadrilateral_size(rect):
-            A, B, C, D = rect
-            return 0.5 * abs((A[1] - C[1]) * (D[0] - B[0]) + (B[1] - D[1]) * (A[0] - C[0]))
-
         x = self.image_width_px / 2
 
         horizon = self.getImageHorizon([x])
@@ -1263,7 +1259,7 @@ class Camera(ClassWithParameterSet):
         for y in range(y_stop, y_start):
             rect = get_square(x, y)
             rect = self.spaceFromImage(rect, Z=0)
-            A = calc_quadrilateral_size(rect)
+            A = ray.areaOfQuadrilateral(rect)
             y_lookup[y] = A
 
         return y_lookup
