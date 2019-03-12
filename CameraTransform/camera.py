@@ -458,7 +458,7 @@ class Camera(ClassWithParameterSet):
             try:
                 lat, lon, elevation = gps.splitGPS(lat, keep_deg=True)
             # or if it is just a single value
-            except AttributeError:
+            except (AttributeError, Exception):
                 pass
         self.gps_lat = lat
         self.gps_lon = lon
