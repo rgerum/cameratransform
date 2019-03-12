@@ -137,6 +137,14 @@ def distanceOfTwoLines(p1, v1, p2, v2):
         res = res[None, None, :]
         return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)[0]
 
+def areaOfTriangle(triangle):
+    a = np.linalg.norm(triangle[..., 0, :] - triangle[..., 1, :])
+    b = np.linalg.norm(triangle[..., 1, :] - triangle[..., 2, :])
+    c = np.linalg.norm(triangle[..., 2, :] - triangle[..., 0, :])
+    s = (a+b+c)/2
+    # Herons formula
+    return np.sqrt(s*(s-a)*(s-b)*(s-c))
+
 def extrudeLine(points, z0, z1):
     mesh = []
     last_point = None
