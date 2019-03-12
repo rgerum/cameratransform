@@ -1,6 +1,7 @@
 import numpy as np
 from hypothesis import strategies as st
 from hypothesis.extra import numpy as st_np
+from hypothesis.control import reject
 
 import CameraTransform as ct
 
@@ -136,3 +137,63 @@ def camera_down_with_world_points(draw, projection=projection(),  n=st.one_of(st
         points = draw(
             st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(3)), elements=st.floats(-100, 100)))
     return camera, points
+
+@st.composite
+def line(draw):
+    origin = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(-100, 100)))
+    anglesTheta = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(-90, 90)))
+    anglesPhi = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(0, 360)))
+
+    distance = draw(st.floats(0, 10))
+
+    sPhi, cPhi = np.sin(np.deg2rad(anglesPhi)), np.cos(np.deg2rad(anglesPhi))
+    sTheta, cTheta = np.sin(np.deg2rad(anglesTheta)), np.cos(np.deg2rad(anglesTheta))
+    direction = np.array([sTheta*cPhi, sTheta*sPhi, cTheta]).T
+    x, y, z = direction[0]
+    if x == 0:
+        reject()
+    c = sPhi
+    b = cPhi
+    a = (-z*c-y*b)/x
+    direction[1] = np.array([a[1], b[1], c[1]])
+    direction[2] = np.array([a[2], b[2], c[2]])
+    direction[1] /= np.linalg.norm(direction[1])
+    direction[2] /= np.linalg.norm(direction[2])
+
+    if np.all(direction[0] - direction[1] < 1e-2) or \
+       np.all(direction[0] - direction[2] < 1e-2) or \
+       np.all(direction[1] - direction[2] < 1e-2):
+        reject()
+
+    # origin will the the closes point between the two lines
+    # p1, p2 will be the closes points of the line to each other
+    p1 = origin - 0.5*direction[0]*distance
+    p2 = origin + 0.5*direction[0]*distance
+
+    o1 = p1 + direction[1]*2
+    o2 = p2 + direction[2]*2
+
+    return o1, direction[1], o2, direction[2], origin, distance, p1, p2
+
+
+@st.composite
+def lines(draw, n=st.one_of(st.integers(1, 3), st.just(1))):
+    n = draw(n)
+    # the points can either be
+    if n == 1:
+        data = draw(line())
+        return data
+    else:
+        data = None
+        for i in range(n):
+            data_new = draw(line())
+            if data is None:
+                data = []
+                for value in data_new:
+                    data.append([value])
+            else:
+                for j, value in enumerate(data_new):
+                    data[j].append(value)
+        for i in range(len(data)):
+            data[i] = np.array(data[i])
+        return data
