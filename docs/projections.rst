@@ -40,7 +40,7 @@ Indirect Parameters
 Functions
 ---------
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 .. autoclass:: CameraProjection
 

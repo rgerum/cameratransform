@@ -1,7 +1,7 @@
 API
 ===
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 CameraTransform
 ---------------

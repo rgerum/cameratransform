@@ -1,7 +1,7 @@
 Camera
 ======
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 .. autoclass:: Camera
 

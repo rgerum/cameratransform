@@ -21,7 +21,7 @@ Parameters
 Transformation
 --------------
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 .. autoclass:: SpatialOrientation
 
