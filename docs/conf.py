@@ -46,7 +46,7 @@ while True:
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath(os.path.join("CameraTransform")))
+sys.path.insert(0, os.path.abspath(os.path.join("cameratransform")))
 
 # -- General configuration ------------------------------------------------
 
@@ -81,9 +81,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'CameraTransform'
-copyright = u'2017-2018, Richard Gerum, Sebastian Richter'
-author = u'Richard Gerum, Sebastian Richter'
+project = u'cameratransform'
+copyright = u'2017-2019, Richard Gerum'
+author = u'Richard Gerum'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -263,7 +263,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
   (master_doc, 'cameratransform.tex', u'CameraTransform Documentation',
-   u'Richard Gerum, Sebastian Richter', 'manual'),
+   u'Richard Gerum', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
