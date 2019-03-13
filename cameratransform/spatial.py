@@ -127,7 +127,7 @@ class SpatialOrientation(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> orientation = ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85)
 
         transform a single point from the space to the image:
@@ -163,7 +163,7 @@ class SpatialOrientation(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> orientation = ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85)
 
         transform a single point from the space to the image:

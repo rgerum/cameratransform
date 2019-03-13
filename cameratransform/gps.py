@@ -41,7 +41,7 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Convert a coordinate pair to a formatted string:
 
@@ -192,7 +192,7 @@ def gpsFromString(gps_string, height=None):
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Convert a coordinate string to a tuple:
 
@@ -280,7 +280,7 @@ def getBearing(point1, point2):
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Calculate the bearing in degrees between two gps positions:
 
@@ -341,7 +341,7 @@ def getDistance(point1, point2):
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Calculate the distance in m between two gps positions:
 
@@ -399,7 +399,7 @@ def moveDistance(start, distance, bearing):
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Move from 52.51666667°N 13.4°E, 503.926 km in the direction -164°:
 

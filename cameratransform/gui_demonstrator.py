@@ -3,7 +3,7 @@ import sys
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import CameraTransform as ct
+import cameratransform as ct
 
 from qtpy import QtGui, QtCore, QtWidgets
 

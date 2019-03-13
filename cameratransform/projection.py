@@ -18,7 +18,7 @@ class CameraProjection(ClassWithParameterSet):
 
     This section provides some examples how the projections can be initialized.
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     **Image Dimensions**:
 
@@ -173,7 +173,7 @@ class CameraProjection(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> proj = ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592))
 
         transform a single point from the **camera** coordinates to the image:
@@ -208,7 +208,7 @@ class CameraProjection(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> proj = ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592))
 
         get the ray of a point in the image:

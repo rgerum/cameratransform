@@ -82,7 +82,7 @@ def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=Tr
     Examples
     --------
 
-    >>> import CameraTransform as ct
+    >>> import cameratransform as ct
 
     Supply the image filename to print the results:
 
@@ -436,7 +436,7 @@ class Camera(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> cam = ct.Camera()
 
         Supply the gps position of the camera as floats:
@@ -794,7 +794,7 @@ class Camera(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
         >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
 
@@ -834,7 +834,7 @@ class Camera(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
         >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
 
@@ -894,7 +894,7 @@ class Camera(ClassWithParameterSet):
         Examples
         --------
 
-        >>> import CameraTransform as ct
+        >>> import cameratransform as ct
         >>> cam = ct.Camera(ct.RectilinearProjection(focallength_px=3729, image=(4608, 2592)),
         >>>                    ct.SpatialOrientation(elevation_m=15.4, tilt_deg=85))
 
