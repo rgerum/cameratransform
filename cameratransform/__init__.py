@@ -25,3 +25,5 @@ from .statistic import *
 from .lens_distortion import *
 from .parameter_set import *
 from .gps import *
+
+__version__ = "1.0"
