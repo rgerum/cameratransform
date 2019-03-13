@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# setup.py
+# __init__.py
 
 # Copyright (c) 2017-2019, Richard Gerum
 #
@@ -17,22 +17,13 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-from setuptools import setup
+from .camera import *
+from .projection import *
+from .spatial import *
+from .scene import *
+from .statistic import *
+from .lens_distortion import *
+from .parameter_set import *
+from .gps import *
 
-setup(name='cameratransform',
-      version="1.0",
-      description='Projects coordinates from 2D to 3D and can fit camera parameters',
-      author='Richard Gerum',
-      author_email='richard.gerum@fau.de',
-      license='MIT',
-      packages=['cameratransform'],
-      install_requires=[
-          'numpy',
-          'scipy',
-          'tqdm'
-      ],
-      extras_require={
-        'projecting_top_view':  ["cv2", "matplotlib"],
-        'exif_extraction':  ["pillow", "requests"]
-      }
-      )
+__version__ = "1.0"

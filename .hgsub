@@ -1,0 +1,6 @@
+cameratransform/includes/qextendedgraphicsview = qextendedgraphicsview
+
+[subpaths]
+https://bitbucket\.org/fabry_biophysics/cameratransform/qextendedgraphicsview = https://bitbucket.org/fabry_biophysics/qextendedgraphicsview
+https://(.*@)bitbucket\.org/fabry_biophysics/cameratransform/qextendedgraphicsview = https://\1bitbucket.org/fabry_biophysics/qextendedgraphicsview
+ssh://(.*@)bitbucket\.org/fabry_biophysics/cameratransform/qextendedgraphicsview = ssh://\1bitbucket.org/fabry_biophysics/qextendedgraphicsview

@@ -15,6 +15,5 @@ pipelines:
           - python -m pip install --upgrade pip setuptools
           - pip install -r requirements.txt
           - pip install -e . --no-dependencies
-          - py.test --cov=CameraTransform
+          - py.test --cov=cameratransform
           - python coveralls.py
-
