@@ -17,7 +17,7 @@ defined from the flat image to the distorted image. This means an undistortion o
 As CameraTransform can includes the lens correction in the tool chain for projection from the image to the world or the
 other way around, there is no need to render an undistorted version of each image the is used.
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 No Distortion
 -------------
