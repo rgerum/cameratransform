@@ -3,3 +3,5 @@ scipy
 pytest-cov
 hypothesis
 bbcs-tools
+mock
+matplotlib
