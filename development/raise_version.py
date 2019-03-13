@@ -40,6 +40,7 @@ def CheckForUncommitedChanges(directory):
     os.chdir(old_dir)
 
 def RelaceVersion(file, version_old, version_new):
+    print("change in file", file)
     with open(file, "r") as fp:
         data = fp.readlines()
     with open(file, "w") as fp:
@@ -64,16 +65,11 @@ os.chdir("..")
 
 # check for new version name as command line argument
 new_version = None
-try:
-    new_version = options.version
-except IndexError:
-    pass
+new_version = options.version
+
 if new_version is None:
-    if options.release is False:
-        new_version = current_version
-    else:
-        print("ERROR: no version number supplied. Use 'raise_version.py 0.9' to release as version 0.9")
-        sys.exit(1)
+    print("ERROR: no version number supplied. Use 'raise_version.py 0.9' to release as version 0.9")
+    sys.exit(1)
 
 # check if new version name differs
 if options.release and current_version == new_version:
@@ -90,7 +86,7 @@ print("Setting version number to", new_version)
 
 """ Let's go """
 RelaceVersion("setup.py", current_version, new_version)
-RelaceVersion("meta.yaml", current_version, new_version)
+#RelaceVersion("meta.yaml", current_version, new_version)
 RelaceVersion("docs/conf.py", current_version, new_version)
 RelaceVersion("cameratransform/__init__.py", current_version, new_version)
 
