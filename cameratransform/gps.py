@@ -1,3 +1,22 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# gps.py
+
+# Copyright (c) 2017-2019, Richard Gerum
+#
+# This file is part of the cameratransform package.
+#
+# cameratransform is free software: you can redistribute it and/or modify
+# it under the terms of the MIT licence.
+#
+# cameratransform is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the license
+# along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
+
 import numpy as np
 import re
 
@@ -173,7 +192,7 @@ def processDegree(data):
 
 def gpsFromString(gps_string, height=None):
     """
-    Read a gps coordinate from a text string in different formats, e.g. `70° 37’ 4.980” S 8° 9’ 26.280” W`,
+    Read a gps coordinate from a text string in different formats, e.g. `70° 37’ 4.980" S 8° 9’ 26.280" W`,
     `70° 37.083 S 8° 9.438 W`, or `-70.618050° -8.157300°`.
 
     Parameters
