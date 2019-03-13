@@ -19,7 +19,7 @@ Parameters
 Functions
 ---------
 
-.. currentmodule:: CameraTransform
+.. currentmodule:: cameratransform
 
 .. automethod:: Camera.setGPSpos
 

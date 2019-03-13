@@ -3,8 +3,8 @@ API
 
 .. currentmodule:: cameratransform
 
-CameraTransform
----------------
+Camera
+------
 
 .. autoclass:: Camera
    :members:
