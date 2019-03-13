@@ -13,9 +13,9 @@ import numpy as np
 from qimage2ndarray import array2qimage
 from qtpy import QtGui, QtCore, QtWidgets
 
-import CameraTransform as ct
-from CameraTransform import QtShortCuts
-from CameraTransform.includes.qextendedgraphicsview.QExtendedGraphicsView import QExtendedGraphicsView
+import cameratransform as ct
+from cameratransform import QtShortCuts
+from cameratransform.includes.qextendedgraphicsview.QExtendedGraphicsView import QExtendedGraphicsView
 
 sys.path.insert(0, os.path.dirname(__file__))
 from calibrate import processImage

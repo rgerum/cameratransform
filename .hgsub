@@ -1,4 +1,4 @@
-CameraTransform/includes/qextendedgraphicsview = qextendedgraphicsview
+cameratransform/includes/qextendedgraphicsview = qextendedgraphicsview
 
 [subpaths]
 https://bitbucket\.org/fabry_biophysics/cameratransform/qextendedgraphicsview = https://bitbucket.org/fabry_biophysics/qextendedgraphicsview

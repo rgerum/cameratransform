@@ -12,7 +12,7 @@ import mock
 while True:
     # try to import CameraTransform
     try:
-        import CameraTransform as ct
+        import cameratransform as ct
     # if an import error occurs
     except ImportError as err:
         # get the module name from the error message

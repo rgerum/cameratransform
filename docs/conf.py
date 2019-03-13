@@ -11,11 +11,11 @@ import mock
 while True:
     try:
         # here are the modules that should be imported for the documentation
-        import CameraTransform
-        import CameraTransform.projection
-        import CameraTransform.spatial
-        import CameraTransform.lens_distortion
-        from CameraTransform import camera
+        import cameratransform
+        import cameratransform.projection
+        import cameratransform.spatial
+        import cameratransform.lens_distortion
+        from cameratransform import camera
     # if an import error occurs
     except ImportError as err:
         # get the module name from the error message

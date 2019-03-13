@@ -3,7 +3,7 @@ from hypothesis import strategies as st
 from hypothesis.extra import numpy as st_np
 from hypothesis.control import reject
 
-import CameraTransform as ct
+import cameratransform as ct
 
 
 def sensor_sizes():
