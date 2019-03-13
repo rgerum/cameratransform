@@ -2,22 +2,20 @@
 # -*- coding: utf-8 -*-
 # QtShortCuts.py
 
-# Copyright (c) 2015-2016, Richard Gerum, Sebastian Richter
+# Copyright (c) 2017-2019, Richard Gerum
 #
-# This file is part of ClickPoints.
+# This file is part of the cameratransform package.
 #
-# ClickPoints is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# cameratransform is free software: you can redistribute it and/or modify
+# it under the terms of the MIT licence.
 #
-# ClickPoints is distributed in the hope that it will be useful,
+# cameratransform is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with ClickPoints. If not, see <http://www.gnu.org/licenses/>
+# You should have received a copy of the license
+# along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import colorsys
 import os
