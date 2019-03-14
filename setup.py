@@ -28,6 +28,7 @@ setup(name='cameratransform',
       packages=['cameratransform'],
       install_requires=[
           'numpy',
+          'pandas',
           'scipy',
           'tqdm'
       ],
