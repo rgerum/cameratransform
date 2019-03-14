@@ -1,6 +1,18 @@
 Installation
 ============
 
+Install with pip
+----------------
+
+The simplest way to install the package is using pip:
+
+    ``pip install cameratransform``
+
+Install from the repository
+---------------------------
+
+If you want to get a bleeding edge version, you can download the package form our bitbucket homepage.
+
 First of all download the software from bitbucket:
 
 `Download zip package <https://bitbucket.org/fabry_biophysics/cameratransform/get/tip.zip>`_
