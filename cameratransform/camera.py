@@ -1245,14 +1245,16 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 
-    def generateLUT(self, undef_value=0):
+    def generateLUT(self, undef_value=0, whole_image=False):
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
 
         Parameters
         ----------
-        undef_value: number, optional
+        undef_value : number, optional
             what values undefined positions should have, default=0
+        whole_image : bool, optional
+            whether to generate the look up table for the whole image or just for a y slice
 
         Returns
         -------
@@ -1260,28 +1262,35 @@ class Camera(ClassWithParameterSet):
             same length as image height
         """
 
-        def get_square(x, y):
-            p0 = [x - 0.5, y - 0.5]
-            p1 = [x + 0.5, y - 0.5]
-            p2 = [x + 0.5, y + 0.5]
-            p3 = [x - 0.5, y + 0.5]
-            return np.array([p0, p1, p2, p3])
+        def get_square(points):
+            p0 = points + np.array([-0.5, -0.5])
+            p1 = points + np.array([+0.5, -0.5])
+            p2 = points + np.array([+0.5, +0.5])
+            p3 = points + np.array([-0.5, +0.5])
+            squares = np.array([p0, p1, p2, p3])
 
-        x = self.image_width_px / 2
+            if len(squares.shape) == 3:
+                return squares.transpose(1, 0, 2)
+            return squares
 
-        horizon = self.getImageHorizon([x])
-        y_stop = max([0, int(horizon[0, 1])])
-        y_start = self.image_height_px
+        if whole_image:
+            x = np.arange(0, self.image_width_px)
+            y = np.arange(0, self.image_height_px)
+            xv, yv = np.meshgrid(x, y)
+            points = np.array([xv.flatten(), yv.flatten()]).T
+        else:
+            y = np.arange(self.image_height_px)
+            x = self.image_width_px / 2 * np.ones(len(y))
+            points = np.array([x, y]).T
 
-        y_lookup = np.zeros(self.image_height_px) + undef_value
+        squares = get_square(points).reshape(-1, 2)
+        squares_space = self.spaceFromImage(squares, Z=0).reshape(-1, 4, 3)
+        A = ray.areaOfQuadrilateral(squares_space)
 
-        for y in range(y_stop, y_start):
-            rect = get_square(x, y)
-            rect = self.spaceFromImage(rect, Z=0)
-            A = ray.areaOfQuadrilateral(rect)
-            y_lookup[y] = A
-
-        return y_lookup
+        if whole_image:
+            A = A.reshape(self.image_height_px, self.image_width_px)
+        A[np.isnan(A)] = undef_value
+        return A
 
     def rotateSpace(self, delta_heading):
         """
