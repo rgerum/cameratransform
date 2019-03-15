@@ -217,18 +217,33 @@ def areaOfQuadrilateral(rect):
     Parameters
     ----------
     rect : ndarray
-        the points of the quadrilateral, dimentions: (2)
+        the points of the quadrilateral, dimentions: (4, 2), (N, 4, 2)
 
     Returns
     -------
     area : float
         the area of the quadrilateral.
+
+    Examples
+    --------
+
+    Calculate the area of a single quadrilateral:
+
+    >>> import cameratransform as ct
+    >>> ct.ray.areaOfQuadrilateral([[0, 0], [1, 0], [1, 1], [0, 1]])
+    1.0
+
+    or of a batch of quadrilaterals:
+
+    >>> ct.ray.areaOfQuadrilateral([[[0, 0], [1, 0], [1, 1], [0, 1]], [[10, 10], [30, 10], [30, 30], [10, 30]]])
+    array([  1., 400.])
     """
+    rect = np.array(rect)
     A = rect[..., 0, :]
     B = rect[..., 1, :]
     C = rect[..., 2, :]
     D = rect[..., 3, :]
-    return 0.5 * abs((A[1] - C[1]) * (D[0] - B[0]) + (B[1] - D[1]) * (A[0] - C[0]))
+    return 0.5 * np.abs((A[..., 1] - C[..., 1]) * (D[..., 0] - B[..., 0]) + (B[..., 1] - D[..., 1]) * (A[..., 0] - C[..., 0]))
 
 
 def extrudeLine(points, z0, z1):
