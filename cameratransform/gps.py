@@ -450,7 +450,7 @@ def moveDistance(start, distance, bearing):
     lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
                              np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
     if start.shape[-1] == 3:
-        return np.array([np.rad2deg(lat2), np.rad2deg(lon2), start[..., 2]]).T
+        return np.array([np.rad2deg(lat2), np.rad2deg(lon2), np.ones_like(lon2)*start[..., 2]]).T
     return np.array([np.rad2deg(lat2), np.rad2deg(lon2)]).T
 
 
