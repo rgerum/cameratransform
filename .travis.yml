@@ -1,0 +1,21 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+before_install:
+  - pip install pytest pytest-cov==2.5.1
+  - pip install coveralls
+install:
+  - python --version
+  - pip install --upgrade pip setuptools wheel
+  - pip install -r requirements.txt
+  - pip install -e . --no-dependencies
+  - python setup.py develop
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3
+script:
+  - py.test --cov=cameratransform
+after_success:
+  - coveralls
