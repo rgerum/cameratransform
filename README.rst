@@ -4,8 +4,8 @@ cameratransform
 
 |Coverage|_ |DOC|_ |Python36| |License|_
 
-.. |Coverage| image:: https://coveralls.io/repos/bitbucket/fabry_biophysics/cameratransform/badge.svg?branch=main
-.. _Coverage: https://coveralls.io/bitbucket/fabry_biophysics/cameratransform?branch=main
+.. |Coverage| image:: https://coveralls.io/repos/github/rgerum/cameratransform/badge.svg?branch=master
+.. _Coverage: https://coveralls.io/github/rgerum/cameratransform?branch=master
 
 .. |DOC| image:: https://readthedocs.org/projects/cameratransform/badge/
 .. _DOC: http://cameratransform.readthedocs.io
