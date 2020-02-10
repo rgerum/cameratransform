@@ -11,15 +11,15 @@ The simplest way to install the package is using pip:
 Install from the repository
 ---------------------------
 
-If you want to get a bleeding edge version, you can download the package form our bitbucket homepage.
+If you want to get a bleeding edge version, you can download the package form our github homepage.
 
-First of all download the software from bitbucket:
+First of all download the software from github:
 
-`Download zip package <https://bitbucket.org/fabry_biophysics/cameratransform/get/tip.zip>`_
+`Download zip package <https://github.com/rgerum/cameratransform/archive/master.zip>`_
 
-or clone with `Mercurial <https://www.mercurial-scm.org/>`_:
+or clone with Git:
 
-    ``hg clone https://bitbucket.org/fabry_biophysics/cameratransform``
+    ``git clone https://github.com/rgerum/cameratransform.git``
 
 Then open the installed folder and execute the following command in a command line:
 

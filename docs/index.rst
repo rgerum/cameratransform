@@ -25,7 +25,7 @@ Note
 ----
 
 If you encounter any bugs or unexpected behaviour, you are encouraged to report a bug in our
-Bitbucket `bugtracker <https://bitbucket.org/fabry_biophysics/cameratransform/issues?status=new&status=open>`_.
+Github `bugtracker <https://github.com/rgerum/cameratransform/issues>`_.
 
 
 Citing CameraTransform
