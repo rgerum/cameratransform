@@ -26,12 +26,19 @@ import matplotlib.pyplot as plt
 import cv2
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
-from .projection import RectilinearProjection, CameraProjection
+from .projection import RectilinearProjection, EquirectangularProjection, CylindricalProjection, CameraProjection
 from .spatial import SpatialOrientation
-from .lens_distortion import NoDistortion, LensDistortion
+from .lens_distortion import NoDistortion, LensDistortion, ABCDistortion, BrownLensDistortion
 from . import gps
 from . import ray
 
+RECTILINEAR = 0
+CYLINDRICAL = 1
+EQUIRECTANGULAR = 2
+
+NODISTORTION = 0
+ABCDDISTORTION = 1
+BROWNLENSDISTORTION = 2
 
 def _getSensorFromDatabase(model):
     """
@@ -1166,8 +1173,8 @@ class Camera(ClassWithParameterSet):
 
         # if we have cached the map, use the cached map
         if self.map is not None and \
-                self.last_extent == extent and \
-                self.last_scaling == scaling:
+                all(self.last_extent == np.array(extent)) and \
+                (self.last_scaling == scaling):
             return self.map
 
         # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
@@ -1319,6 +1326,23 @@ class Camera(ClassWithParameterSet):
         """
         keys = self.parameters.parameters.keys()
         export_dict = {key: getattr(self, key) for key in keys}
+
+        # check projections and save
+        if isinstance(self.projection, RectilinearProjection):
+            export_dict["projection"] = RECTILINEAR
+        elif isinstance(self.projection, CylindricalProjection):
+            export_dict["projection"] = CYLINDRICAL
+        elif isinstance(self.projection, EquirectangularProjection):
+            export_dict["projection"] = EQUIRECTANGULAR
+
+        # check lens distortions and save
+        if isinstance(self.lens, NoDistortion):
+            export_dict["lens"] = NODISTORTION
+        elif isinstance(self.lens, ABCDistortion):
+            export_dict["lens"] = ABCDDISTORTION
+        elif isinstance(self.lens, BrownLensDistortion):
+            export_dict["lens"] = BROWNLENSDISTORTION
+
         with open(filename, "w") as fp:
             fp.write(json.dumps(export_dict, indent=4))
 
@@ -1333,6 +1357,25 @@ class Camera(ClassWithParameterSet):
         """
         with open(filename, "r") as fp:
             variables = json.loads(fp.read())
+
+        if "projection" in variables.keys():
+            if variables["projection"] == RECTILINEAR:
+                self.projection = RectilinearProjection()
+            elif variables["projection"] == CYLINDRICAL:
+                self.projection = CylindricalProjection()
+            elif variables["projection"] == EQUIRECTANGULAR:
+                self.projection = EquirectangularProjection()
+            variables.pop("projection")
+
+        if "lens" in variables.keys():
+            if variables["lens"] == NODISTORTION:
+                self.lens = NoDistortion()
+            elif variables["lens"] == ABCDDISTORTION:
+                self.lens = ABCDistortion()
+            elif variables["lens"] == BROWNLENSDISTORTION:
+                self.lens = BrownLensDistortion()
+            variables.pop("lens")
+
         for key in variables:
             setattr(self, key, variables[key])
 

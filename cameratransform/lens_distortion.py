@@ -19,7 +19,7 @@
 
 import numpy as np
 from .parameter_set import ClassWithParameterSet, ParameterSet, Parameter, TYPE_DISTORTION
-
+import json
 
 def invert_function(x, func):
     from scipy import interpolate
@@ -60,6 +60,18 @@ class LensDistortion(ClassWithParameterSet):  # pragma: no cover
 
     def setProjection(self, projection):
         pass
+
+    def save(self, filename):
+        keys = self.parameters.parameters.keys()
+        export_dict = {key: getattr(self, key) for key in keys}
+        with open(filename, "w") as fp:
+            fp.write(json.dumps(export_dict))
+
+    def load(self, filename):
+        with open(filename, "r") as fp:
+            variables = json.loads(fp.read())
+        for key in variables:
+            setattr(self, key, variables[key])
 
 
 class NoDistortion(LensDistortion):
