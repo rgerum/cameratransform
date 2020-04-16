@@ -1360,22 +1360,26 @@ class Camera(ClassWithParameterSet):
 
         if "projection" in variables.keys():
             if variables["projection"] == RECTILINEAR:
-                self.projection = RectilinearProjection()
+                projection = RectilinearProjection()
             elif variables["projection"] == CYLINDRICAL:
-                self.projection = CylindricalProjection()
+                projection = CylindricalProjection()
             elif variables["projection"] == EQUIRECTANGULAR:
-                self.projection = EquirectangularProjection()
+                projection = EquirectangularProjection()
             variables.pop("projection")
+        else:
+            projection = RectilinearProjection()
 
         if "lens" in variables.keys():
             if variables["lens"] == NODISTORTION:
-                self.lens = NoDistortion()
+                lens = NoDistortion()
             elif variables["lens"] == ABCDDISTORTION:
-                self.lens = ABCDistortion()
+                lens = ABCDistortion()#variables.get("a", None), variables.get("b", None),variables.get("c", None))
             elif variables["lens"] == BROWNLENSDISTORTION:
-                self.lens = BrownLensDistortion()
+                lens = BrownLensDistortion()#variables.get("k1", None), variables.get("k2", None),variables.get("k3", None))
             variables.pop("lens")
-
+        else:
+            lens = None
+        self.__init__(projection=projection, lens=lens, orientation=SpatialOrientation())
         for key in variables:
             setattr(self, key, variables[key])
 
@@ -1394,6 +1398,6 @@ def load_camera(filename):
     camera : :py:class:`Camera`
         the camera with the given parameters.
     """
-    cam = Camera(RectilinearProjection(), SpatialOrientation())
+    cam = Camera(RectilinearProjection(), SpatialOrientation(), NoDistortion())
     cam.load(filename)
     return cam
