@@ -1164,7 +1164,7 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=extent, alpha=alpha)
         return image
 
-    def _getMap(self, extent=None, scaling=None, Z=0):
+    def _getMap(self, extent=None, scaling=None, Z=0, hide_backpoints=True):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             border = self.getImageBorder()
@@ -1191,7 +1191,7 @@ class Camera(ClassWithParameterSet):
         mesh_points = np.hstack((mesh_points, Z*np.ones((mesh_points.shape[0], 1))))
 
         # transform the space points to the image
-        mesh_points_shape = self.imageFromSpace(mesh_points)
+        mesh_points_shape = self.imageFromSpace(mesh_points, hide_backpoints=hide_backpoints)
 
         # reshape the map and cache it
         self.map = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[:, ::-1, :]
@@ -1202,7 +1202,7 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, Z=0., skip_size_check=False):
+    def getTopViewOfImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, Z=0., skip_size_check=False, hide_backpoints=True):
         """
         Project an image to a top view projection. This will be done using a grid with the dimensions of the extent
         ([x_min, x_max, y_min, y_max]) in meters and the scaling, giving a resolution. For convenience, the image can
@@ -1239,7 +1239,7 @@ class Camera(ClassWithParameterSet):
             assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
             assert image.shape[0] == self.image_height_px, "The height of the image (%d) does not match the image height of the camera (%d)." % (image.shape[0], self.image_height_px)
         # get the mapping
-        x, y = self._getMap(extent=extent, scaling=scaling, Z=Z)
+        x, y = self._getMap(extent=extent, scaling=scaling, Z=Z, hide_backpoints=hide_backpoints)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
         if len(image.shape) == 2:
             pass
