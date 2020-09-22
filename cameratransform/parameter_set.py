@@ -279,7 +279,7 @@ class ClassWithParameterSet(object):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1, disable_bar=False):
+    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1, disable_bar=False, print_trace=True):
         start = []
         parameter_names = []
         additional_parameter_names = []
@@ -309,7 +309,8 @@ class ClassWithParameterSet(object):
 
         # convert the trace to a pandas dataframe
         trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])
-        print(trace)
+        if print_trace:
+            print(trace)
         self.set_trace(trace)
         self.set_to_mean()
         return trace
