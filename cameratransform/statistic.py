@@ -65,7 +65,7 @@ class normal_bounded(np.ndarray):
         return self.__add__(other)
 
 
-def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=None):
+def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=None, disable_bar=False):
     if burn < 1:
         burn = int(iterations*burn)
     else:
@@ -90,7 +90,7 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     last_pos = start
     last_prob = getLogProb(list(last_pos) + next_prior_trace)
     # iterate to sample
-    with tqdm.trange(int(iterations)) as t:
+    with tqdm.trange(int(iterations), disable=disable_bar) as t:
         for i in t:
             if prior_trace is not None:
                 next_prior_trace = list(prior_trace.loc[np.random.randint(len(prior_trace))])[:-1]
