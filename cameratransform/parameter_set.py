@@ -279,7 +279,7 @@ class ClassWithParameterSet(object):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1):
+    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1, disable_bar=False):
         start = []
         parameter_names = []
         additional_parameter_names = []
@@ -305,7 +305,7 @@ class ClassWithParameterSet(object):
         if trys >= max_tries:
             raise ValueError("Could not find a starting position with non-zero probability.")
 
-        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn)
+        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn, disable_bar=disable_bar)
 
         # convert the trace to a pandas dataframe
         trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])
