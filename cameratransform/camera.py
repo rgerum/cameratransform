@@ -956,7 +956,7 @@ class Camera(ClassWithParameterSet):
         # ensure that the points are provided as an array
         points = np.array(points)
         # get the index which coordinate to force to the given value
-        given = np.array([X, Y, Z])
+        given = np.array([X, Y, Z], dtype=object)
         if X is not None:
             index = 0
         elif Y is not None:
