@@ -34,7 +34,7 @@ Citing CameraTransform
 If you use CameraTransform for academic research, you are highly encouraged (though not
 required) to cite the following paper:
 
-*  Gerum, R., Richter, S., Winterl, A., Mark, M., Fabry, B., Le Bohec, C., and Zitterbart, D.P. (2016),
+*  Gerum, R., Richter, S., Winterl, A., Mark, M., Fabry, B., Le Bohec, C., and Zitterbart, D.P. (2019),
    `"CameraTransform: A Python package for perspective corrections and image mapping" <https://doi.org/10.1016/j.softx.2019.100333>`_.
    SoftwareX doi:10.1016/j.softx.2019.100333
 
