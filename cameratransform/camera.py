@@ -22,7 +22,10 @@ import pandas as pd
 import os
 import json
 import itertools
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 import cv2
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS

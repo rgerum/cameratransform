@@ -27,7 +27,10 @@ import sys
 import threading
 
 import cv2
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 import numpy as np
 from qimage2ndarray import array2qimage
 from qtpy import QtGui, QtCore, QtWidgets

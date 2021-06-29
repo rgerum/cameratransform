@@ -20,7 +20,10 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 from .statistic import metropolis, plotTrace, Model
 
 STATE_DEFAULT = 0

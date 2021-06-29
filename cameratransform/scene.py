@@ -18,8 +18,10 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import numpy as np
-import matplotlib.pyplot as plt
-
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 
 class Scene:  # pragma: no cover
     objects = []

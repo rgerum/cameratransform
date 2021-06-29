@@ -21,7 +21,10 @@ from __future__ import division, print_function
 import sys
 import os
 import numpy as np
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 import cameratransform as ct
 
 from qtpy import QtGui, QtCore, QtWidgets

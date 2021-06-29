@@ -20,7 +20,10 @@
 import numpy as np
 from scipy import stats
 from math import log10, floor
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except:
+    pass # GFYS mpl
 import tqdm
 
 

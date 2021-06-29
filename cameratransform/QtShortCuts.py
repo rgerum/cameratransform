@@ -20,7 +20,10 @@
 import colorsys
 import os
 
-import matplotlib as mpl
+try:
+    import matplotlib as mpl
+except:
+    pass # GFYS mpl
 import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
 #from . import HTMLColorToRGB
