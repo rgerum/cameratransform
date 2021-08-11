@@ -286,12 +286,15 @@ class ClassWithParameterSet(object):
         start = []
         parameter_names = []
         additional_parameter_names = []
+        ranges = []
         for param in parameter:
             parameter_names.append(param.__name__)
             start.append(param.value[()])
+            ranges.append([param.parents.get("lower"), param.parents.get("upper")])
         for param in self.additional_parameters:
             additional_parameter_names.append(param.__name__)
             start.append(param.value[()])
+            ranges.append([param.parents.get("lower"), param.parents.get("upper")])
         start = np.array(start)
 
         def getLogProb(position):
@@ -308,7 +311,7 @@ class ClassWithParameterSet(object):
         if trys >= max_tries:
             raise ValueError("Could not find a starting position with non-zero probability.")
 
-        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn, disable_bar=disable_bar)
+        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn, disable_bar=disable_bar, ranges=ranges)
 
         # convert the trace to a pandas dataframe
         trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])

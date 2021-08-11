@@ -26,6 +26,7 @@ except:
     pass # GFYS mpl
 import tqdm
 
+from scipy.stats import truncnorm
 
 def print_mean_std(x, y):
     digits = -int(floor(log10(abs(y))))
@@ -68,7 +69,7 @@ class normal_bounded(np.ndarray):
         return self.__add__(other)
 
 
-def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=None, disable_bar=False):
+def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=None, disable_bar=False, ranges=None):
     if burn < 1:
         burn = int(iterations*burn)
     else:
@@ -79,6 +80,12 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     rejected = 0
     trace = []
 
+    if ranges is None:
+        ranges = np.ones((N, 1)) *np.array([-np.inf, np.inf])[None,:]
+    else:
+        ranges = np.array(ranges, dtype=float)
+        ranges[:,0][np.isnan(ranges[:,0])] = -np.inf
+        ranges[:,1][np.isnan(ranges[:,1])] = np.inf
     step = np.array(step)
 
     adaptive_scale_factor = 1
@@ -101,7 +108,8 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
                 next_prior_trace = []
 
             # draw a new position
-            next_pos = last_pos + np.random.normal(0, step*adaptive_scale_factor, N)
+            # next_pos = last_pos + np.random.normal(0, step*adaptive_scale_factor, N)
+            next_pos = last_pos + adaptive_scale_factor*step*truncnorm((ranges[:,0]-last_pos)/step, (ranges[:,1]-last_pos)/step).rvs()
             # get the probability
             next_prob = getLogProb(list(next_pos) + next_prior_trace)
             # calculate the acceptance ratio
