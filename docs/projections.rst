@@ -1,3 +1,5 @@
+.. _camprojections:
+
 Projections
 ===========
 

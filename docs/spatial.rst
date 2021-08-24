@@ -1,3 +1,5 @@
+.. _camorientation:
+
 Camera Orientation
 ==================
 
