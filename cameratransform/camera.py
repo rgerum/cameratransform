@@ -559,6 +559,78 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHeightPoints)
 
+    def addObjectLengthInformation(self, points_front, points_back, length, variation, Z=0, only_plot=False,
+                                   plot_color=None):
+        """
+        Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
+        with a given length lying flat on the surface. The objects are assumed to be like flat rods lying on the z=0 surface.
+
+        Parameters
+        ----------
+        points_front : ndarray
+            the position of the objects front, dimension (2) or (Nx2)
+        points_back : ndarray
+            the position of the objects back, dimension (2) or (Nx2)
+        length : number, ndarray
+            the mean length of the objects, dimensions scalar or (N)
+        variation : number, ndarray
+            the standard deviation of the lengths of the objects, dimensions scalar or (N). If the variation is not known
+            a pymc2 stochastic variable object can be used.
+        only_plot : bool, optional
+            when true, the information will be ignored for fitting and only be used to plot.
+        """
+        if not only_plot:
+            if not isinstance(variation, (float, int)):
+                self.additional_parameters += [variation]
+
+                def lengthInformation(points_front=points_front, points_back=points_back, length=length,
+                                      variation=variation, Z=Z):
+                    length_distribution = stats.norm(loc=length, scale=variation.value)
+
+                    # get the length of the objects
+                    heights = self.getObjectLength(points_front, points_back, Z)
+
+                    # the probability that the objects have this height
+                    return np.sum(length_distribution.logpdf(heights))
+
+            else:
+                length_distribution = stats.norm(loc=length, scale=variation)
+
+                def lengthInformation(points_front=points_front, points_back=points_back,
+                                      length_distribution=length_distribution, Z=Z):
+                    # get the length of the objects
+                    heights = self.getObjectLength(points_front, points_back, Z)
+
+                    # the probability that the objects have this height
+                    return np.sum(length_distribution.logpdf(heights))
+
+            self.log_prob.append(lengthInformation)
+
+        def plotHeightPoints(points_front=points_front, points_back=points_back, Z=Z, color=plot_color):
+            p, = plt.plot(points_front[..., 0], points_front[..., 1], "_", label="front", color=color)
+
+            # get the back positions in the world
+            point3D_front = self.spaceFromImage(points_front, Z=Z)
+            point3D_back = self.spaceFromImage(points_back, Z=Z)
+            difference = point3D_back - point3D_front
+            difference /= np.linalg.norm(difference, axis=-1)[..., None]
+            predicted_back = point3D_front + difference * length
+            projected_back = self.imageFromSpace(predicted_back)
+
+            plt.scatter(projected_back[..., 0], projected_back[..., 1], label="back", facecolors='none',
+                        edgecolors=p.get_color())
+            plt.plot(points_back[..., 0], points_back[..., 1], "+", label="back fitted", color=p.get_color())
+
+            data = np.concatenate(([points_front], [projected_back], [np.ones(points_front.shape) * np.nan]))
+            if len(data.shape) == 3:
+                data = data.transpose(1, 0, 2).reshape((-1, 2))
+            else:
+                data = data.reshape((-1, 2))
+
+            plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+
+        self.info_plot_functions.append(plotHeightPoints)
+
     def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties, only_plot=False, plot_color=None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the given
@@ -1085,6 +1157,32 @@ class Camera(ClassWithParameterSet):
         point3D_head = np.mean([point3D_head1, point3D_head2], axis=0)
         # the z difference between these two points
         return point3D_head[..., 2] - point3D_feet[..., 2]
+
+    def getObjectLength(self, point_front, point_back, Z=0):
+        """
+        Calculate the length of objects in the image, assuming the Z position of the objects is known, e.g. they are
+        assumed to lie flat on the Z=0 plane.
+
+        Parameters
+        ----------
+        point_front : ndarray
+            the positions of the front end, dimensions: (2) or (Nx2)
+        point_back : ndarray
+            the positions of the back end, dimensions: (2) or (Nx2)
+        Z : number, ndarray, optional
+            the Z position of the objects, dimensions: scalar or (N), default 0
+
+        Returns
+        -------
+        lengths: ndarray
+            the lengths of the objects in meters, dimensions: () or (N)
+        """
+        # get the front positions in the world
+        point3D_front = self.spaceFromImage(point_front, Z=Z)
+        # get the back positions in the world
+        point3D_back = self.spaceFromImage(point_back, Z=Z)
+        # the z difference between these two points
+        return np.linalg.norm(point3D_front - point3D_back, axis=-1)
 
     def _getUndistortMap(self, extent=None, scaling=None):
         # if no extent is given, take the maximum extent from the image border
