@@ -26,7 +26,6 @@ try:
     import matplotlib.pyplot as plt
 except:
     pass # GFYS mpl
-import cv2
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, EquirectangularProjection, CylindricalProjection, CameraProjection
@@ -283,6 +282,7 @@ class CameraGroup(ClassWithParameterSet):
         return prob if not np.isnan(prob) else -np.inf
 
     def setCameraParametersByPointCorrespondence(self, corresponding1, corresponding2, baseline):
+        import cv2
         cam1 = self[0]
         cam2 = self[1]
         f, cx, cy = cam1.focallength_x_px, cam1.center_x_px, cam1.center_y_px
@@ -311,6 +311,7 @@ class CameraGroup(ClassWithParameterSet):
         cam2.parameters.set_fit_parameters(data.keys(), data.values())
 
     def plotEpilines(self, corresponding1, corresponding2, im1, im2):
+        import cv2
         cam1 = self[0]
         cam2 = self[1]
         F, mask = cv2.findFundamentalMat(corresponding1, corresponding2)#, method=cv2.FM_8POINT)
@@ -1245,6 +1246,8 @@ class Camera(ClassWithParameterSet):
         image : ndarray
             the undistorted image
         """
+        import cv2
+
         # check if the size of the image matches the size of the camera
         if not skip_size_check:
             assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
@@ -1335,6 +1338,8 @@ class Camera(ClassWithParameterSet):
         image : ndarray
             the top view projected image
         """
+        import cv2
+
         # check if the size of the image matches the size of the camera
         if not skip_size_check:
             assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)

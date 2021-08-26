@@ -30,7 +30,7 @@ setup(name='cameratransform',
           'numpy',
           'pandas',
           'scipy',
-          'tqdm'
+          'tqdm',
       ],
       extras_require={
         'projecting_top_view':  ["cv2", "matplotlib"],
