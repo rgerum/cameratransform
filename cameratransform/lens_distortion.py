@@ -156,8 +156,6 @@ class BrownLensDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         points = points / r * self._convert_radius_inverse(r)
-        # set nans to 0
-        points[np.isnan(points)] = 0
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -169,8 +167,6 @@ class BrownLensDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         points = points / r * self._convert_radius(r)
-        # set nans to 0
-        points[np.isnan(points)] = 0
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -252,8 +248,6 @@ class ABCDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         points = points / r * self._convert_radius_inverse(r)
-        # set nans to 0
-        points[np.isnan(points)] = 0
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -265,7 +259,5 @@ class ABCDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         points = points / r * self._convert_radius(r)
-        # set nans to 0
-        points[np.isnan(points)] = 0
         # rescale back to the image
         return points * self.scale + self.offset
