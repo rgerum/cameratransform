@@ -2,7 +2,7 @@
 
 [![Coverage](https://coveralls.io/repos/github/rgerum/cameratransform/badge.svg?branch=master)](https://coveralls.io/github/rgerum/cameratransform?branch=master)
 [![DOC](https://readthedocs.org/projects/cameratransform/badge/)](https://cameratransform.readthedocs.io)
-[![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://img.shields.io/badge/DOI-10.1016/j.softx.2019.100333-blue.svg)](https://doi.org/10.1016/j.softx.2019.100333)
 
 
