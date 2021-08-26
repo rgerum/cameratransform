@@ -162,7 +162,7 @@ class TestTransforms(unittest.TestCase):
         x = np.linspace(0, 1, 100)*proj.image_width_px
         pos0 = np.round(np.array([x, y]).T).astype(int)
         pos1 = cam.lens.distortedFromImage(pos0)
-        pos2 = np.round(cam.lens.imageFromDistorted(pos1)).astype(int)
+        pos2 = np.round(cam.lens.imageFromDistorted(pos1))
         np.testing.assert_almost_equal(pos2, pos0, 0, err_msg="Transforming from distorted to undistorted image fails.")
 
     @given(ct_st.camera_image_points(), st.floats(0, 100))
