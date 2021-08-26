@@ -5,3 +5,4 @@ hypothesis
 bbcs-tools
 mock
 matplotlib
+Cython
