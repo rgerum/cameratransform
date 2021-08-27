@@ -20,10 +20,6 @@
 import numpy as np
 from scipy import stats
 from math import log10, floor
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
 import tqdm
 
 from scipy.stats import truncnorm
@@ -165,6 +161,7 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
 
 def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distributions=False, skip=1):
     from scipy.stats import gaussian_kde
+    import matplotlib.pyplot as plt
 
     def getAxes(name, N, width):
         try:

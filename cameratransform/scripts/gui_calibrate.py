@@ -27,10 +27,6 @@ import sys
 import threading
 
 import cv2
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
 import numpy as np
 from qimage2ndarray import array2qimage
 from qtpy import QtGui, QtCore, QtWidgets
@@ -148,6 +144,7 @@ class MyImage(QtWidgets.QWidget):
         self.processing_finished.emit()
 
     def getImage(self):
+        import matplotlib.pyplot as plt
         if self.image_data is not None:
             return self.image_data
         if os.path.exists(self.output_image_corners):
@@ -346,6 +343,7 @@ class Window(QtWidgets.QWidget):
         self.newCalibration()
 
     def newCalibration(self):
+        import matplotlib.pyplot as plt
         # a new calibration has been fitted or loaded
 
         # display the calibration data

@@ -17,14 +17,9 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-from __future__ import division, print_function
 import sys
 import os
 import numpy as np
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
 import cameratransform as ct
 
 from qtpy import QtGui, QtCore, QtWidgets
@@ -133,6 +128,7 @@ class Window(QtWidgets.QWidget):
         self.updatePlot()
 
     def updatePlot(self):
+        import matplotlib.pyplot as plt
         if self.select_scene.value() != self.scene.__class__.__name__:
             self.scene = self.scenes[self.select_scene.value()](self.cam)
 

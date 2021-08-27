@@ -20,10 +20,6 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
 from .statistic import metropolis, plotTrace, Model
 
 STATE_DEFAULT = 0
@@ -371,6 +367,7 @@ class ClassWithParameterSet(object):
         plotTrace(self.parameters.trace, **kwargs)
 
     def plotFitInformation(self, image=None):
+        import matplotlib.pyplot as plt
         if image is not None:
             plt.imshow(image)
         for func in self.info_plot_functions:

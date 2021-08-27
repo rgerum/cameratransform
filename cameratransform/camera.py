@@ -18,14 +18,9 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import numpy as np
-import pandas as pd
 import os
 import json
 import itertools
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
 from scipy import stats
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, EquirectangularProjection, CylindricalProjection, CameraProjection
@@ -312,6 +307,7 @@ class CameraGroup(ClassWithParameterSet):
 
     def plotEpilines(self, corresponding1, corresponding2, im1, im2):
         import cv2
+        import matplotlib.pyplot as plt
         cam1 = self[0]
         cam2 = self[1]
         F, mask = cv2.findFundamentalMat(corresponding1, corresponding2)#, method=cv2.FM_8POINT)
@@ -369,6 +365,7 @@ class CameraGroup(ClassWithParameterSet):
         plt.show()
 
     def plotMyEpiploarLines(self, corresponding1, corresponding2, im1=None, im2=None):
+        import matplotlib.pyplot as plt
         cam1 = self[0]
         cam2 = self[1]
 
@@ -539,6 +536,7 @@ class Camera(ClassWithParameterSet):
             self.log_prob.append(heigthInformation)
 
         def plotHeightPoints(points_feet=points_feet, points_head=points_head, color=plot_color):
+            import matplotlib.pyplot as plt
             p, = plt.plot(points_feet[..., 0], points_feet[..., 1], "_", label="feet", color=color)
 
             # get the feet positions in the world
@@ -608,6 +606,7 @@ class Camera(ClassWithParameterSet):
             self.log_prob.append(lengthInformation)
 
         def plotHeightPoints(points_front=points_front, points_back=points_back, Z=Z, color=plot_color):
+            import matplotlib.pyplot as plt
             p, = plt.plot(points_front[..., 0], points_front[..., 1], "_", label="front", color=color)
 
             # get the back positions in the world
@@ -677,6 +676,7 @@ class Camera(ClassWithParameterSet):
             self.log_prob.append(landmarkInformation)
 
         def plotLandmarkPoints(lm_points_image=lm_points_image, lm_points_space=lm_points_space, color=plot_color):
+            import matplotlib.pyplot as plt
             lm_projected_image = self.imageFromSpace(lm_points_space)
 
             p, = plt.plot(lm_points_image[..., 0], lm_points_image[..., 1], "+", label="landmarks fitted", color=color)
@@ -722,6 +722,7 @@ class Camera(ClassWithParameterSet):
             self.log_prob.append(horizonInformation)
 
         def plotHorizonPoints(horizon=horizon, color=plot_color):
+            import matplotlib.pyplot as plt
             image_horizon = self.getImageHorizon(horizon[..., 0])
             if 0:
                 p, = plt.plot(image_horizon[..., 0], image_horizon[..., 1], "+", label="horizon fitted", color=color)
@@ -1263,6 +1264,7 @@ class Camera(ClassWithParameterSet):
                           interpolation=cv2.INTER_NEAREST,
                           borderValue=[0, 1, 0, 0])[::-1]  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
+            import matplotlib.pyplot as plt
             extent = self.last_extent_undistort.copy()
             extent[2], extent[3] = extent[3]-1, extent[2]-1
             plt.imshow(image, extent=extent, alpha=alpha)
@@ -1355,6 +1357,7 @@ class Camera(ClassWithParameterSet):
                           interpolation=cv2.INTER_NEAREST,
                           borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
+            import matplotlib.pyplot as plt
             plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 

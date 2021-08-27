@@ -19,11 +19,6 @@
 
 import colorsys
 import os
-
-try:
-    import matplotlib as mpl
-except:
-    pass # GFYS mpl
 import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
 #from . import HTMLColorToRGB
@@ -304,6 +299,7 @@ class QInputColor(QInput):
                 self.setValue(self.color)
 
     def _openDialog(self):
+        import matplotlib as mpl
         # get new color from color picker
         color = QtWidgets.QColorDialog.getColor(QtGui.QColor(*tuple(mpl.colors.to_rgba_array(self.value())[0] * 255)),
                                                 self.parent(), self.label.text() + " choose color")

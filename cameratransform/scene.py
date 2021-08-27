@@ -18,10 +18,7 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import numpy as np
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass # GFYS mpl
+
 
 class Scene:  # pragma: no cover
     objects = []
@@ -37,6 +34,7 @@ class Scene:  # pragma: no cover
         self.objects.append(object)
 
     def plotSceneViews(self):
+        import matplotlib.pyplot as plt
         cone = self.camera.getCameraCone()
 
         plt.subplot(221)
@@ -82,6 +80,7 @@ class Scene:  # pragma: no cover
                 plt.plot(object_im[:, 0], object_im[:, 1], "-")
 
     def renderImage(self, filename):
+        import matplotlib.pyplot as plt
         fig = plt.figure(0, (self.camera.projection.parameters.image_width_px / 100,
                              self.camera.projection.parameters.image_height_px / 100))
         ax = plt.axes([0, 0, 1, 1])
