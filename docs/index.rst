@@ -12,6 +12,7 @@ the camera space to the world space and back.
 
    installation
    getting_started
+   coordinate_systems
    camera
    lens_distortion
    projections

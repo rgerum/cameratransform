@@ -17,8 +17,6 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-from __future__ import division, print_function
-
 import glob
 import json
 import os
