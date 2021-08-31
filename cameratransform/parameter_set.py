@@ -20,7 +20,8 @@
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
-from .statistic import metropolis, plotTrace, Model
+from .statistic import metropolis, plotTrace, Model, printTraceSummary
+
 
 STATE_DEFAULT = 0
 STATE_USER_SET = 1
@@ -292,6 +293,7 @@ class ClassWithParameterSet(object):
             start.append(param.value[()])
             ranges.append([param.parents.get("lower"), param.parents.get("upper")])
         start = np.array(start)
+        step = step*np.array([p.step for p in parameter])
 
         def getLogProb(position):
             self.parameters.set_fit_parameters(parameter_names, position[:len(parameter_names)])
@@ -374,3 +376,6 @@ class ClassWithParameterSet(object):
             func()
         plt.xlim(0, self.image_width_px)
         plt.ylim(self.image_height_px, 0)
+
+    def printTraceSummary(self):
+        printTraceSummary(self.parameters.trace)

@@ -246,7 +246,7 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distribution
 def printTraceSummary(trace, logarithmic=False):
     print("Trace %d" % len(trace))
     for index, name in enumerate(trace.columns[:-1]):
-        if logarithmic[index]:
+        if logarithmic is not False and logarithmic[index]:
             data = np.exp(trace[name])
         else:
             data = trace[name]
