@@ -135,6 +135,19 @@ class CameraProjection(ClassWithParameterSet):
             sensor_height_mm=Parameter(sensor_height_mm, default=13.0, type=TYPE_INTRINSIC),  # the sensor height in mm
             sensor_width_mm=Parameter(sensor_width_mm, default=17.3, type=TYPE_INTRINSIC),  # the sensor width in mm
         )
+        # add parameter focallength_px that sets x and y simultaneously
+        fx = self.parameters.parameters["focallength_x_px"]
+        fy = self.parameters.parameters["focallength_y_px"]
+        f = Parameter(focallength_x_px, default=3600, type=TYPE_INTRINSIC)
+        def callback():
+            fx.value = f.value
+            if fx.callback is not None:
+                fx.callback()
+            fy.value = f.value
+            if fy.callback is not None:
+                fy.callback()
+        f.callback = callback
+        self.parameters.parameters["focallength_px"] = f
 
         if view_x_deg is not None or view_y_deg is not None:
             if sensor_width_mm is None:
