@@ -166,6 +166,9 @@ class TestTransforms(unittest.TestCase):
         pos0 = np.round(np.array([x, y]).T).astype(int)
         pos1 = cam.lens.distortedFromImage(pos0)
         pos2 = np.round(cam.lens.imageFromDistorted(pos1))
+        # set the points that cannot be back projected (because they are nan in the distorted image) to nan
+        pos0 = pos0.astype(np.float)
+        pos0[np.isnan(pos2[:, 0])] = np.nan
         np.testing.assert_almost_equal(pos2, pos0, 0, err_msg="Transforming from distorted to undistorted image fails.")
 
     @given(ct_st.camera_image_points(), st.floats(0, 100))
