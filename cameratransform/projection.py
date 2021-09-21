@@ -178,7 +178,7 @@ class CameraProjection(ClassWithParameterSet):
 
     def save(self, filename):
         keys = self.parameters.parameters.keys()
-        export_dict = {key: getattr(self, key) for key in keys}
+        export_dict = {key: getattr(self, key) for key in keys if key != "focallength_px"}
         with open(filename, "w") as fp:
             fp.write(json.dumps(export_dict))
 

@@ -1434,7 +1434,7 @@ class Camera(ClassWithParameterSet):
             the filename where to store the parameters.
         """
         keys = self.parameters.parameters.keys()
-        export_dict = {key: getattr(self, key) for key in keys}
+        export_dict = {key: getattr(self, key) for key in keys if key != "focallength_px"}
 
         # check projections and save
         if isinstance(self.projection, RectilinearProjection):
