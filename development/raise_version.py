@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # raise_version.py
 
-# Copyright (c) 2017-2019, Richard Gerum
+# Copyright (c) 2017-2021, Richard Gerum
 #
 # This file is part of the cameratransform package.
 #
@@ -17,7 +17,6 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-from __future__ import print_function, division
 import os, sys
 import shutil
 import glob

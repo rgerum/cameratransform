@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # test_fits.py
 
-# Copyright (c) 2017-2019, Richard Gerum
+# Copyright (c) 2017-2021, Richard Gerum
 #
 # This file is part of the cameratransform package.
 #

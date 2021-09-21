@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # statistic.py
 
-# Copyright (c) 2017-2019, Richard Gerum
+# Copyright (c) 2017-2021, Richard Gerum
 #
 # This file is part of the cameratransform package.
 #
