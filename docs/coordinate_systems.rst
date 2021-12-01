@@ -125,10 +125,10 @@ See also :ref:`CamOrientation`.
                 camera.rotateX(-camera.last_rot[1]*Math.PI/180);
                 camera.rotateZ(-camera.last_rot[2]*Math.PI/180);
 
-                camera.rotateZ(cam_params.heading_deg*Math.PI/180);
+                camera.rotateZ(-cam_params.heading_deg*Math.PI/180);
                 camera.rotateX(cam_params.tilt_deg*Math.PI/180);
                 camera.rotateZ(cam_params.roll_deg*Math.PI/180);
-                camera.last_rot = [cam_params.roll_deg, cam_params.tilt_deg, cam_params.heading_deg];
+                camera.last_rot = [cam_params.roll_deg, cam_params.tilt_deg, -cam_params.heading_deg];
                 scene.render()
             }, false);
 
