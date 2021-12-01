@@ -326,7 +326,7 @@ class RectilinearProjection(CameraProjection):
 
     .. math::
         \vec{r} = \begin{pmatrix}
-            (x_\mathrm{im} - c_x)/f_x\\
+            -(x_\mathrm{im} - c_x)/f_x\\
             (y_\mathrm{im} - c_y)/f_y\\
             1\\
         \end{pmatrix}
@@ -409,7 +409,7 @@ class CylindricalProjection(CameraProjection):
 
     .. math::
         \vec{r} = \begin{pmatrix}
-            \sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
+            -\sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
             \frac{y_\mathrm{im} - c_y}{f_y}\\
             \cos\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)
         \end{pmatrix}
@@ -485,7 +485,7 @@ class EquirectangularProjection(CameraProjection):
 
     .. math::
         \vec{r} = \begin{pmatrix}
-            \sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
+            -\sin\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)\\
             \tan\left(\frac{y_\mathrm{im} - c_y}{f_y}\right)\\
             \cos\left(\frac{x_\mathrm{im} - c_x}{f_x}\right)
         \end{pmatrix}
