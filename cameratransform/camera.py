@@ -1098,7 +1098,7 @@ class Camera(ClassWithParameterSet):
         points : ndarray
             the points in the **space** coordinate system, dimensions (3), (Nx3)
         """
-        return gps.spaceFromGPS(points, np.array([self.gps_lat, self.gps_lon, self.elevation_m]))
+        return gps.spaceFromGPS(points, np.array([self.gps_lat, self.gps_lon]))
 
     def gpsFromImage(self, points, X=None, Y=None, Z=0, D=None):
         """
