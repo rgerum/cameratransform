@@ -20,6 +20,10 @@ Parameters
 - ``pos_y_m``, :math:`y`: the y position of the camera.
 - ``elevation_m``, :math:`z`: the z position of the camera, or the elevation above the xy plane.
 
+.. hint::
+    When coming from a yaw-pitch-roll system, the pitch is defined differently than the tilt. Tilt 0 means looking straight
+    down, while pitch 0 means looking straight ahead. Therefore, tilt_deg = 90 - pitch_deg.
+
 Transformation
 --------------
 
