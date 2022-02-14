@@ -458,7 +458,8 @@ class Camera(ClassWithParameterSet):
         lon: number, optional
             the longitude of the camera.
         elevation: number, optional
-            the elevation of the camera.
+            the elevation of the camera (this is the same elevation SpatialOrientation is using, setting it here might
+            overwrite a previous value from SpatialOrientation).
 
         Examples
         --------
