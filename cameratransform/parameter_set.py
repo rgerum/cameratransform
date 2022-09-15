@@ -194,6 +194,8 @@ class ClassWithParameterSet(object):
 
     def set_to_mean(self):
         if self.parameters.trace is not None:
+            print(self.parameters.trace["probability"])
+            print('self.parameters.trace["probability"]', self.parameters.trace["probability"].dtype)
             most_probable_index = self.parameters.trace["probability"].idxmax()
             parameter_set = dict(self.parameters.trace.loc[most_probable_index])
             if "probability" in parameter_set:
