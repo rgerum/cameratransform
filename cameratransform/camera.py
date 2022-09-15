@@ -22,12 +22,25 @@ import os
 import json
 import itertools
 from scipy import stats
+from typing import Union, Optional, Tuple, List
+from numbers import Number
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
 from .projection import RectilinearProjection, EquirectangularProjection, CylindricalProjection, CameraProjection
 from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion, ABCDistortion, BrownLensDistortion
 from . import gps
 from . import ray
+
+try:
+    from numpy.typing import ArrayLike
+
+except ImportError:
+    import numpy.ndarray as ArrayLike
+Points1D = Union[ArrayLike, float]  # (), (N)
+Points2D = ArrayLike  # (2), (Nx2)
+Points3D = ArrayLike  # (3), (Nx3)
+Image = ArrayLike  # (HxW)
+Mesh3D = ArrayLike  # (3x3), (Mx3x3)
 
 RECTILINEAR = 0
 CYLINDRICAL = 1
@@ -37,7 +50,7 @@ NODISTORTION = 0
 ABCDDISTORTION = 1
 BROWNLENSDISTORTION = 2
 
-def _getSensorFromDatabase(model):
+def _getSensorFromDatabase(model: str) -> Optional[Tuple[float, float]]:
     """
     Get the sensor size from the given model from the database at: https://github.com/openMVG/CameraSensorSizeDatabase
 
@@ -80,7 +93,8 @@ def _getSensorFromDatabase(model):
     return None
 
 
-def getCameraParametersFromExif(filename, verbose=False, sensor_from_database=True):
+def getCameraParametersFromExif(filename: str, verbose: bool = False, sensor_from_database: bool = True) -> \
+        Tuple[float, Tuple[float, float], Tuple[float, float]]:
     """
     Try to extract the intrinsic camera parameters from the exif information.
 
@@ -161,7 +175,8 @@ class CameraGroup(ClassWithParameterSet):
     orientation_list = None
     lens_list = None
 
-    def __init__(self, projection, orientation=None, lens=None):
+    def __init__(self, projection: Union[list, CameraProjection], orientation: Union[list, SpatialOrientation] = None,
+                 lens: Union[list, LensDistortion] = None):
         ClassWithParameterSet.__init__(self)
         self.N = 1
 
@@ -196,26 +211,26 @@ class CameraGroup(ClassWithParameterSet):
         self.cameras = [Camera(projection, orientation, lens) for index, projection, orientation, lens in
                         zip(range(self.N), itertools.cycle(self.projection_list), itertools.cycle(self.orientation_list), itertools.cycle(self.lens_list))]
 
-    def getBaseline(self):
+    def getBaseline(self) -> float:
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
 
-    def spaceFromImages(self, points1, points2):
+    def spaceFromImages(self, points1: Points2D, points2: Points2D) -> Points3D:
         p1, v1 = self.cameras[0].getRay(points1)
         p2, v2 = self.cameras[1].getRay(points2)
         return ray.intersectionOfTwoLines(p1, v1, p2, v2)
 
-    def discanteBetweenRays(self, points1, points2):
+    def discanteBetweenRays(self, points1: Points2D, points2: Points2D) -> Points1D:
         p1, v1 = self.cameras[0].getRay(points1, normed=True)
         p2, v2 = self.cameras[1].getRay(points2, normed=True)
         return ray.distanceOfTwoLines(p1, v1, p2, v2)
 
-    def imagesFromSpace(self, points):
+    def imagesFromSpace(self, points: Points3D) -> List[Points2D, ...]:
         return [cam.imageFromSpace(points) for cam in self.cameras]
 
-    def __getitem__(self, item):
+    def __getitem__(self, item) -> "Camera":
         return self.cameras[item]
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.cameras)
 
     def __iter__(self):
@@ -422,7 +437,7 @@ class Camera(ClassWithParameterSet):
 
     R_earth = 6371e3
 
-    def __init__(self, projection, orientation=None, lens=None):
+    def __init__(self, projection: CameraProjection, orientation: SpatialOrientation = None, lens: LensDistortion = None):
         ClassWithParameterSet.__init__(self)
         self.projection = projection
         if orientation is None:
@@ -447,7 +462,7 @@ class Camera(ClassWithParameterSet):
         string += ")"
         return string
 
-    def setGPSpos(self, lat, lon=None, elevation=None):
+    def setGPSpos(self, lat: Union[Number, str], lon: Number = None, elevation: Number = None):
         """
         Provide the earth position for the camera.
 
@@ -493,7 +508,8 @@ class Camera(ClassWithParameterSet):
         if elevation is not None:
             self.elevation_m = elevation
 
-    def addObjectHeightInformation(self, points_feet, points_head, height, variation, only_plot=False, plot_color=None):
+    def addObjectHeightInformation(self, points_feet: Points2D, points_head: Points2D, height: Points1D,
+                                   variation: Points1D, only_plot: bool = False, plot_color: bool = None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with the given feet and head positions and a known height and height variation.
@@ -559,8 +575,9 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHeightPoints)
 
-    def addObjectLengthInformation(self, points_front, points_back, length, variation, Z=0, only_plot=False,
-                                   plot_color=None):
+    def addObjectLengthInformation(self, points_front: Points2D, points_back: Points2D, length: Points1D,
+                                   variation: Points1D, Z: Number = 0, only_plot: bool = False,
+                                   plot_color: bool = None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with a given length lying flat on the surface. The objects are assumed to be like flat rods lying on the z=0 surface.
@@ -632,7 +649,8 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHeightPoints)
 
-    def addLandmarkInformation(self, lm_points_image, lm_points_space, uncertainties, only_plot=False, plot_color=None):
+    def addLandmarkInformation(self, lm_points_image: Points2D, lm_points_space: Points3D, uncertainties: Points1D,
+                               only_plot: bool = False, plot_color: bool = None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the given
         landmarks and the specified positions in the image.
@@ -692,7 +710,8 @@ class Camera(ClassWithParameterSet):
             plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
         self.info_plot_functions.append(plotLandmarkPoints)
 
-    def addHorizonInformation(self, horizon, uncertainty=1, only_plot=False, plot_color=None):
+    def addHorizonInformation(self, horizon: Points2D, uncertainty=Points1D,
+                              only_plot: bool = False, plot_color: bool = None):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the horizon
         at the given pixel positions.
@@ -747,7 +766,7 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHorizonPoints)
 
-    def distanceToHorizon(self):
+    def distanceToHorizon(self) -> float:
         """
         Calculates the distance of the camera's position to the horizon of the earth. The horizon depends on the radius
         of the earth and the elevation of the camera.
@@ -759,7 +778,7 @@ class Camera(ClassWithParameterSet):
         """
         return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + self.elevation_m)))
 
-    def getImageHorizon(self, pointsX=None):
+    def getImageHorizon(self, pointsX: Points1D = None) -> Points2D:
         """
         This function calculates the position of the horizon in the image sampled at the points x=0, x=im_width/2,
         x=im_width.
@@ -803,10 +822,10 @@ class Camera(ClassWithParameterSet):
                 return np.array([x, y])
         return np.array(points)
 
-    def getPos(self):
+    def getPos(self) -> Points3D:
         return np.array([self.pos_x_m, self.pos_y_m, self.elevation_m])
 
-    def getImageBorder(self, resolution=1):
+    def getImageBorder(self, resolution: Number = 1) -> Points3D:
         """
         Get the border of the image in a top view. Useful for drawing the field of view of the camera in a map.
 
@@ -832,7 +851,7 @@ class Camera(ClassWithParameterSet):
             border.append([x, 0])
         return np.array(border)
 
-    def getCameraCone(self, project_to_ground=False, D=1):
+    def getCameraCone(self, project_to_ground: bool = False, D: Number = 1) -> Points3D:
         """
         The cone of the camera's field of view. This includes the border of the image and lines to the origin of the
         camera.
@@ -881,7 +900,7 @@ class Camera(ClassWithParameterSet):
             border.append(border[corner_index])
         return np.array(border)
 
-    def imageFromSpace(self, points, hide_backpoints=True):
+    def imageFromSpace(self, points: Points3D, hide_backpoints: bool = True) -> Points2D:
         """
         Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
 
@@ -918,7 +937,7 @@ class Camera(ClassWithParameterSet):
         # project the points from the space to the camera and from the camera to the image
         return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points), hide_backpoints=hide_backpoints))
 
-    def getRay(self, points, normed=False):
+    def getRay(self, points: Points2D, normed: bool = False) -> Tuple[Points3D, Points3D]:
         """
         As the transformation from the **image** coordinate system to the **space** coordinate system is not unique,
         **image** points can only be uniquely mapped to a ray in **space** coordinates.
@@ -969,7 +988,8 @@ class Camera(ClassWithParameterSet):
         # return the offset point and the direction of the ray
         return offset, direction
 
-    def spaceFromImage(self, points, X=None, Y=None, Z=0, D=None, mesh=None):
+    def spaceFromImage(self, points: Points2D, X: Points1D = None, Y: Points1D = None, Z: Points1D = 0,
+                       D: Points1D = None, mesh: Mesh3D = None) -> Points3D:
         """
         Convert points (Nx2) from the **image** coordinate system to the **space** coordinate system. This is not a unique
         transformation, therefore an additional constraint has to be provided. The X, Y, or Z coordinate(s) of the target
@@ -1069,7 +1089,7 @@ class Camera(ClassWithParameterSet):
         points[factor < 0] = np.nan
         return points
 
-    def gpsFromSpace(self, points):
+    def gpsFromSpace(self, points: Points3D) -> Points3D:
         """
         Convert points (Nx3) from the **space** coordinate system to the **gps** coordinate system.
 
@@ -1085,7 +1105,7 @@ class Camera(ClassWithParameterSet):
         """
         return gps.gpsFromSpace(points, np.array([self.gps_lat, self.gps_lon, self.elevation_m]))
 
-    def spaceFromGPS(self, points):
+    def spaceFromGPS(self, points: Points3D) -> Points3D:
         """
         Convert points (Nx3) from the **gps** coordinate system to the **space** coordinate system.
 
@@ -1101,7 +1121,8 @@ class Camera(ClassWithParameterSet):
         """
         return gps.spaceFromGPS(points, np.array([self.gps_lat, self.gps_lon]))
 
-    def gpsFromImage(self, points, X=None, Y=None, Z=0, D=None):
+    def gpsFromImage(self, points: Points2D, X: Points3D = None, Y: Points3D = None, Z: Points3D = 0,
+                     D: Points3D = None) -> Points3D:
         """
         Convert points (Nx2) from the **image** coordinate system to the **gps** coordinate system.
 
@@ -1117,7 +1138,7 @@ class Camera(ClassWithParameterSet):
         """
         return self.gpsFromSpace(self.spaceFromImage(points, X=X, Y=Y, Z=Z, D=D))
 
-    def imageFromGPS(self, points):
+    def imageFromGPS(self, points: Points3D) -> Points2D:
         """
         Convert points (Nx3) from the **gps** coordinate system to the **image** coordinate system.
 
@@ -1133,7 +1154,7 @@ class Camera(ClassWithParameterSet):
         """
         return self.imageFromSpace(self.spaceFromGPS(points))
 
-    def getObjectHeight(self, point_feet, point_heads, Z=0):
+    def getObjectHeight(self, point_feet: Points2D, point_heads: Points2D, Z: Points1D = 0) -> Points1D:
         """
         Calculate the height of objects in the image, assuming the Z position of the objects is known, e.g. they are
         assumed to stand on the Z=0 plane.
@@ -1161,7 +1182,7 @@ class Camera(ClassWithParameterSet):
         # the z difference between these two points
         return point3D_head[..., 2] - point3D_feet[..., 2]
 
-    def getObjectLength(self, point_front, point_back, Z=0):
+    def getObjectLength(self, point_front: Points2D, point_back: Points2D, Z: Points1D = 0) -> Points1D:
         """
         Calculate the length of objects in the image, assuming the Z position of the objects is known, e.g. they are
         assumed to lie flat on the Z=0 plane.
@@ -1221,7 +1242,8 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map_undistort
 
-    def undistortImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, skip_size_check=False):
+    def undistortImage(self, image: Image, extent: List[Number, Number, Number, Number] = None, scaling: Number=None,
+                       do_plot: bool = False, alpha: Number = None, skip_size_check: bool = False) -> Image:
         """
         Applies the undistortion of the lens model to the image. The purpose of this function is mainly to check the
         sanity of a lens transformation. As CameraTransform includes the lens transformation in any calculations, it
@@ -1309,7 +1331,9 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, image, extent=None, scaling=None, do_plot=False, alpha=None, Z=0., skip_size_check=False, hide_backpoints=True):
+    def getTopViewOfImage(self, image: Image, extent: List[Number, Number, Number, Number] = None, scaling: Number = None,
+                          do_plot: bool = False, alpha: Number = None, Z: Number = 0., skip_size_check: bool = False,
+                          hide_backpoints: bool = True) -> Image:
         """
         Project an image to a top view projection. This will be done using a grid with the dimensions of the extent
         ([x_min, x_max, y_min, y_max]) in meters and the scaling, giving a resolution. For convenience, the image can
@@ -1362,7 +1386,7 @@ class Camera(ClassWithParameterSet):
             plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 
-    def generateLUT(self, undef_value=0, whole_image=False):
+    def generateLUT(self, undef_value: Number = 0, whole_image: bool = False) -> ArrayLike:
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
 
@@ -1409,7 +1433,7 @@ class Camera(ClassWithParameterSet):
         A[np.isnan(A)] = undef_value
         return A
 
-    def rotateSpace(self, delta_heading):
+    def rotateSpace(self, delta_heading: Number):
         """
         Rotates the whole camera setup, this will turn the heading and rotate the camera position (pos_x_m, pos_y_m)
         around the origin.
@@ -1425,7 +1449,7 @@ class Camera(ClassWithParameterSet):
         s, c = np.sin(delta_heading_rad), np.cos(delta_heading_rad)
         self.pos_x_m, self.pos_y_m = np.dot(np.array([[c, s], [-s, c]]), pos)
 
-    def save(self, filename):
+    def save(self, filename: str):
         """
         Saves the camera parameters to a json file.
 
@@ -1456,7 +1480,7 @@ class Camera(ClassWithParameterSet):
         with open(filename, "w") as fp:
             fp.write(json.dumps(export_dict, indent=4))
 
-    def load(self, filename):
+    def load(self, filename: str):
         """
         Load the camera parameters from a json file.
 
@@ -1494,7 +1518,7 @@ class Camera(ClassWithParameterSet):
             setattr(self, key, variables[key])
 
 
-def load_camera(filename):
+def load_camera(filename: str) -> Camera:
     """
     Create a :py:class:`Camera` instance with the parameters from the file.
 
