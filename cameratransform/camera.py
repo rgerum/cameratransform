@@ -36,7 +36,7 @@ try:
 
 except ImportError:
     import numpy.ndarray as ArrayLike
-Points1D = Union[ArrayLike, float]  # (), (N)
+Points1D = Union[ArrayLike, List, float]  # (), (N)
 Points2D = ArrayLike  # (2), (Nx2)
 Points3D = ArrayLike  # (3), (Nx3)
 Image = ArrayLike  # (HxW)
@@ -224,7 +224,7 @@ class CameraGroup(ClassWithParameterSet):
         p2, v2 = self.cameras[1].getRay(points2, normed=True)
         return ray.distanceOfTwoLines(p1, v1, p2, v2)
 
-    def imagesFromSpace(self, points: Points3D) -> List[Points2D, ...]:
+    def imagesFromSpace(self, points: Points3D) -> List[Points2D]:
         return [cam.imageFromSpace(points) for cam in self.cameras]
 
     def __getitem__(self, item) -> "Camera":
@@ -462,7 +462,7 @@ class Camera(ClassWithParameterSet):
         string += ")"
         return string
 
-    def setGPSpos(self, lat: Union[Number, str], lon: Number = None, elevation: Number = None):
+    def setGPSpos(self, lat: Union[Number, str, ], lon: Number = None, elevation: Number = None):
         """
         Provide the earth position for the camera.
 
@@ -1242,7 +1242,7 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map_undistort
 
-    def undistortImage(self, image: Image, extent: List[Number, Number, Number, Number] = None, scaling: Number=None,
+    def undistortImage(self, image: Image, extent: List[Number] = None, scaling: Number=None,
                        do_plot: bool = False, alpha: Number = None, skip_size_check: bool = False) -> Image:
         """
         Applies the undistortion of the lens model to the image. The purpose of this function is mainly to check the
@@ -1331,7 +1331,7 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, image: Image, extent: List[Number, Number, Number, Number] = None, scaling: Number = None,
+    def getTopViewOfImage(self, image: Image, extent: List[Number] = None, scaling: Number = None,
                           do_plot: bool = False, alpha: Number = None, Z: Number = 0., skip_size_check: bool = False,
                           hide_backpoints: bool = True) -> Image:
         """

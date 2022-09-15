@@ -45,6 +45,7 @@ while True:
 
 points = st_np.arrays(dtype="float", shape=st.tuples(st.integers(2, 2), st.integers(0, 100)), elements=st.floats(0, 10000))
 
+
 class TestFits(unittest.TestCase):
 
     def test_fitCamParametersFromObjects(self):

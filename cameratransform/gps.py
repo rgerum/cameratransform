@@ -19,6 +19,8 @@
 
 import numpy as np
 import re
+from typing import Union, Optional, Tuple, List
+from numbers import Number
 
 
 def formatGPS(lat, lon, format=None, asLatex=False):
@@ -154,7 +156,8 @@ def formatGPS(lat, lon, format=None, asLatex=False):
     # return the results
     return result
 
-def processDegree(data):
+
+def processDegree(data) -> float:
     # start with a value of 0
     value = 0
     # the degrees
@@ -190,7 +193,8 @@ def processDegree(data):
     # return the value
     return value
 
-def gpsFromString(gps_string, height=None):
+
+def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], height: Union[Number, List[Number]] = None) -> Union[List, np.ndarray]:
     """
     Read a gps coordinate from a text string in different formats, e.g. `70° 37’ 4.980" S 8° 9’ 26.280" W`,
     `70° 37.083 S 8° 9.438 W`, or `-70.618050° -8.157300°`.
