@@ -33,9 +33,9 @@ from . import ray
 
 try:
     from numpy.typing import ArrayLike
-
 except ImportError:
-    import numpy.ndarray as ArrayLike
+    from numpy import ndarray as ArrayLike
+
 Points1D = Union[ArrayLike, List, float]  # (), (N)
 Points2D = ArrayLike  # (2), (Nx2)
 Points3D = ArrayLike  # (3), (Nx3)
