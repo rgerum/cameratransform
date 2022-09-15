@@ -66,13 +66,13 @@ class Window(QtWidgets.QWidget):
         main_layout = QtWidgets.QHBoxLayout(self)
         self.setLayout(main_layout)
 
-        layout = QtWidgets.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout()
         main_layout.addLayout(layout)
 
         self.plot_widget = QtShortCuts.MatplotlibWidget(self)
         layout.addWidget(self.plot_widget)
 
-        layout = QtWidgets.QVBoxLayout(self)
+        layout = QtWidgets.QVBoxLayout()
         main_layout.addLayout(layout)
 
         self.scenes = getClassDefinitionsDict(globals(), ct.Scene)

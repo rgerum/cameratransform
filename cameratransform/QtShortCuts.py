@@ -35,6 +35,7 @@ else:
     from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import _pylab_helpers
 from matplotlib.figure import Figure
+from matplotlib import pyplot as plt
 
 
 class MatplotlibWidget(Canvas):
@@ -52,6 +53,7 @@ class MatplotlibWidget(Canvas):
         self.manager = FigureManager(self, 1)
         self.manager._cidgcf = self.figure
         _pylab_helpers.Gcf.set_active(self.manager)
+        plt.figure(self.figure)
 
     def sizeHint(self):
         w, h = self.get_width_height()
