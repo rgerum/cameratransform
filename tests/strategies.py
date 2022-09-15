@@ -169,7 +169,7 @@ def line(draw):
     sTheta, cTheta = np.sin(np.deg2rad(anglesTheta)), np.cos(np.deg2rad(anglesTheta))
     direction = np.array([sTheta*cPhi, sTheta*sPhi, cTheta]).T
     x, y, z = direction[0]
-    if x == 0:
+    if np.abs(x) < 1e-20:
         reject()
     c = sPhi
     b = cPhi

@@ -100,6 +100,10 @@ def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
     return point
 
 
+def distanceLinePoint(p1, v1, p2):
+    return np.linalg.norm(np.cross(v1, p1-p2)) / np.linalg.norm(v1)
+
+
 def intersectionOfTwoLines(p1, v1, p2, v2):
     """
     Get the point closest to the intersection of two lines. The lines are given by one point (p1 and p2) and a
@@ -139,7 +143,10 @@ def intersectionOfTwoLines(p1, v1, p2, v2):
         b2 = -np.dot(v2, v2)
         c1 = -np.dot(v1, p1 - p2)
         c2 = -np.dot(v2, p1 - p2)
-        res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
+        try:
+            res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
+        except np.linalg.LinAlgError:
+            return np.ones(3)*np.nan
         res = res[None, None, :]
         return np.mean([p1 + res[..., 0] * v1, p2 + res[..., 1] * v2], axis=0)[0]
 
@@ -183,7 +190,10 @@ def distanceOfTwoLines(p1, v1, p2, v2):
         b2 = -np.dot(v2, v2)
         c1 = -np.dot(v1, p1 - p2)
         c2 = -np.dot(v2, p1 - p2)
-        res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
+        try:
+            res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
+        except np.linalg.LinAlgError:
+            return 0
         res = res[None, None, :]
         return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)[0]
 

@@ -25,6 +25,7 @@ import unittest
 import numpy as np
 from hypothesis import given, reproduce_failure, strategies as st
 from hypothesis.extra import numpy as st_np
+from cameratransform import RectilinearProjection
 
 import mock
 
@@ -85,7 +86,8 @@ class TestParameterSet(unittest.TestCase):
         cone_image[cone_image[:, 0] == cam.projection.image_width_px] = np.nan
         cone_image[cone_image[:, 1] == cam.projection.image_height_px] = np.nan
         cone_image[cone_image[:, 1] == 0] = np.nan
-        assert np.all(np.isnan(cone_image))
+        if isinstance(cam.projection, RectilinearProjection):
+            assert np.all(np.isnan(cone_image))
 
         cone = cam.getImageBorder()
         cone_image = np.round(cone).astype("float")
@@ -93,12 +95,15 @@ class TestParameterSet(unittest.TestCase):
         cone_image[cone_image[:, 0] == cam.projection.image_width_px] = np.nan
         cone_image[cone_image[:, 1] == cam.projection.image_height_px] = np.nan
         cone_image[cone_image[:, 1] == 0] = np.nan
-        assert np.all(np.isnan(cone_image))
+        if isinstance(cam.projection, RectilinearProjection):
+            assert np.all(np.isnan(cone_image))
 
     @given(ct_st.camera())
     def test_cameraOrigin(self, cam):
         origin, ray = cam.getRay([0, 0])
-        assert np.all(np.isnan(cam.imageFromSpace(origin)))
+        image_point = cam.imageFromSpace(origin)
+        if isinstance(cam.projection, RectilinearProjection):
+            assert np.all(np.isnan(image_point))
 
 
 if __name__ == '__main__':

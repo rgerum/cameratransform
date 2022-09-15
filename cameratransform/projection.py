@@ -372,8 +372,9 @@ class RectilinearProjection(CameraProjection):
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         # transform the points
-        transformed_points = np.array([-points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
-                                       points[..., 1] * self.focallength_y_px / points[..., 2] + self.center_y_px]).T
+        with np.errstate(divide='ignore', invalid='ignore'):
+            transformed_points = np.array([-points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
+                                           points[..., 1] * self.focallength_y_px / points[..., 2] + self.center_y_px]).T
         if hide_backpoints:
             transformed_points[points[..., 2] > 0] = np.nan
         return transformed_points
@@ -447,10 +448,11 @@ class CylindricalProjection(CameraProjection):
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         # transform the points
-        transformed_points = np.array(
-            [-self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
-             -self.focallength_y_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]],
-                                                                      axis=-1) + self.center_y_px]).T
+        with np.errstate(divide='ignore', invalid='ignore'):
+            transformed_points = np.array(
+                [-self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
+                 -self.focallength_y_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]],
+                                                                          axis=-1) + self.center_y_px]).T
         # ensure that points' x values are also nan when the y values are nan
         transformed_points[np.isnan(transformed_points[..., 1])] = np.nan
         # return the points
