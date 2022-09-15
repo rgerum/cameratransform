@@ -155,7 +155,8 @@ class BrownLensDistortion(LensDistortion):
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        points = points / r * self._convert_radius_inverse(r)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            points = points / r * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -166,7 +167,8 @@ class BrownLensDistortion(LensDistortion):
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        points = points / r * self._convert_radius(r)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            points = points / r * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -247,7 +249,8 @@ class ABCDistortion(LensDistortion):
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        points = points / r * self._convert_radius_inverse(r)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            points = points / r * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -258,6 +261,7 @@ class ABCDistortion(LensDistortion):
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        points = points / r * self._convert_radius(r)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            points = points / r * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
