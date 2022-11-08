@@ -124,7 +124,10 @@ class CameraProjection(ClassWithParameterSet):
         elif focallength_mm is not None and sensor_width_mm is not None:
             focallength_px = focallength_mm / sensor_width_mm * image_width_px
             focallength_x_px = focallength_px
-            focallength_y_px = focallength_px
+            if sensor_height_mm is not None:
+                focallength_y_px = focallength_mm / sensor_height_mm * image_height_px
+            else:
+                focallength_y_px = focallength_px
 
         self.parameters = ParameterSet(
             # the intrinsic parameters
