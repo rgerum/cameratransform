@@ -26,5 +26,5 @@ coveralls = "^3.3.1"
 nbsphinx = "^0.8.9"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
