@@ -175,7 +175,7 @@ class TestTransforms(unittest.TestCase):
     def test_transWorldToCam(self, params, Z):
         cam, p = params
         # when the camera is exactly on the desired plane, the output will not work
-        assume(Z != cam.elevation_m)
+        assume(np.abs(Z - cam.elevation_m) > 1e-3)
         p = np.array(p)
         # transform point
         p1 = cam.spaceFromImage(p, Z=Z)
