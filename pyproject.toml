@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "cameratransform"
+version = "1.2"
+description = "Projects coordinates from 2D to 3D and can fit camera parameters"
+authors = ["rgerum <14153051+rgerum@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+numpy = "^1.23.4"
+pandas = "^1.5.1"
+scipy = "^1.9.3"
+tqdm = "^4.64.1"
+opencv-python = {version = "^4.6.0.66", extras = ["projecting_top_view"]}
+matplotlib = {version = "^3.6.2", extras = ["projecting_top_view"]}
+pillow = {version = "^9.3.0", extras = ["exif_extraction"]}
+requests = {version = "^2.28.1", extras = ["exif_extraction"]}
+
+
+[tool.poetry.group.dev.dependencies]
+hypothesis = "^6.56.4"
+mock = "^4.0.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
