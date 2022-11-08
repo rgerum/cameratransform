@@ -1,8 +1,7 @@
 # CameraTransform
 
-[![Coverage](https://coveralls.io/repos/github/rgerum/cameratransform/badge.svg?branch=master)](https://coveralls.io/github/rgerum/cameratransform?branch=master)
 [![DOC](https://readthedocs.org/projects/cameratransform/badge/)](https://cameratransform.readthedocs.io)
-[![BUILD](https://app.travis-ci.com/rgerum/cameratransform.svg?branch=master)](https://app.travis-ci.com/github/rgerum/cameratransform)
+[![test](https://github.com/rgerum/cameratransform/actions/workflows/test.yml/badge.svg)](https://github.com/rgerum/cameratransform/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![DOI](https://img.shields.io/badge/DOI-10.1016/j.softx.2019.100333-blue.svg)](https://doi.org/10.1016/j.softx.2019.100333)
 
