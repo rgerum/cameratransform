@@ -16,6 +16,7 @@ opencv-python = {version = "^4.6.0.66", extras = ["projecting_top_view"]}
 matplotlib = {version = "^3.6.2", extras = ["projecting_top_view"]}
 pillow = {version = "^9.3.0", extras = ["exif_extraction"]}
 requests = {version = "^2.28.1", extras = ["exif_extraction"]}
+nbsphinx = {version = "^^0.8.9", extras = ["docs"]}
 
 
 [tool.poetry.group.dev.dependencies]
@@ -23,7 +24,7 @@ hypothesis = "^6.56.4"
 mock = "^4.0.3"
 coverage = "^6.5.0"
 coveralls = "^3.3.1"
-nbsphinx = "^0.8.9"
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
