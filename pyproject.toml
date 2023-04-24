@@ -27,6 +27,12 @@ coveralls = "^3.3.1"
 pytest = "^7.2.0"
 
 
+
+[tool.poetry.group.gui.dependencies]
+qtpy = "^2.3.1"
+pyqt5 = "^5.15.9"
+qimage2ndarray = "^1.10.0"
+
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
