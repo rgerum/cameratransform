@@ -256,7 +256,7 @@ def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], he
                   r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)('|′|´|′)?\s*",
                   r"(?P<deg>[\d.+-]+)°\s*"]
     for string in regex_list:
-        pattern = "\s*"+string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+"\s*,?\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?"+"\s*"
+        pattern = r"\s*"+string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+r"\s*,?\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?"+r"\s*"
         match = re.match(pattern, gps_string)
         if match:
             data = match.groupdict()
@@ -270,7 +270,7 @@ def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], he
                 return np.array(gps + [height])
     # if not, try only a single coordinate
     for string in regex_list:
-        pattern = "\s*"+string+"(?P<sign>N|S|W|E)?"+"\s*"
+        pattern = r"\s*"+string+"(?P<sign>N|S|W|E)?"+r"\s*"
         match = re.match(pattern, gps_string)
         if match:
             data = match.groupdict()
