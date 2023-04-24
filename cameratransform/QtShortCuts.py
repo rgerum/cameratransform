@@ -198,9 +198,12 @@ class QInputNumber(QInput):
             self._emitSignal()
 
     def _doSetValue(self, value):
-        self.spin_box.setValue(value)
+        v = value
+        if self.decimals == 0:
+            v = int(value)
+        self.spin_box.setValue(v)
         if self.slider is not None:
-            self.slider.setValue(value * self.decimal_factor)
+            self.slider.setValue(int(value * self.decimal_factor))
 
     def value(self):
         return self.spin_box.value()
