@@ -23,7 +23,7 @@ import sys
 import os
 import unittest
 import numpy as np
-from hypothesis import given, reproduce_failure, strategies as st
+from hypothesis import given, settings, reproduce_failure, strategies as st, HealthCheck
 from hypothesis.extra import numpy as st_np
 from hypothesis.control import reject
 
@@ -106,6 +106,7 @@ class TestParameterSet(unittest.TestCase):
             except Exception:
                 np.testing.assert_almost_equal(origin, intersection)
 
+    @settings(suppress_health_check=(HealthCheck.filter_too_much,))
     @given(ct_st.lines())
     def test_lineDistance(self, line):
         p1, v1, p2, v2, center, distance, c1, c2 = line
