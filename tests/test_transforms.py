@@ -107,9 +107,15 @@ class TestTransforms(unittest.TestCase):
                        view_y_deg=proj.getFieldOfView()[0],
                        focallength_mm=14)
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       view_x_deg=proj.getFieldOfView()[0],
-                       sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
+        p = proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                           view_x_deg=proj.getFieldOfView()[0],
+                           sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
+        assert abs(p.getFieldOfView()[0] - proj.getFieldOfView()[0]) < 1e-5
+
+        p = proj.__class__(image=[proj.image_width_px, proj.image_height_px],
+                           view_y_deg=proj.getFieldOfView()[1],
+                           sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
+        assert abs(p.getFieldOfView()[1] - proj.getFieldOfView()[1]) < 1e-5
 
     @given(ct_st.camera())
     def test_transFieldOfView(self, cam):

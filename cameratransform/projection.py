@@ -112,6 +112,14 @@ class CameraProjection(ClassWithParameterSet):
         elif sensor_width_mm is None and sensor_height_mm is not None:
             sensor_width_mm = image_width_px / image_height_px * sensor_height_mm
 
+        # calculate the focal length from the field of view
+        if focallength_x_px is None and view_x_deg is not None:
+            self.image_width_px = image_width_px
+            focallength_x_px = self.focallengthFromFOV(view_x=view_x_deg)
+        if focallength_y_px is None and view_y_deg is not None:
+            self.image_height_px = image_height_px
+            focallength_y_px = self.focallengthFromFOV(view_y=view_y_deg)
+
         # get the focalllength
         focallength_x_px = focallength_x_px
         focallength_y_px = focallength_y_px
@@ -128,6 +136,15 @@ class CameraProjection(ClassWithParameterSet):
                 focallength_y_px = focallength_mm / sensor_height_mm * image_height_px
             else:
                 focallength_y_px = focallength_px
+
+        # make sure both focal lengths are set if only one is set
+        if focallength_x_px is None and focallength_y_px is not None:
+            focallength_x_px = focallength_y_px
+        if focallength_y_px is None and focallength_x_px is not None:
+            focallength_y_px = focallength_x_px
+
+        #if focallength_x_px is None:
+        #    raise ValueError("Focal length could not be calculated with the provided parameters")
 
         self.parameters = ParameterSet(
             # the intrinsic parameters
