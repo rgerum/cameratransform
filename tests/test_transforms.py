@@ -74,48 +74,154 @@ class TestTransforms(unittest.TestCase):
                                                  sensor_width_mm=sensor_size[1], sensor_height_mm=sensor_size[0]),
                         ct.SpatialOrientation())
 
-    @given(ct_st.projection())
-    def test_initProjection(self, proj):
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px], center=[proj.center_x_px, proj.center_y_px],
-                       focallength_px=proj.focallength_x_px)
+    @given(proj=ct_st.projection(),
+           use_image=st.integers(0, 6),
+           use_center=st.integers(0, 3),
+           use_focallength=st.integers(0, 3),
+           use_focallength_mm=st.integers(0, 1),
+           use_sensor=st.integers(0, 4),
+           use_viewdeg=st.integers(0, 4))
+    def test_initProjection(self, proj, use_image, use_center, use_focallength, use_sensor, use_focallength_mm, use_viewdeg):
+        kwargs = {}
+        test_args = {}
+        expected_error = None
+        if use_image == 0:
+            kwargs["image"] = None
+            expected_error = ValueError, "image"
+        elif use_image == 1:
+            kwargs["image"] = [proj.image_width_px, proj.image_height_px]
+        elif use_image == 2:
+            kwargs["image"] = np.zeros([proj.image_height_px, proj.image_width_px])
+        elif use_image == 3:
+            kwargs["image_width_px"] = proj.image_width_px
+            kwargs["image_height_px"] = proj.image_height_px
+        elif use_image == 4:
+            kwargs["image_width_px"] = proj.image_width_px
+            expected_error = ValueError, "image"
+        elif use_image == 5:
+            kwargs["image_height_px"] = proj.image_height_px
+            expected_error = ValueError, "image"
+        elif use_image == 6:
+            kwargs["image"] = np.zeros([proj.image_height_px, proj.image_width_px])
+            kwargs["image_width_px"] = proj.image_width_px
+            kwargs["image_height_px"] = proj.image_height_px
+            expected_error = ValueError, "image"
+        test_args["image_width_px"] = proj.image_width_px
+        test_args["image_height_px"] = proj.image_height_px
 
-        proj.__class__(image=np.zeros([proj.image_height_px, proj.image_width_px]),
-                       center_x_px=proj.center_x_px, center_y_px=proj.center_y_px,
-                       focallength_px=proj.focallength_x_px, focallength_y_px=proj.focallength_y_px)
+        if use_center == 0:
+            kwargs["center"] = None
+        elif use_center == 1:
+            kwargs["center"] = [proj.center_x_px, proj.center_y_px]
+        elif use_center == 2:
+            kwargs["center_x_px"] = proj.center_x_px
+            kwargs["center_y_px"] = proj.center_y_px
+        elif use_center == 3:
+            kwargs["center"] = [proj.center_x_px, proj.center_y_px]
+            kwargs["center_x_px"] = proj.center_x_px
+            kwargs["center_y_px"] = proj.center_y_px
+            if expected_error is None:
+                expected_error = ValueError, "center"
+        if use_center != 0:
+            test_args["center_x_px"] = proj.center_x_px
+            test_args["center_y_px"] = proj.center_y_px
 
-        proj.__class__(image=np.zeros([proj.image_height_px, proj.image_width_px, 3]),
-                       center=[proj.center_x_px, proj.center_y_px],
-                       focallength_px=proj.focallength_x_px)
+        if use_focallength == 0:
+            kwargs["focallength_px"] = None
+        elif use_focallength == 1:
+            kwargs["focallength_px"] = proj.focallength_x_px
+        elif use_focallength == 2:
+            kwargs["focallength_x_px"] = proj.focallength_x_px
+            kwargs["focallength_y_px"] = proj.focallength_y_px
+        elif use_focallength == 3:
+            kwargs["focallength_px"] = proj.focallength_x_px
+            kwargs["focallength_x_px"] = proj.focallength_x_px
+            kwargs["focallength_y_px"] = proj.focallength_y_px
+            if expected_error is None:
+                expected_error = ValueError, "focal"
+        if use_focallength != 0:
+            test_args["focallength_x_px"] = proj.focallength_x_px
+            test_args["focallength_y_px"] = proj.focallength_y_px
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       sensor=[proj.sensor_width_mm, proj.sensor_height_mm],
-                       focallength_mm=14)
+        if use_sensor == 0:
+            kwargs["sensor"] = None
+        elif use_sensor == 1:
+            kwargs["sensor"] = [proj.sensor_width_mm, proj.sensor_height_mm]
+            test_args["sensor_width_mm"] = proj.sensor_width_mm
+            test_args["sensor_height_mm"] = proj.sensor_height_mm
+        elif use_sensor == 2:
+            kwargs["sensor_width_mm"] = proj.sensor_width_mm
+            kwargs["sensor_height_mm"] = proj.sensor_height_mm
+            test_args["sensor_width_mm"] = proj.sensor_width_mm
+            test_args["sensor_height_mm"] = proj.sensor_height_mm
+        elif use_sensor == 3:
+            kwargs["sensor_width_mm"] = proj.sensor_width_mm
+            test_args["sensor_width_mm"] = proj.sensor_width_mm
+        elif use_sensor == 4:
+            kwargs["sensor_height_mm"] = proj.sensor_height_mm
+            test_args["sensor_height_mm"] = proj.sensor_height_mm
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       sensor_width_mm=proj.sensor_width_mm,
-                       focallength_mm=14)
+        if use_focallength_mm == 0:
+            kwargs["focallength_mm"] = None
+        elif use_focallength_mm == 1:
+            kwargs["focallength_mm"] = 14
+            test_args["focallength_mm"] = 14
+            if use_focallength != 0:
+                if expected_error is None:
+                    expected_error = ValueError, "focallength_mm .* px"
+            if use_sensor == 0:
+                if expected_error is None:
+                    expected_error = ValueError, "focallength_mm .* sensor"
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       sensor_height_mm=proj.sensor_height_mm,
-                       focallength_mm=14)
+        if use_viewdeg == 0:
+            kwargs["view_x_deg"] = None
+        elif use_viewdeg == 1:
+            kwargs["view_x_deg"] = proj.getFieldOfView()[0]
+            test_args["view_x_deg"] = kwargs["view_x_deg"]
+        elif use_viewdeg == 2:
+            kwargs["view_y_deg"] = proj.getFieldOfView()[1]
+            test_args["view_y_deg"] = kwargs["view_y_deg"]
+        elif use_viewdeg == 3:
+            kwargs["view_x_deg"] = proj.getFieldOfView()[0]
+            kwargs["view_y_deg"] = proj.getFieldOfView()[1]
+            test_args["view_x_deg"] = kwargs["view_x_deg"]
+            test_args["view_y_deg"] = kwargs["view_y_deg"]
+        elif use_viewdeg == 4:
+            kwargs["view_x_deg"] = proj.getFieldOfView()[0]
+            kwargs["view_y_deg"] = proj.getFieldOfView()[0]
+            test_args["view_x_deg"] = kwargs["view_x_deg"]
+            test_args["view_y_deg"] = kwargs["view_y_deg"]
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       view_x_deg=proj.getFieldOfView()[0],
-                       focallength_mm=14)
+        if use_viewdeg != 0 and (use_focallength_mm != 0 or use_focallength != 0):
+            if expected_error is None:
+                expected_error = ValueError, "focal"
 
-        proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                       view_y_deg=proj.getFieldOfView()[0],
-                       focallength_mm=14)
+        if use_focallength_mm == 0 and \
+            use_focallength == 0 and \
+            use_viewdeg == 0:
+            if expected_error is None:
+                expected_error = ValueError, "focal"
 
-        p = proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                           view_x_deg=proj.getFieldOfView()[0],
-                           sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
-        assert abs(p.getFieldOfView()[0] - proj.getFieldOfView()[0]) < 1e-5
+        import pytest
+        if expected_error is not None:
+            with pytest.raises(expected_error[0], match=expected_error[1]):
+                p = proj.__class__(**kwargs)
+            return
+        else:
+            p = proj.__class__(**kwargs)
 
-        p = proj.__class__(image=[proj.image_width_px, proj.image_height_px],
-                           view_y_deg=proj.getFieldOfView()[1],
-                           sensor=[proj.sensor_width_mm, proj.sensor_height_mm])
-        assert abs(p.getFieldOfView()[1] - proj.getFieldOfView()[1]) < 1e-5
+        for key in test_args:
+            if key == "view_x_deg":
+                np.testing.assert_almost_equal(p.getFieldOfView()[0], test_args[key])
+            elif key == "view_y_deg":
+                np.testing.assert_almost_equal(p.getFieldOfView()[1], test_args[key])
+            elif key == "focallength_mm":
+                if kwargs.get("view_x_deg", None) and 0:
+                    np.testing.assert_almost_equal(p.focallength_x_px * p.sensor_width_mm / p.image_width_px, test_args[key])
+                if kwargs.get("view_y_deg", None) and 0:
+                    np.testing.assert_almost_equal(p.focallength_y_px * p.sensor_height_mm / p.image_height_px, test_args[key])
+            else:
+                np.testing.assert_almost_equal(getattr(p, key), test_args[key])
 
     @given(ct_st.camera())
     def test_transFieldOfView(self, cam):

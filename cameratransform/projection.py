@@ -85,82 +85,97 @@ class CameraProjection(ClassWithParameterSet):
     >>> projection = ct.RectilinearProjection(focallength_px=3863.64, center_x_px=2304, center_y_px=1728, image=(4608, 3456))
 
     """
-
     def __init__(self, focallength_px=None, focallength_x_px=None, focallength_y_px=None, center_x_px=None,
                  center_y_px=None, center=None, focallength_mm=None, image_width_px=None, image_height_px=None,
                  sensor_width_mm=None, sensor_height_mm=None, image=None, sensor=None, view_x_deg=None,
                  view_y_deg=None):
+        """ make sure the image dimensions are specified """
+        # either no image specified
+        if image is not None and (image_width_px or image_height_px):
+            raise ValueError("cannot provide both an image shape tuple and image_width_px or image_height_px")
+        # ... or both dimensions of the image specified
+        if image is None and (image_width_px is None or image_height_px is None):
+            raise ValueError("need to provide either parameter 'image' or 'image_width_px' and 'image_height_px'")
 
-        # split image in width and height
         if image is not None:
             try:
                 image_height_px, image_width_px = image.shape[:2]
             except AttributeError:
                 image_width_px, image_height_px = image
+
+        """ if the image center is specified """
+        # if the center is specified
+        if center and (center_x_px or center_y_px):
+            raise ValueError("cannot provide center tuple and center_x_px and center_y_px")
         if center is not None:
             center_x_px, center_y_px = center
-        if center_x_px is None and image_width_px is not None:
+        if center_x_px is None:
             center_x_px = image_width_px / 2
-        if center_y_px is None and image_height_px is not None:
+        if center_y_px is None:
             center_y_px = image_height_px / 2
 
-        # split sensor in width and height
-        if sensor is not None:
-            sensor_width_mm, sensor_height_mm = sensor
-        if sensor_height_mm is None and sensor_width_mm is not None:
-            sensor_height_mm = image_height_px / image_width_px * sensor_width_mm
-        elif sensor_width_mm is None and sensor_height_mm is not None:
-            sensor_width_mm = image_width_px / image_height_px * sensor_height_mm
-
-        # calculate the focal length from the field of view
-        if focallength_x_px is None and view_x_deg is not None:
-            self.image_width_px = image_width_px
-            focallength_x_px = self.focallengthFromFOV(view_x=view_x_deg)
-        if focallength_y_px is None and view_y_deg is not None:
-            self.image_height_px = image_height_px
-            focallength_y_px = self.focallengthFromFOV(view_y=view_y_deg)
-
-        # get the focalllength
-        focallength_x_px = focallength_x_px
-        focallength_y_px = focallength_y_px
-        if focallength_px is not None:
-            try:
-                focallength_x_px, focallength_y_px = focallength_px
-            except TypeError:
+        """ different init cases """
+        # init using focal length and image dimensions
+        if focallength_px or focallength_x_px or focallength_y_px:
+            # only a generic focal length or individual ones
+            if focallength_px and (focallength_x_px or focallength_y_px):
+                raise ValueError("cannot provide both an focallength_px and focallength_x_px or focallength_y_px")
+            if focallength_mm is not None:
+                raise ValueError("cannot provide both an focallength_mm and a focallength in px")
+            if focallength_px:
                 focallength_x_px = focallength_px
                 focallength_y_px = focallength_px
-        elif focallength_mm is not None and sensor_width_mm is not None:
-            focallength_px = focallength_mm / sensor_width_mm * image_width_px
-            focallength_x_px = focallength_px
-            if sensor_height_mm is not None:
-                focallength_y_px = focallength_mm / sensor_height_mm * image_height_px
-            else:
-                focallength_y_px = focallength_px
 
-        # make sure both focal lengths are set if only one is set
-        if focallength_x_px is None and focallength_y_px is not None:
-            focallength_x_px = focallength_y_px
-        if focallength_y_px is None and focallength_x_px is not None:
-            focallength_y_px = focallength_x_px
+        if sensor and (sensor_width_mm or sensor_height_mm):
+            raise ValueError("cannot provide both an sensor shape tuple and sensor_width_mm or sensor_height_mm")
+        if sensor:
+            sensor_width_mm, sensor_height_mm = sensor
+        if sensor_width_mm and sensor_height_mm is None:
+            sensor_height_mm = sensor_width_mm / image_width_px * image_height_px
+        if sensor_width_mm is None and sensor_height_mm:
+            sensor_width_mm = sensor_height_mm / image_height_px * image_width_px
 
-        #if focallength_x_px is None:
-        #    raise ValueError("Focal length could not be calculated with the provided parameters")
+        if focallength_mm:
+            if sensor_width_mm is None or sensor_height_mm is None:
+                raise ValueError("when using focallength_mm a sensor size has to be provided")
+            focallength_x_px = focallength_mm / sensor_width_mm * image_width_px
+            focallength_y_px = focallength_mm / sensor_height_mm * image_height_px
+
+        if view_x_deg or view_y_deg:
+            self.image_width_px = image_width_px
+            self.image_height_px = image_height_px
+            if view_x_deg:
+                if focallength_x_px is not None:
+                    raise ValueError("cannot set both focallength_x_px and view_x_deg")
+                focallength_x_px = self.focallengthFromFOV(view_x=view_x_deg)
+                if not view_y_deg:
+                    focallength_y_px = focallength_x_px
+            if view_y_deg:
+                if focallength_y_px:
+                    raise ValueError("cannot set both focallength_y_px and view_y_deg")
+                focallength_y_px = self.focallengthFromFOV(view_y=view_y_deg)
+                if not view_x_deg:
+                    focallength_x_px = focallength_y_px
+
+        if focallength_x_px is None or focallength_y_px is None:
+            raise ValueError("Either provide a focal length or a field of view angle.")
 
         self.parameters = ParameterSet(
             # the intrinsic parameters
-            focallength_x_px=Parameter(focallength_x_px, default=3600, type=TYPE_INTRINSIC),  # the focal length in px
-            focallength_y_px=Parameter(focallength_y_px, default=3600, type=TYPE_INTRINSIC),  # the focal length in px
+            focallength_x_px=Parameter(focallength_x_px, type=TYPE_INTRINSIC),  # the focal length in px
+            focallength_y_px=Parameter(focallength_y_px, type=TYPE_INTRINSIC),  # the focal length in px
             center_x_px=Parameter(center_x_px, default=0, type=TYPE_INTRINSIC),  # the focal length in mm
             center_y_px=Parameter(center_y_px, default=0, type=TYPE_INTRINSIC),  # the focal length in mm
-            image_height_px=Parameter(image_height_px, default=3456, type=TYPE_INTRINSIC),  # the image height in px
-            image_width_px=Parameter(image_width_px, default=4608, type=TYPE_INTRINSIC),  # the image width in px
+            image_height_px=Parameter(image_height_px, type=TYPE_INTRINSIC),  # the image height in px
+            image_width_px=Parameter(image_width_px, type=TYPE_INTRINSIC),  # the image width in px
             sensor_height_mm=Parameter(sensor_height_mm, default=13.0, type=TYPE_INTRINSIC),  # the sensor height in mm
             sensor_width_mm=Parameter(sensor_width_mm, default=17.3, type=TYPE_INTRINSIC),  # the sensor width in mm
         )
+
         # add parameter focallength_px that sets x and y simultaneously
         fx = self.parameters.parameters["focallength_x_px"]
         fy = self.parameters.parameters["focallength_y_px"]
-        f = Parameter(focallength_x_px, default=3600, type=TYPE_INTRINSIC)
+        f = Parameter(focallength_x_px, type=TYPE_INTRINSIC)
 
         def callback():
             fx.value = f.value
@@ -175,19 +190,10 @@ class CameraProjection(ClassWithParameterSet):
 
         if view_x_deg is not None or view_y_deg is not None:
             if sensor_width_mm is None:
-                if view_x_deg is not None:
-                    self.sensor_width_mm = self.imageFromFOV(view_x=view_x_deg)
-                    self.sensor_height_mm = self.image_height_px / self.image_width_px * self.sensor_width_mm
-                elif view_y_deg is not None:
-                    self.sensor_height_mm = self.imageFromFOV(view_y=view_y_deg)
-                    self.sensor_width_mm = self.image_width_px / self.image_height_px * self.sensor_height_mm
-                if focallength_mm is not None:
-                    self.focallength_px = focallength_mm / self.sensor_width_mm * self.image_width_px
-                    self.focallength_x_px = focallength_px
-                    self.focallength_y_px = focallength_px
-            else:
-                self.focallength_x_px = self.focallengthFromFOV(view_x_deg, view_y_deg)
-                self.focallength_y_px = self.focallengthFromFOV(view_x_deg, view_y_deg)
+                if focallength_mm is not None and self.focallength_x_px and sensor_width_mm is not None:
+                    self.sensor_width_mm = focallength_mm / self.focallength_x_px * self.image_width_px
+                if focallength_mm is not None and self.focallength_px and sensor_height_mm is not None:
+                    self.sensor_height_mm = focallength_mm / self.focallength_y_px * self.image_height_px
 
     def __str__(self):
         string = ""

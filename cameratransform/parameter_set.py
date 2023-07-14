@@ -47,6 +47,8 @@ class Parameter(object):
             self.range = range
         else:
             self.range = (None, None)
+        if value is None and default is None:
+            raise ValueError("Value cannot be None")
         self.default = default
         if state is None:
             if value is None:
