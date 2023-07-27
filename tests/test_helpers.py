@@ -52,7 +52,7 @@ import strategies as ct_st
 class TestParameterSet(unittest.TestCase):
 
     def test_parameterSet(self):
-        cam = ct.Camera(ct.RectilinearProjection(), ct.SpatialOrientation())
+        cam = ct.Camera(ct.RectilinearProjection(image=(100, 50), focallength_px=100), ct.SpatialOrientation())
         cam.defaults.elevation_m = 99
         assert cam.elevation_m == 99
         assert cam.defaults.elevation_m == 99

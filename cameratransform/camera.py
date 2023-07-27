@@ -1494,14 +1494,14 @@ class Camera(ClassWithParameterSet):
 
         if "projection" in variables.keys():
             if variables["projection"] == RECTILINEAR:
-                projection = RectilinearProjection()
+                projection = RectilinearProjection(image=(100, 50), focallength_px=100)
             elif variables["projection"] == CYLINDRICAL:
-                projection = CylindricalProjection()
+                projection = CylindricalProjection(image=(100, 50), focallength_px=100)
             elif variables["projection"] == EQUIRECTANGULAR:
-                projection = EquirectangularProjection()
+                projection = EquirectangularProjection(image=(100, 50), focallength_px=100)
             variables.pop("projection")
         else:
-            projection = RectilinearProjection()
+            projection = RectilinearProjection(image=(100, 50), focallength_px=100)
 
         if "lens" in variables.keys():
             if variables["lens"] == NODISTORTION:
@@ -1532,6 +1532,6 @@ def load_camera(filename: str) -> Camera:
     camera : :py:class:`Camera`
         the camera with the given parameters.
     """
-    cam = Camera(RectilinearProjection(), SpatialOrientation(), NoDistortion())
+    cam = Camera(RectilinearProjection(image=(100, 50), focallength_px=100), SpatialOrientation(), NoDistortion())
     cam.load(filename)
     return cam
