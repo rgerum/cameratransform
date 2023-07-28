@@ -22,7 +22,8 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'nbsphinx'
+    'nbsphinx',
+    'sphinxcontrib.jquery',  # to fix read the docs jQuery bug (https://github.com/readthedocs/sphinx_rtd_theme/issues/1452)
 ]
 
 templates_path = ['_templates']
