@@ -22,7 +22,8 @@ Parameters
 
 .. hint::
     When coming from a yaw-pitch-roll system, the pitch is defined differently than the tilt. Tilt 0 means looking straight
-    down, while pitch 0 means looking straight ahead. Therefore, tilt_deg = 90 - pitch_deg.
+    down, while pitch 0 means looking straight ahead. Therefore, tilt_deg = pitch_deg + 90. Also the orientation of the
+    roll is typically with an inverted sign: roll_deg = -roll_deg.
 
 Transformation
 --------------
