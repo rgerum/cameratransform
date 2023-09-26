@@ -35,6 +35,17 @@ See also :ref:`camprojections`.
             width: 40px;
             text-align: right;
         }
+        .radio_buttons {
+            margin-left: 140px;
+            margin-bottom: 5px;
+            margin-top: 10px;
+        }
+        .radio_buttons input {
+          top: 0;
+        }
+        .radio_buttons label {
+          text-align: left;
+        }
     </style>
     <div style="display: inline-block; width: 300px; position: relative">
        <canvas id="c"></canvas><br>
@@ -65,8 +76,11 @@ Note: in this visualisation *view_x_deg* is used. The field of view can also be 
 Space
 -----
 This 3D coordinate system defines an euclidean space in which the camera is positioned. Distances are in meter.
-The camera is positioned at (pos_x_m, pos_y_m, elevation_m) in this coordinate system.
-When heading_deg is 0, the camera faces in the positive y direction of this coordinate system.
+The camera is positioned at (*pos_x_m*, *pos_y_m*, *elevation_m*) in this coordinate system.
+When *heading_deg* is 0, the camera faces in the positive *y* direction of this coordinate system.
+
+As an alternative system of angles, cameratransform also supports the yaw-pitch-roll system, see
+:py:class:`SpatialOrientationYawPitchRoll`.
 
 See also :ref:`CamOrientation`.
 
@@ -78,9 +92,22 @@ See also :ref:`CamOrientation`.
       <label>pos_y_m</label><input type="range" min="-10" max="10" value="-2" step="0.1" class="slider" id="pos_y_m"><span>-1</span><br/>
       <label>elevation_m</label><input type="range" min="0" max="10" value="2" step="0.1" class="slider" id="elevation_m"><span>2</span><br/>
       <br/>
-      <label>heading_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="heading_deg"><span>0</span><br/>
-      <label>tilt_deg</label><input type="range" min="00" max="180" value="40" class="slider" id="tilt_deg"><span>40</span><br/>
-      <label>roll_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="roll_deg"><span>0</span><br/>
+      <p class="radio_buttons">
+          <input type="radio" id="tilt-heading-roll" name="angle_system" value="tilt-heading-roll" checked>
+          <label for="tilt-heading-roll">tilt-heading-roll</label><br>
+          <input type="radio" id="yaw-pitch-roll" name="angle_system" value="yaw-pitch-roll">
+          <label for="yaw-pitch-roll">yaw-pitch-roll</label>
+      </p>
+      <p id="angles1">
+          <label>heading_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="heading_deg"><span>0</span><br/>
+          <label>tilt_deg</label><input type="range" min="00" max="180" value="40" class="slider" id="tilt_deg"><span>40</span><br/>
+          <label>roll_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="roll_deg"><span>0</span><br/>
+      </p>
+      <p id="angles2" style="display: none">
+          <label>yaw_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="yaw_deg"><span>0</span><br/>
+          <label>pitch_deg</label><input type="range" min="-90" max="90" value="-50" class="slider" id="pitch_deg"><span>-50</span><br/>
+          <label>roll_deg</label><input type="range" min="-180" max="180" value="0" class="slider" id="roll_deg2"><span>0</span><br/>
+      </p>
     </div>
     <script type="module">
         import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r132/build/three.module.js';
@@ -91,9 +118,56 @@ See also :ref:`CamOrientation`.
         document.getElementById("pos_x_m").oninput = function() {setCamParameter({pos_x_m: this.value}); this.nextSibling.innerText = this.value}
         document.getElementById("pos_y_m").oninput = function() {setCamParameter({pos_y_m: this.value}); this.nextSibling.innerText = this.value}
         document.getElementById("elevation_m").oninput = function() {setCamParameter({elevation_m: this.value}); this.nextSibling.innerText = this.value}
-        document.getElementById("heading_deg").oninput = function() {setCamParameter({heading_deg: this.value}); this.nextSibling.innerText = this.value}
-        document.getElementById("tilt_deg").oninput = function() {setCamParameter({tilt_deg: this.value}); this.nextSibling.innerText = this.value}
-        document.getElementById("roll_deg").oninput = function() {setCamParameter({roll_deg: this.value}); this.nextSibling.innerText = this.value}
+
+        document.getElementById("tilt-heading-roll").oninput = function() {
+            console.log("1");
+            document.getElementById("angles1").style.display = "";
+            document.getElementById("angles2").style.display = "none";
+        }
+        document.getElementById("yaw-pitch-roll").oninput = function() {console.log(2);
+            document.getElementById("angles1").style.display = "none";
+            document.getElementById("angles2").style.display = "";
+        }
+
+        document.getElementById("heading_deg").oninput = function() {
+            setCamParameter({heading_deg: this.value});
+            this.nextSibling.innerText = this.value
+            document.getElementById("yaw_deg").value = this.value;
+            document.getElementById("yaw_deg").nextSibling.innerText = this.value;
+        }
+        document.getElementById("tilt_deg").oninput = function() {
+            setCamParameter({tilt_deg: this.value});
+            this.nextSibling.innerText = this.value;
+            document.getElementById("pitch_deg").value = this.value*1-90;
+            document.getElementById("pitch_deg").nextSibling.innerText = this.value*1-90;
+        }
+        document.getElementById("roll_deg").oninput = function() {
+            setCamParameter({roll_deg: this.value});
+            this.nextSibling.innerText = this.value;
+            document.getElementById("roll_deg2").value = -this.value;
+            document.getElementById("roll_deg2").nextSibling.innerText = -this.value;
+        }
+        document.getElementById("yaw_deg").oninput = function() {
+            setCamParameter({heading_deg: this.value});
+            this.nextSibling.innerText = this.value
+            document.getElementById("heading_deg").value = this.value;
+            document.getElementById("heading_deg").nextSibling.innerText = this.value;
+        }
+        document.getElementById("pitch_deg").oninput = function() {
+            console.log("pitch_deg", this.value, "tilt", this.value+90);
+            setCamParameter({tilt_deg: this.value*1+90});
+            console.log(cam_params);
+            this.nextSibling.innerText = this.value;
+            document.getElementById("tilt_deg").value = this.value*1+90;
+            document.getElementById("tilt_deg").nextSibling.innerText = this.value*1+90;
+        }
+        document.getElementById("roll_deg2").oninput = function() {
+            setCamParameter({roll_deg: -this.value});
+            this.nextSibling.innerText = this.value;
+            document.getElementById("roll_deg").value = -this.value;
+            document.getElementById("roll_deg").nextSibling.innerText = -this.value;
+        }
+
         document.getElementById("image_width_px").oninput = function() {setCamParameter({image_width_px: this.value}); this.nextSibling.innerText = this.value}
         document.getElementById("image_height_px").oninput = function() {setCamParameter({image_height_px: this.value}); this.nextSibling.innerText = this.value}
         document.getElementById("view_x_deg").oninput = function() {setCamParameter({view_x_deg: this.value}); this.nextSibling.innerText = this.value}
