@@ -34,3 +34,5 @@ Transformation
 
 .. automethod:: SpatialOrientation.cameraFromSpace
 .. automethod:: SpatialOrientation.spaceFromCamera
+
+.. autoclass:: SpatialOrientationYawPitchRoll
