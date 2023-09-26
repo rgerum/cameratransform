@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# gui_demonstrator.py
+# demo_qt.py
 
 # Copyright (c) 2017-2021, Richard Gerum
 #
@@ -26,29 +26,9 @@ from qtpy import QtGui, QtCore, QtWidgets
 
 sys.path.insert(0, os.path.dirname(__file__))
 import QtShortCuts
+from demo_includes import getClassDefinitionsDict, getClassDefinitions, Scene9Cubes
 
 
-def getClassDefinitions(module, baseclass):
-    class_definitions = []
-    for name in dir(module):
-        current_class_definition = getattr(module, name)
-        try:
-            if issubclass(current_class_definition, baseclass) and current_class_definition != baseclass:
-                class_definitions.append(current_class_definition)
-        except TypeError:
-            pass
-    return class_definitions
-
-def getClassDefinitionsDict(module, baseclass):
-    class_definitions = []
-    for name in module:
-        current_class_definition = module[name]
-        try:
-            if issubclass(current_class_definition, baseclass) and current_class_definition != baseclass:
-                class_definitions.append(current_class_definition)
-        except TypeError:
-            pass
-    return class_definitions
 
 
 class Window(QtWidgets.QWidget):
@@ -154,24 +134,6 @@ class Window(QtWidgets.QWidget):
         self.scene.plotSceneViews()
         plt.draw()
 
-
-class Scene9Cubes(ct.Scene):
-
-    def __init__(self, camera):
-        ct.Scene.__init__(self)
-        self.camera = camera
-        for i in [-1, 0, 1]:
-            for j in [-1, 0, 1]:
-                self.addCube(np.array([i * 2, j * 2, -5]) + np.array([0, 0, 0.5]), 1)
-
-
-class SceneObjectsOnPlane(ct.Scene):
-
-    def __init__(self, camera):
-        ct.Scene.__init__(self)
-        self.camera = camera
-        for i in range(100):
-            self.addCube(np.array([np.random.normal(0, 100), np.random.randint(1, 1000), 0]) + np.array([0, 0, 0.5]), 1)
 
 
 def startDemonstratorGUI():
