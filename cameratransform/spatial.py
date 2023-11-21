@@ -265,12 +265,12 @@ class SpatialOrientationYawPitchRoll(SpatialOrientation):
         self.t = np.array([self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m])
 
         # construct the rotation matrices for tilt, roll and heading
-        self.R_roll = np.array([[+np.cos(roll), np.sin(roll), 0],
-                                [-np.sin(roll), np.cos(roll), 0],
-                                [0, 0, 1]])
+        self.R_roll = np.array([[np.cos(roll), 0, np.sin(roll)],
+                                [0, 1, 0],
+                                [-np.sin(roll), 0, np.cos(roll)]])
         self.R_tilt = np.array([[1, 0, 0],
-                                [0, np.cos(tilt), np.sin(tilt)],
-                                [0, -np.sin(tilt), np.cos(tilt)]])
+                                [0, np.cos(tilt), -np.sin(tilt)],
+                                [0, np.sin(tilt), np.cos(tilt)]])
         self.R_head = np.array([[np.cos(heading), -np.sin(heading), 0],
                                 [np.sin(heading), np.cos(heading), 0],
                                 [0, 0, 1]])
