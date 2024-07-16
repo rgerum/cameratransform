@@ -68,7 +68,7 @@ class SpatialOrientation(ClassWithParameterSet):
 
     .. math::
         x_\mathrm{camera} = R \cdot (x_\mathrm{space} - t)\\
-        x_\mathrm{space} = R^{-1} \cdot x_\mathrm{space} + t\\
+        x_\mathrm{space} = R^{-1} \cdot x_\mathrm{camera} + t\\
 
     """
 
