@@ -709,6 +709,69 @@ class Camera(ClassWithParameterSet):
 
             plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
         self.info_plot_functions.append(plotLandmarkPoints)
+        
+    def addLandmarkInformationGPS(self, lm_points_image: Points2D, lm_points_geo: Points3D, uncertainties: Points1D,
+                               only_plot: bool = False, plot_color: bool = None):
+        """
+        Add a term to the camera probability used for fitting. This term includes the probability to observe the given
+        landmarks and the specified positions in the image.
+
+        Parameters
+        ----------
+        lm_points_image : ndarray
+            the pixel positions of the landmarks in the image, dimension (2) or (Nx2)
+        lm_points_geo : ndarray
+            the **space** positions of the landmarks, dimension (3) or (Nx3)
+        uncertainties : number, ndarray
+            the standard deviation uncertainty of the positions in the **space** coordinates. Typically for landmarks
+            obtained by gps, it could be e.g. [3, 3, 5], dimensions scalar, (3) or (Nx3)
+        only_plot : bool, optional
+            when true, the information will be ignored for fitting and only be used to plot.
+        """
+        uncertainties = np.array(uncertainties)
+        offset = np.max(uncertainties)
+        sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
+        if len(lm_points_image.shape) == 1:
+            lm_points_image = lm_points_image[None, ...]
+        if len(lm_points_geo.shape) == 1:
+            lm_points_geo = lm_points_geo[None, ...]
+        if len(uncertainties.shape) == 1:
+            uncertainties = uncertainties[None, ..., None]
+        else:
+            uncertainties = uncertainties[..., None]
+
+        def landmarkInformation(lm_points_image=lm_points_image, lm_points_geo=lm_points_geo, uncertainties=uncertainties):
+            origins, lm_rays = self.getRay(lm_points_image, normed=True)
+            lm_points_space = self.spaceFromGPS(lm_points_geo)
+            nearest_point = ray.getClosestPointFromLine(origins, lm_rays, lm_points_space)
+            distance_from_camera = np.linalg.norm(nearest_point-np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]), axis=-1)
+            factor = distance_from_camera[..., None] + sampled_offsets
+
+            distribution = stats.norm(lm_points_space[..., None], uncertainties)
+
+            points_on_rays = origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+
+            return np.sum(distribution.logpdf(points_on_rays))
+
+        if not only_plot:
+            self.log_prob.append(landmarkInformation)
+
+        def plotLandmarkPoints(lm_points_image=lm_points_image, lm_points_geo=lm_points_geo, color=plot_color):
+            import matplotlib.pyplot as plt
+            lm_points_space = self.spaceFromGPS(lm_points_geo)
+            lm_projected_image = self.imageFromSpace(lm_points_space)
+
+            p, = plt.plot(lm_points_image[..., 0], lm_points_image[..., 1], "+", label="landmarks fitted", color=color)
+            plt.scatter(lm_projected_image[..., 0], lm_projected_image[..., 1], label="landmarks", facecolors='none', edgecolors=p.get_color())
+
+            data = np.concatenate(([lm_points_image], [lm_projected_image], [np.ones(lm_points_image.shape) * np.nan]))
+            if len(data.shape) == 3:
+                data = data.transpose(1, 0, 2).reshape((-1, 2))
+            else:
+                data = data.reshape((-1, 2))
+
+            plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+        self.info_plot_functions.append(plotLandmarkPoints)
 
     def addHorizonInformation(self, horizon: Points2D, uncertainty=Points1D,
                               only_plot: bool = False, plot_color: bool = None):
