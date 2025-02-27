@@ -13,7 +13,7 @@ allows to transform from **camera coordinates** (3D, origin at the camera, z=dis
 
 Parameters
 ----------
-- ``heading_deg``, :math:`\alpha_\mathrm{heading}`: the direction in which the camera is looking. (0°: the camera faces “north”, 90°: east, 180°: south, 270°: west)
+- ``heading_deg``, :math:`\alpha_\mathrm{heading}`: the direction in which the camera is looking. (0°: the camera faces “north”, 90°: east, +/-180°: south, -90°: west, NOTE: it is a circular property so values above and below +180° are also accepted.)
 - ``tilt_deg``, :math:`\alpha_\mathrm{tilt}`: the tilt of the camera. (0°: camera faces down, 90°: camera faces parallel to the ground, 180°: camera faces upwards)
 - ``roll_deg``, :math:`\alpha_\mathrm{roll}`: the rotation of the image. (0°: camera image is not rotated (landscape format), 90°: camera image is in portrait format, 180°: camera is in upside down landscape format)
 - ``pos_x_m``, :math:`x`: the x position of the camera.
