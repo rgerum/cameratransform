@@ -86,8 +86,8 @@ def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
         rI[((ti < 0.0) + (si + ti > 1.0)).astype(bool)] = np.nan
 
     def nanargmin(a, axis):
-        from numpy.lib.nanfunctions import _replace_nan
-        a, mask = _replace_nan(a, np.inf)
+        mask = np.isnan(a)
+        a[mask] = np.inf
         res = np.argmin(a, axis=axis)
         return res
 
