@@ -6,13 +6,11 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import pkg_resources
-
 project = 'cameratransform'
 copyright = '2017-2024, Richard Gerum'
 author = 'Richard Gerum'
 language = 'en'
-release = pkg_resources.get_distribution('cameratransform').version
+release = "1.2"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
