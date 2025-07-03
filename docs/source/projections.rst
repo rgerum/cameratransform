@@ -57,6 +57,11 @@ Projections
 
 All projections share the same interface, as explained above, but implement different image projections.
 
+.. note::
+   Some sources define the projections slightly different. Cameratransform uses a minus sign for the x direction to
+   revert the flipping of the image which the pinhole camera model does. This is done to keep the coordinate system aligned
+   with the **space** coordinate system, e.g. x increasing from left to right.
+
 Rectilinear Projection
 ~~~~~~~~~~~~~~~~~~~~~~
 
