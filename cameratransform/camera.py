@@ -30,6 +30,7 @@ from .spatial import SpatialOrientation
 from .lens_distortion import NoDistortion, LensDistortion, ABCDistortion, BrownLensDistortion
 from . import gps
 from . import ray
+from cameratransform.utils import ensure_array_format
 
 try:
     from numpy.typing import ArrayLike
@@ -215,16 +216,19 @@ class CameraGroup(ClassWithParameterSet):
         return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
 
     def spaceFromImages(self, points1: Points2D, points2: Points2D) -> Points3D:
+        points1, points2 = ensure_array_format(points1, "...x2", points2)
         p1, v1 = self.cameras[0].getRay(points1)
         p2, v2 = self.cameras[1].getRay(points2)
         return ray.intersectionOfTwoLines(p1, v1, p2, v2)
 
     def discanteBetweenRays(self, points1: Points2D, points2: Points2D) -> Points1D:
+        points1, points2 = ensure_array_format(points1, "...x2", points2)
         p1, v1 = self.cameras[0].getRay(points1, normed=True)
         p2, v2 = self.cameras[1].getRay(points2, normed=True)
         return ray.distanceOfTwoLines(p1, v1, p2, v2)
 
     def imagesFromSpace(self, points: Points3D) -> List[Points2D]:
+        points = ensure_array_format(points, "...x3")
         return [cam.imageFromSpace(points) for cam in self.cameras]
 
     def __getitem__(self, item) -> "Camera":
@@ -996,7 +1000,7 @@ class Camera(ClassWithParameterSet):
          [1652.73 2144.53]]
         """
         # ensure that the points are provided as an array
-        points = np.array(points)
+        points = ensure_array_format(points, "...x3")
         # project the points from the space to the camera and from the camera to the image
         return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points), hide_backpoints=hide_backpoints))
 
@@ -1042,7 +1046,7 @@ class Camera(ClassWithParameterSet):
          [-0.18 0.98 -0.33]]
         """
         # ensure that the points are provided as an array
-        points = np.array(points)
+        points = ensure_array_format(points, "...x2")
         # get the camera position in space (the origin of the camera coordinate system)
         offset = self.orientation.spaceFromCamera([0, 0, 0])
         # get the direction fo the ray from the points
@@ -1115,7 +1119,7 @@ class Camera(ClassWithParameterSet):
          [-8.09 45.00 0.37]]
         """
         # ensure that the points are provided as an array
-        points = np.array(points)
+        points = ensure_array_format(points, "...x2")
         # get the index which coordinate to force to the given value
         given = np.array([X, Y, Z], dtype=object)
         if X is not None:
@@ -1236,6 +1240,7 @@ class Camera(ClassWithParameterSet):
         heights: ndarray
             the height of the objects in meters, dimensions: () or (N)
         """
+        point_feet, point_heads = ensure_array_format(point_feet, "...x2", point_heads)
         # get the feet positions in the world
         point3D_feet = self.spaceFromImage(point_feet, Z=Z)
         # get the head positions in the world
@@ -1264,6 +1269,7 @@ class Camera(ClassWithParameterSet):
         lengths: ndarray
             the lengths of the objects in meters, dimensions: () or (N)
         """
+        point_front, point_back = ensure_array_format(point_front, "...x2", point_back)
         # get the front positions in the world
         point3D_front = self.spaceFromImage(point_front, Z=Z)
         # get the back positions in the world

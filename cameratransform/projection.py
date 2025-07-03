@@ -19,7 +19,8 @@
 
 import json
 import numpy as np
-from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_INTRINSIC
+from cameratransform.parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_INTRINSIC
+from cameratransform.utils import ensure_array_format
 
 
 class CameraProjection(ClassWithParameterSet):
@@ -241,16 +242,16 @@ class CameraProjection(ClassWithParameterSet):
         transform a single point from the **camera** coordinates to the image:
 
         >>> proj.imageFromCamera([-0.09, -0.27, -1.00])
-        [2639.61 2302.83]
+        [1968.39 2302.83]
 
         or multiple points in one go:
 
         >>> proj.imageFromCamera([[-0.09, -0.27, -1.00], [-0.18, -0.24, -1.00]])
-        [[2639.61 2302.83]
-         [2975.22 2190.96]]
+        [[1968.39 2302.83]
+         [1632.78 2190.96]]
         """
         # to be overloaded by the child class.
-        return None
+        raise NotImplemented
 
     def getRay(self, points, normed=False):  # pragma: no cover
         """
@@ -285,7 +286,7 @@ class CameraProjection(ClassWithParameterSet):
          [0.18 -0.24 -1.00]]
         """
         # to be overloaded by the child class.
-        return None
+        raise NotImplementedError
 
     def getFieldOfView(self):  # pragma: no cover
         """
@@ -349,7 +350,7 @@ class RectilinearProjection(CameraProjection):
     **Projection**:
 
     .. math::
-        x_\mathrm{im} &= f_x \cdot \frac{x}{z} + c_x\\
+        x_\mathrm{im} &= f_x \cdot \frac{-x}{z} + c_x\\
         y_\mathrm{im} &= f_y \cdot \frac{y}{z} + c_y
 
     **Rays**:
@@ -368,7 +369,7 @@ class RectilinearProjection(CameraProjection):
     .. math::
         C_{\mathrm{intr.}} &=
         \begin{pmatrix}
-         f_x & 0   & c_x \\
+         -f_x & 0   & c_x \\
          0   & f_y & c_y \\
          0   & 0   &   1 \\
          \end{pmatrix}\\
@@ -377,11 +378,11 @@ class RectilinearProjection(CameraProjection):
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
-        points = np.array(points)
+        x, y = ensure_array_format(points, "...x2").T
         # set z=focallenth and solve the other equations for x and y
-        ray = np.array([-(points[..., 0] - self.center_x_px) / self.focallength_x_px,
-                        (points[..., 1] - self.center_y_px) / self.focallength_y_px,
-                        np.ones(points[..., 1].shape)]).T
+        ray = np.array([-(x - self.center_x_px) / self.focallength_x_px,
+                        (y - self.center_y_px) / self.focallength_y_px,
+                        np.ones(y.shape)]).T
         # norm the ray if desired
         if normed:
             ray /= np.linalg.norm(ray, axis=-1)[..., None]
@@ -390,17 +391,18 @@ class RectilinearProjection(CameraProjection):
 
     def imageFromCamera(self, points, hide_backpoints=True):
         """
-                          x                                y
+                         -x                                y
             x_im = f_x * --- + offset_x      y_im = f_y * --- + offset_y
                           z                                z
         """
-        points = np.array(points)
+        points = ensure_array_format(points, "...x3")
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
+        x, y, z = points.T
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
-            transformed_points = np.array([-points[..., 0] * self.focallength_x_px / points[..., 2] + self.center_x_px,
-                                           points[..., 1] * self.focallength_y_px / points[..., 2] + self.center_y_px]).T
+            transformed_points = np.array([-x * self.focallength_x_px / z + self.center_x_px,
+                                            y * self.focallength_y_px / z + self.center_y_px]).T
         if hide_backpoints:
             transformed_points[points[..., 2] > 0] = np.nan
         return transformed_points
@@ -426,15 +428,15 @@ class RectilinearProjection(CameraProjection):
 
 class CylindricalProjection(CameraProjection):
     r"""
-    This projection is a common projection used for panoranic images. This projection is often used
+    This projection is a common projection used for panoramic images. This projection is often used
     for wide panoramic images, as it can cover the full 360° range in the x-direction. The poles cannot
     be represented in this projection, as they would be projected to :math:`y = \pm\infty`.
 
     **Projection**:
 
     .. math::
-        x_\mathrm{im} &= f_x \cdot \arctan{\left(\frac{x}{z}\right)} + c_x\\
-        y_\mathrm{im} &= f_y \cdot \frac{y}{\sqrt{x^2+z^2}} + c_y
+        x_\mathrm{im} &= -f_x \cdot \arctan2{\left(\frac{-x}{-z}\right)} + c_x\\
+        y_\mathrm{im} &= -f_y \cdot \frac{y}{\sqrt{x^2+z^2}} + c_y
 
     **Rays**:
 
@@ -448,13 +450,13 @@ class CylindricalProjection(CameraProjection):
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
-        points = np.array(points)
+        x0, y0 = ensure_array_format(points, "...x2").T
         # set r=1 and solve the other equations for x and y
         r = 1
-        alpha = (points[..., 0] - self.center_x_px) / self.focallength_x_px
+        alpha = (x0 - self.center_x_px) / self.focallength_x_px
         x = -np.sin(alpha) * r
         z = np.cos(alpha) * r
-        y = r * (points[..., 1] - self.center_y_px) / self.focallength_y_px
+        y = r * (y0 - self.center_y_px) / self.focallength_y_px
         # compose the ray
         ray = np.array([x, y, z]).T
         # norm the ray if desired
@@ -465,20 +467,20 @@ class CylindricalProjection(CameraProjection):
 
     def imageFromCamera(self, points, hide_backpoints=True):
         """
-                               ( x )                                     y
-            x_im = f_x * arctan(---) + offset_x      y_im = f_y * --------------- + offset_y
-                               ( z )                              sqrt(x**2+z**2)
+                                 (-x )                                      y
+            x_im = -f_x * arctan2(---) + offset_x      y_im = -f_y * --------------- + offset_y
+                                 (-z )                               sqrt(x**2+z**2)
         """
         # ensure that the points are provided as an array
-        points = np.array(points)
+        points = ensure_array_format(points, "...x3")
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
+        x, y, z = points.T
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
             transformed_points = np.array(
-                [-self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
-                 -self.focallength_y_px * points[..., 1] / np.linalg.norm(points[..., [0, 2]],
-                                                                          axis=-1) + self.center_y_px]).T
+                [-self.focallength_x_px * np.arctan2(-x, -z) + self.center_x_px,
+                 -self.focallength_y_px * y / np.sqrt(x ** 2 + z ** 2) + self.center_y_px]).T
         # ensure that points' x values are also nan when the y values are nan
         transformed_points[np.isnan(transformed_points[..., 1])] = np.nan
         # return the points
@@ -505,14 +507,14 @@ class CylindricalProjection(CameraProjection):
 
 class EquirectangularProjection(CameraProjection):
     r"""
-    This projection is a common projection used for panoranic images. The projection can cover the
+    This projection is a common projection used for panoramic images. The projection can cover the
     full range of angles in both x and y direction.
 
     **Projection**:
 
     .. math::
-        x_\mathrm{im} &= f_x \cdot \arctan{\left(\frac{x}{z}\right)} + c_x\\
-        y_\mathrm{im} &= f_y \cdot \arctan{\left(\frac{y}{\sqrt{x^2+z^2}}\right)} + c_y
+        x_\mathrm{im} &= -f_x \cdot \arctan2{\left(-x, -z\right)} + c_x\\
+        y_\mathrm{im} &= -f_y \cdot \arctan2{\left(y, \sqrt{x^2+z^2}\right)} + c_y
 
     **Rays**:
 
@@ -526,13 +528,13 @@ class EquirectangularProjection(CameraProjection):
 
     def getRay(self, points, normed=False):
         # ensure that the points are provided as an array
-        points = np.array(points)
+        x0, y0 = ensure_array_format(points, "...x2").T
         # set r=1 and solve the other equations for x and y
         r = 1
-        alpha = (points[..., 0] - self.center_x_px) / self.focallength_x_px
+        alpha = (x0 - self.center_x_px) / self.focallength_x_px
         x = -np.sin(alpha) * r
         z = np.cos(alpha) * r
-        y = r * np.tan((points[..., 1] - self.center_y_px) / self.focallength_y_px)
+        y = r * np.tan((y0 - self.center_y_px) / self.focallength_y_px)
         # compose the ray
         ray = np.array([x, y, z]).T
         # norm the ray if desired
@@ -548,14 +550,14 @@ class EquirectangularProjection(CameraProjection):
                                ( z )                                    (sqrt(x**2+z**2))
         """
         # ensure that the points are provided as an array
-        points = np.array(points)
+        points = ensure_array_format(points, "...x3")
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
+        x, y, z = points.T
         # transform the points
         transformed_points = np.array(
-            [-self.focallength_x_px * np.arctan2(-points[..., 0], -points[..., 2]) + self.center_x_px,
-             -self.focallength_y_px * np.arctan2(points[..., 1], np.sqrt(
-                 points[..., 0] ** 2 + points[..., 2] ** 2)) + self.center_y_px]).T
+            [-self.focallength_x_px * np.arctan2(-x, -z) + self.center_x_px,
+             -self.focallength_y_px * np.arctan2(y, np.sqrt(x ** 2 + z ** 2)) + self.center_y_px]).T
 
         # return the points
         return transformed_points
