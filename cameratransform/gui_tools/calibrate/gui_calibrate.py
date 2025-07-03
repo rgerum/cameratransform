@@ -30,8 +30,8 @@ from qimage2ndarray import array2qimage
 from qtpy import QtGui, QtCore, QtWidgets
 
 import cameratransform as ct
-from cameratransform.gui_demonstrator import QtShortCuts
-from cameratransform.scripts.QExtendedGraphicsView import QExtendedGraphicsView
+from cameratransform.gui_tools.demonstrator import QtShortCuts
+from cameratransform.gui_tools.calibrate.QExtendedGraphicsView import QExtendedGraphicsView
 
 sys.path.insert(0, os.path.dirname(__file__))
 from calibrate import processImage
@@ -279,9 +279,9 @@ class Window(QtWidgets.QWidget):
 
         # save button
         self.button_save = QtShortCuts.QInputFilename(self.button_layout2, None, os.getcwd(),
-                                                         button_text="Save Calibration",
-                                                         file_type="Text File (*.txt)", existing=False,
-                                                         just_button=True)
+                                                      button_text="Save Calibration",
+                                                      file_type="Text File (*.txt)", existing=False,
+                                                      just_button=True)
         self.button_save.valueChanged.connect(self.saveCalibration)
         self.button_save.setDisabled(True)
 
@@ -522,7 +522,7 @@ class Window(QtWidgets.QWidget):
             self.displayImage()
 
 
-def startDemonstratorGUI():
+def startCalibrationGUI():
     app = QtWidgets.QApplication(sys.argv)
 
     window = Window()
@@ -531,4 +531,4 @@ def startDemonstratorGUI():
 
 
 if __name__ == '__main__':
-    startDemonstratorGUI()
+    startCalibrationGUI()

@@ -19,10 +19,9 @@
 
 import sys
 import os
-import numpy as np
 import cameratransform as ct
 
-from qtpy import QtGui, QtCore, QtWidgets
+from qtpy import QtWidgets
 
 sys.path.insert(0, os.path.dirname(__file__))
 import QtShortCuts
@@ -59,7 +58,7 @@ class Window(QtWidgets.QWidget):
         self.scenes = {p.__name__: p for p in self.scenes}
         print(self.scenes)
         self.select_scene = QtShortCuts.QInputChoice(layout, "Scene", self.scene.__class__.__name__,
-                                                              values=list(self.scenes.keys()))
+                                                     values=list(self.scenes.keys()))
 
         self.projections = getClassDefinitions(ct, ct.CameraProjection)
         self.projections = {p.__name__: p for p in self.projections}
