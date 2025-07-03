@@ -30,8 +30,8 @@ from qimage2ndarray import array2qimage
 from qtpy import QtGui, QtCore, QtWidgets
 
 import cameratransform as ct
-from cameratransform import QtShortCuts
-from cameratransform.includes.qextendedgraphicsview.QExtendedGraphicsView import QExtendedGraphicsView
+from cameratransform.gui_demonstrator import QtShortCuts
+from cameratransform.scripts.QExtendedGraphicsView import QExtendedGraphicsView
 
 sys.path.insert(0, os.path.dirname(__file__))
 from calibrate import processImage
@@ -175,7 +175,7 @@ class Window(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
 
         # the camera
-        self.camera = ct.Camera(ct.RectilinearProjection(), lens=ct.BrownLensDistortion())
+        self.camera = ct.Camera(ct.RectilinearProjection(image=[1920, 1080], focallength_px=1200), lens=ct.BrownLensDistortion())
         # the list of loaded images
         self.images = []
 
@@ -423,7 +423,7 @@ class Window(QtWidgets.QWidget):
         # split the filename from the directory
         directory, filename = os.path.split(filename)
         # replace numbers with * (for glob)
-        filename = os.path.join(directory, re.sub("\d+", "*", filename))
+        filename = os.path.join(directory, re.sub("\\d+", "*", filename))
         # define the output directory (as a subdirectory "output")
         output_directory = os.path.join(directory, "output")
 
