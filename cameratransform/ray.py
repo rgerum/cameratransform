@@ -179,6 +179,8 @@ def distanceOfTwoLines(p1, v1, p2, v2):
     """
     # if we transform multiple points in one go
     if len(v1.shape) == 2:
+        return np.array([__distanceOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(v1.shape[0])])
+        """ TODO get the parellelized version to work
         a1 = np.einsum('ij,ij->i', v1, v1)
         a2 = np.einsum('ij,ij->i', v1, v2)
         b1 = -np.einsum('ij,ij->i', v2, v1)
@@ -190,23 +192,45 @@ def distanceOfTwoLines(p1, v1, p2, v2):
             return np.linalg.norm((p1 + res[:, 0, 0, None] * v1) - (p2 + res[:, 1, 0, None] * v2), axis=1)
         except np.linalg.LinAlgError:
             return np.array([__distanceOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(v1.shape[0])])
+        """
     else:  # or just one point
         return __distanceOfTwoLines(p1, v1, p2, v2)
 
 def __distanceOfTwoLines(p1, v1, p2, v2):
-    # the version for one point
-    a1 = np.dot(v1, v1)
-    a2 = np.dot(v1, v2)
-    b1 = -np.dot(v2, v1)
-    b2 = -np.dot(v2, v2)
-    c1 = -np.dot(v1, p1 - p2)
-    c2 = -np.dot(v2, p1 - p2)
-    try:
-        res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]), np.array([c1, c2]))
-    except np.linalg.LinAlgError:
-        return 0
-    res = res[None, None, :]
-    return np.linalg.norm((p1 + res[..., 0] * v1) - (p2 + res[..., 1] * v2), axis=1)[0]
+    # Calculate the vector connecting points p1 and p2
+    p1p2 = p2 - p1
+
+    # Calculate the cross product of the direction vectors
+    v1_cross_v2 = np.cross(v1, v2)
+
+    # Calculate the magnitude of the cross product (denominator)
+    norm_v1_cross_v2 = np.linalg.norm(v1_cross_v2)
+
+    # Check if lines are parallel (or coincident)
+    # If the cross product is zero (or very close to zero), the lines are parallel.
+    if np.isclose(norm_v1_cross_v2, 0):
+        # Lines are parallel (or coincident).
+        # The distance is the shortest distance from a point on one line to the other line.
+        # This is given by: d = |(p2 - p1) x v1| / |v1|
+        norm_v1 = np.linalg.norm(v1)
+        if np.isclose(norm_v1, 0):
+            # This means v1 is a zero vector.
+            # If v2 is also zero, we have two points. Distance is between p1 and p2.
+            if np.isclose(np.linalg.norm(v2), 0):
+                return np.linalg.norm(p1p2)
+            else:  # v1 is zero, v2 is not. p1 is a point, L2 is a line.
+                return np.linalg.norm(np.cross(p1p2, v2)) / np.linalg.norm(v2)
+
+        # General case for parallel lines (non-zero direction vectors)
+        numerator = np.linalg.norm(np.cross(p1p2, v1))
+        return numerator / norm_v1
+    # Lines are skew (non-parallel and non-intersecting) or intersecting.
+    # The numerator of the formula: absolute value of the scalar triple product
+    numerator = np.abs(np.dot(p1p2, v1_cross_v2))
+
+    # The distance is the numerator divided by the denominator
+    distance = numerator / norm_v1_cross_v2
+    return float(distance)
 
 def areaOfTriangle(triangle):
     """

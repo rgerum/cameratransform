@@ -184,8 +184,8 @@ def line(draw):
        np.all(direction[1] - direction[2] < 1e-2):
         reject()
 
-    # origin will the the closes point between the two lines
-    # p1, p2 will be the closes points of the line to each other
+    # origin will be the closest point between the two lines
+    # p1, p2 will be the closest points of the line to each other
     p1 = origin - 0.5*direction[0]*distance
     p2 = origin + 0.5*direction[0]*distance
 
