@@ -10,7 +10,7 @@ project = 'cameratransform'
 copyright = '2017-2024, Richard Gerum'
 author = 'Richard Gerum'
 language = 'en'
-release = "1.2"
+release = "1.2.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

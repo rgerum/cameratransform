@@ -1,6 +1,6 @@
 [project]
 name = "cameratransform"
-version = "1.2"
+version = "1.2.1"
 description = "Projects coordinates from 2D to 3D and can fit camera parameters"
 authors = [{name = "Richard Gerum", email = "14153051+rgerum@users.noreply.github.com"}]
 license = "MIT"

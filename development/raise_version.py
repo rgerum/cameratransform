@@ -58,7 +58,7 @@ parser.add_option("-p", "--password", action="store", dest="password")
 if options.version is None and len(args):
     options.version = args[0]
 
-print("raise version started ...")
+print("raise version started ... (current version is %s)" % current_version)
 # go to parent directory
 os.chdir("..")
 
@@ -84,9 +84,9 @@ print("Setting version number to", new_version)
 #    CheckForUncommitedChanges(path_to_website)
 
 """ Let's go """
-RelaceVersion("setup.py", current_version, new_version)
+RelaceVersion("pyproject.toml", current_version, new_version)
 #RelaceVersion("meta.yaml", current_version, new_version)
-RelaceVersion("docs/conf.py", current_version, new_version)
+RelaceVersion("docs/source/conf.py", current_version, new_version)
 RelaceVersion("cameratransform/__init__.py", current_version, new_version)
 
 if options.release:
