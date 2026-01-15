@@ -9,9 +9,15 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Build and publish to pypi
-      uses: JRubics/poetry-publish@v2.1
-      with:
-        python_version: "3.11"
-        pypi_token: ${{ secrets.PYPI_TOKEN }}
+      - uses: actions/checkout@v6
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "latest"
+
+      - name: Build distribution
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish
