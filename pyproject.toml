@@ -5,40 +5,40 @@ description = "Projects coordinates from 2D to 3D and can fit camera parameters"
 authors = [{name = "Richard Gerum", email = "14153051+rgerum@users.noreply.github.com"}]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "cameratransform"}]
 requires-python = ">=3.11"
 
-
-[tool.poetry.dependencies]
-numpy = "^2.3.1"
-pandas = "^2.3.0"
-scipy = "^1.16.0"
-tqdm = "^4.67.1"
-opencv-python =  {version = "^4.11.0.86", extras = ["projecting_top_view"]}
-matplotlib = {version = "^3.10.3", extras = ["projecting_top_view"]}
-pillow = {version = "^11.3.0", extras = ["exif_extraction"]}
-requests = {version = "^2.32.4", extras = ["exif_extraction"]}
-nbsphinx = {version = "^0.9.7", extras = ["docs"]}
-sphinx-rtd-theme = {version = "^3.0.2", extras = ["docs"]}
-
-
-[tool.poetry.group.dev.dependencies]
-hypothesis = "^6.56.4"
-mock = "^4.0.3"
-coverage = "^6.5.0"
-coveralls = "^3.3.1"
-pytest = "^7.2.0"
+dependencies = [
+    "numpy>=2.3.1",
+    "pandas>=2.3.0",
+    "scipy>=1.16.0",
+    "tqdm>=4.67.1",
+    "opencv-python>=4.11.0.86",
+    "matplotlib>=3.10.3",
+    "pillow>=11.3.0",
+    "requests>=2.32.4",
+]
 
 
 
-[tool.poetry.group.gui.dependencies]
-qtpy = "^2.3.1"
-pyqt5 = "^5.15.9"
-qimage2ndarray = "^1.10.0"
-
-
-[tool.poetry.group.docs.dependencies]
-jupyter = "^1.0.0"
+[dependency-groups]
+dev = [
+    "hypothesis>=6.56.4",
+    "mock>=4.0.3",
+    "coverage>=6.5.0",
+    "coveralls>=3.3.1",
+    "pytest>=7.2.0",
+]
+gui = [
+    "qtpy>=2.3.1",
+    "pyqt5>=5.15.9",
+    "qimage2ndarray>=1.10.0",
+]
+docs = [
+    "jupyter>=1.0.0",
+    "sphinx>=7",
+    "nbsphinx>=0.9.7",
+    "sphinx-rtd-theme>=3.0.2",
+]
 
 [tool.pytest.ini_options]
 addopts = [
@@ -47,5 +47,8 @@ addopts = [
 
 
 [build-system]
-requires = ["poetry-core>=2.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["cameratransform"]
