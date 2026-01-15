@@ -23,6 +23,6 @@ jobs:
         run: uv python install
 
       - name: Install the project
-        run: uv sync --locked --all-extras --dev
+        run: uv sync --locked --all-groups
 
       - run: uv run pytest

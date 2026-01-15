@@ -171,14 +171,20 @@ name = "cameratransform"
 version = "1.2.1"
 source = { editable = "." }
 dependencies = [
-    { name = "matplotlib" },
     { name = "numpy" },
-    { name = "opencv-python" },
     { name = "pandas" },
-    { name = "pillow" },
-    { name = "requests" },
     { name = "scipy" },
     { name = "tqdm" },
+]
+
+[package.optional-dependencies]
+exif-extraction = [
+    { name = "pillow" },
+    { name = "requests" },
+]
+projecting-top-view = [
+    { name = "matplotlib" },
+    { name = "opencv-python" },
 ]
 
 [package.dev-dependencies]
@@ -204,15 +210,16 @@ gui = [
 
 [package.metadata]
 requires-dist = [
-    { name = "matplotlib", specifier = ">=3.10.3" },
+    { name = "matplotlib", marker = "extra == 'projecting-top-view'", specifier = ">=3.10.3" },
     { name = "numpy", specifier = ">=2.3.1" },
-    { name = "opencv-python", specifier = ">=4.11.0.86" },
+    { name = "opencv-python", marker = "extra == 'projecting-top-view'", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.3.0" },
-    { name = "pillow", specifier = ">=11.3.0" },
-    { name = "requests", specifier = ">=2.32.4" },
+    { name = "pillow", marker = "extra == 'exif-extraction'", specifier = ">=11.3.0" },
+    { name = "requests", marker = "extra == 'exif-extraction'", specifier = ">=2.32.4" },
     { name = "scipy", specifier = ">=1.16.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
+provides-extras = ["projecting-top-view", "exif-extraction"]
 
 [package.metadata.requires-dev]
 dev = [

@@ -12,8 +12,14 @@ dependencies = [
     "pandas>=2.3.0",
     "scipy>=1.16.0",
     "tqdm>=4.67.1",
+]
+
+[project.optional-dependencies]
+projecting_top_view = [
     "opencv-python>=4.11.0.86",
     "matplotlib>=3.10.3",
+]
+exif_extraction = [
     "pillow>=11.3.0",
     "requests>=2.32.4",
 ]
