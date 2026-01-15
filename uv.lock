@@ -182,6 +182,11 @@ exif-extraction = [
     { name = "pillow" },
     { name = "requests" },
 ]
+gui = [
+    { name = "pyqt5" },
+    { name = "qimage2ndarray" },
+    { name = "qtpy" },
+]
 projecting-top-view = [
     { name = "matplotlib" },
     { name = "opencv-python" },
@@ -202,11 +207,6 @@ docs = [
     { name = "sphinx", version = "9.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
     { name = "sphinx-rtd-theme" },
 ]
-gui = [
-    { name = "pyqt5" },
-    { name = "qimage2ndarray" },
-    { name = "qtpy" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -215,11 +215,14 @@ requires-dist = [
     { name = "opencv-python", marker = "extra == 'projecting-top-view'", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.3.0" },
     { name = "pillow", marker = "extra == 'exif-extraction'", specifier = ">=11.3.0" },
+    { name = "pyqt5", marker = "extra == 'gui'", specifier = ">=5.15.9" },
+    { name = "qimage2ndarray", marker = "extra == 'gui'", specifier = ">=1.10.0" },
+    { name = "qtpy", marker = "extra == 'gui'", specifier = ">=2.3.1" },
     { name = "requests", marker = "extra == 'exif-extraction'", specifier = ">=2.32.4" },
     { name = "scipy", specifier = ">=1.16.0" },
     { name = "tqdm", specifier = ">=4.67.1" },
 ]
-provides-extras = ["projecting-top-view", "exif-extraction"]
+provides-extras = ["projecting-top-view", "exif-extraction", "gui"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -234,11 +237,6 @@ docs = [
     { name = "nbsphinx", specifier = ">=0.9.7" },
     { name = "sphinx", specifier = ">=7" },
     { name = "sphinx-rtd-theme", specifier = ">=3.0.2" },
-]
-gui = [
-    { name = "pyqt5", specifier = ">=5.15.9" },
-    { name = "qimage2ndarray", specifier = ">=1.10.0" },
-    { name = "qtpy", specifier = ">=2.3.1" },
 ]
 
 [[package]]
