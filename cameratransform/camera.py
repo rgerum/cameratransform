@@ -23,12 +23,21 @@ import json
 import itertools
 from scipy import stats
 from typing import Union, Optional, Tuple, List, Any, Sequence
-from numpy.typing import NDArray
 from numbers import Number
 from .parameter_set import ParameterSet, ClassWithParameterSet, Parameter, TYPE_GPS
-from .projection import RectilinearProjection, EquirectangularProjection, CylindricalProjection, CameraProjection
+from .projection import (
+    RectilinearProjection,
+    EquirectangularProjection,
+    CylindricalProjection,
+    CameraProjection,
+)
 from .spatial import SpatialOrientation
-from .lens_distortion import NoDistortion, LensDistortion, ABCDistortion, BrownLensDistortion
+from .lens_distortion import (
+    NoDistortion,
+    LensDistortion,
+    ABCDistortion,
+    BrownLensDistortion,
+)
 from . import gps
 from . import ray
 from cameratransform.utils import ensure_array_format
@@ -37,7 +46,10 @@ from cameratransform.utils import ensure_array_format
 # Using npt.NDArray for return types (subscriptable)
 # The actual functions accept various inputs via np.array() conversion
 import numpy.typing as npt
-Points1D = Union[npt.NDArray[Any], Sequence[float], float]  # (), (N) - accepts scalars, lists, arrays
+
+Points1D = Union[
+    npt.NDArray[Any], Sequence[float], float
+]  # (), (N) - accepts scalars, lists, arrays
 Points2D = npt.NDArray[Any]  # (2), (Nx2) - returns arrays
 Points3D = npt.NDArray[Any]  # (3), (Nx3) - returns arrays
 ImageArray = npt.NDArray[Any]  # (HxW) or (HxWxC)
@@ -50,6 +62,7 @@ EQUIRECTANGULAR = 2
 NODISTORTION = 0
 ABCDDISTORTION = 1
 BROWNLENSDISTORTION = 2
+
 
 def _getSensorFromDatabase(model: str) -> Optional[Tuple[float, float]]:
     """
@@ -94,8 +107,9 @@ def _getSensorFromDatabase(model: str) -> Optional[Tuple[float, float]]:
     return None
 
 
-def getCameraParametersFromExif(filename: str, verbose: bool = False, sensor_from_database: bool = True) -> \
-        Tuple[float, Tuple[float, float], Tuple[float, float]]:
+def getCameraParametersFromExif(
+    filename: str, verbose: bool = False, sensor_from_database: bool = True
+) -> Tuple[float, Tuple[float, float], Tuple[float, float]]:
     """
     Try to extract the intrinsic camera parameters from the exif information.
 
@@ -158,8 +172,13 @@ def getCameraParametersFromExif(filename: str, verbose: bool = False, sensor_fro
     # or from the exif information
     if not sensor_size or sensor_size is None:
         sensor_size = (
-            exif["ExifImageWidth"] / (exif["FocalPlaneXResolution"][0] / exif["FocalPlaneXResolution"][1]) * 25.4,
-            exif["ExifImageHeight"] / (exif["FocalPlaneYResolution"][0] / exif["FocalPlaneYResolution"][1]) * 25.4)
+            exif["ExifImageWidth"]
+            / (exif["FocalPlaneXResolution"][0] / exif["FocalPlaneXResolution"][1])
+            * 25.4,
+            exif["ExifImageHeight"]
+            / (exif["FocalPlaneYResolution"][0] / exif["FocalPlaneYResolution"][1])
+            * 25.4,
+        )
     # get the image size
     image_size = (exif["ExifImageWidth"], exif["ExifImageHeight"])
     # print the output if desired
@@ -176,8 +195,14 @@ class CameraGroup(ClassWithParameterSet):
     orientation_list: List[SpatialOrientation]
     lens_list: List[LensDistortion]
 
-    def __init__(self, projection: Union[List[CameraProjection], CameraProjection], orientation: Optional[Union[List[SpatialOrientation], SpatialOrientation]] = None,
-                 lens: Optional[Union[List[LensDistortion], LensDistortion]] = None):
+    def __init__(
+        self,
+        projection: Union[List[CameraProjection], CameraProjection],
+        orientation: Optional[
+            Union[List[SpatialOrientation], SpatialOrientation]
+        ] = None,
+        lens: Optional[Union[List[LensDistortion], LensDistortion]] = None,
+    ):
         ClassWithParameterSet.__init__(self)
         self.N = 1
 
@@ -190,18 +215,25 @@ class CameraGroup(ClassWithParameterSet):
                 setattr(self, parameter_name, list(parameter))
                 self.N = len(getattr(self, parameter_name))
 
-        checkCount(projection, CameraProjection, "projection_list", RectilinearProjection)
-        checkCount(orientation, SpatialOrientation, "orientation_list", SpatialOrientation)
+        checkCount(
+            projection, CameraProjection, "projection_list", RectilinearProjection
+        )
+        checkCount(
+            orientation, SpatialOrientation, "orientation_list", SpatialOrientation
+        )
         checkCount(lens, LensDistortion, "lens_list", NoDistortion)
 
         params = {}
+
         def gatherParameters(parameter_list):
             if len(parameter_list) == 1:
                 params.update(parameter_list[0].parameters.parameters)
             else:
                 for index, proj in enumerate(parameter_list):
                     for name in proj.parameters.parameters:
-                        params["C%d_%s" % (index, name)] = proj.parameters.parameters[name]
+                        params["C%d_%s" % (index, name)] = proj.parameters.parameters[
+                            name
+                        ]
 
         gatherParameters(self.projection_list)
         gatherParameters(self.orientation_list)
@@ -209,11 +241,21 @@ class CameraGroup(ClassWithParameterSet):
 
         self.parameters = ParameterSet(**params)
 
-        self.cameras = [Camera(projection, orientation, lens) for index, projection, orientation, lens in
-                        zip(range(self.N), itertools.cycle(self.projection_list), itertools.cycle(self.orientation_list), itertools.cycle(self.lens_list))]
+        self.cameras = [
+            Camera(projection, orientation, lens)
+            for index, projection, orientation, lens in zip(
+                range(self.N),
+                itertools.cycle(self.projection_list),
+                itertools.cycle(self.orientation_list),
+                itertools.cycle(self.lens_list),
+            )
+        ]
 
     def getBaseline(self) -> float:
-        return np.sqrt((self[0].pos_x_m-self[1].pos_x_m)**2 + (self[0].pos_y_m-self[1].pos_y_m)**2)
+        return np.sqrt(
+            (self[0].pos_x_m - self[1].pos_x_m) ** 2
+            + (self[0].pos_y_m - self[1].pos_y_m) ** 2
+        )
 
     def spaceFromImages(self, points1: Points2D, points2: Points2D) -> Points3D:
         points1, points2 = ensure_array_format(points1, "...x2", points2)
@@ -241,13 +283,24 @@ class CameraGroup(ClassWithParameterSet):
         return iter(self.cameras)
 
     def addBaselineInformation(self, target_baseline, uncertainty=6):
-        def baselineInformation(target_baseline=target_baseline, uncertainty=uncertainty):
+        def baselineInformation(
+            target_baseline=target_baseline, uncertainty=uncertainty
+        ):
             # baseline
-            return np.sum(stats.norm(loc=target_baseline, scale=uncertainty).logpdf(self.getBaseline()))
+            return np.sum(
+                stats.norm(loc=target_baseline, scale=uncertainty).logpdf(
+                    self.getBaseline()
+                )
+            )
+
         self.log_prob.append(baselineInformation)
 
-    def addPointCorrespondenceInformation(self, corresponding1, corresponding2, uncertainty=1):
-        def pointCorrespondenceInformation(corresponding1=corresponding1, corresponding2=corresponding2):
+    def addPointCorrespondenceInformation(
+        self, corresponding1, corresponding2, uncertainty=1
+    ):
+        def pointCorrespondenceInformation(
+            corresponding1=corresponding1, corresponding2=corresponding2
+        ):
             sum = 0
             corresponding = [corresponding1, corresponding2]
             # iterate over cam1 -> cam2 and cam2 -> cam1
@@ -258,9 +311,13 @@ class CameraGroup(ClassWithParameterSet):
                 p1 = self[1 - i].imageFromSpace(world_epipole + world_ray * 1)
                 p2 = self[1 - i].imageFromSpace(world_epipole + world_ray * 2)
                 # find the perpendicular point from the epipolar lines to the correspondes point
-                perpendicular_point = ray.getClosestPointFromLine(p1, p2 - p1, corresponding[1 - i])
+                perpendicular_point = ray.getClosestPointFromLine(
+                    p1, p2 - p1, corresponding[1 - i]
+                )
                 # calculate the distances
-                distances = np.linalg.norm(perpendicular_point - corresponding[1 - i], axis=-1)
+                distances = np.linalg.norm(
+                    perpendicular_point - corresponding[1 - i], axis=-1
+                )
                 # sum the logprob of these distances
                 sum += np.sum(stats.norm(loc=0, scale=uncertainty).logpdf(distances))
             # return the sum of the logprobs
@@ -277,12 +334,20 @@ class CameraGroup(ClassWithParameterSet):
             # get the ray from the correspondences in the first camera's image
             world_epipole, world_ray = self[i].getRay(corresponding[i])
             # project them to the image of the second camera
-            p1 = self[1 - i].imageFromSpace(world_epipole + world_ray * 1, hide_backpoints=False)
-            p2 = self[1 - i].imageFromSpace(world_epipole + world_ray * 2, hide_backpoints=False)
+            p1 = self[1 - i].imageFromSpace(
+                world_epipole + world_ray * 1, hide_backpoints=False
+            )
+            p2 = self[1 - i].imageFromSpace(
+                world_epipole + world_ray * 2, hide_backpoints=False
+            )
             # find the perpendicular point from the epipolar lines to the correspondes point
-            perpendicular_point = ray.getClosestPointFromLine(p1, p2 - p1, corresponding[1 - i])
+            perpendicular_point = ray.getClosestPointFromLine(
+                p1, p2 - p1, corresponding[1 - i]
+            )
             # calculate the distances
-            distances = np.linalg.norm(perpendicular_point - corresponding[1 - i], axis=-1)
+            distances = np.linalg.norm(
+                perpendicular_point - corresponding[1 - i], axis=-1
+            )
             # sum the logprob of these distances
             distances_list.append(distances)
         # return the sum of the logprobs
@@ -292,17 +357,26 @@ class CameraGroup(ClassWithParameterSet):
         """
         Gives the sum of all terms of the log probability. This function is used for sampling and fitting.
         """
-        prob = np.sum([logProb() for logProb in self.log_prob]) + np.sum([logProb() for cam in self for logProb in cam.log_prob])
+        prob = np.sum([logProb() for logProb in self.log_prob]) + np.sum(
+            [logProb() for cam in self for logProb in cam.log_prob]
+        )
         return prob if not np.isnan(prob) else -np.inf
 
-    def setCameraParametersByPointCorrespondence(self, corresponding1, corresponding2, baseline):
+    def setCameraParametersByPointCorrespondence(
+        self, corresponding1, corresponding2, baseline
+    ):
         import cv2
+
         cam1 = self[0]
         cam2 = self[1]
         f, cx, cy = cam1.focallength_x_px, cam1.center_x_px, cam1.center_y_px
         K = np.array([[f, 0, cx], [0, f, cy], [0, 0, 1]])
-        mat, mask = cv2.findEssentialMat(corresponding1, corresponding2, cam1.focallength_x_px,
-                                         (cam1.center_x_px, cam1.center_y_px))
+        mat, mask = cv2.findEssentialMat(
+            corresponding1,
+            corresponding2,
+            cam1.focallength_x_px,
+            (cam1.center_x_px, cam1.center_y_px),
+        )
         n, rot, t, mask = cv2.recoverPose(mat, corresponding1, corresponding2, K)
         cam1.heading_deg = 0
         cam1.tilt_deg = 0
@@ -315,21 +389,26 @@ class CameraGroup(ClassWithParameterSet):
             return np.array([180 + alpha, beta, 180 + gamma])
 
         roll, tilt, heading = rotationToEuler(rot)
-        data = dict(roll_deg=roll,
-                    tilt_deg=tilt,
-                    heading_deg=heading,
-                    pos_x_m=cam1.pos_x_m + t[0, 0]*baseline,
-                    pos_y_m=cam1.pos_y_m + t[1, 0]*baseline,
-                    elevation_m=cam1.elevation_m + t[2, 0]*baseline)
+        data = dict(
+            roll_deg=roll,
+            tilt_deg=tilt,
+            heading_deg=heading,
+            pos_x_m=cam1.pos_x_m + t[0, 0] * baseline,
+            pos_y_m=cam1.pos_y_m + t[1, 0] * baseline,
+            elevation_m=cam1.elevation_m + t[2, 0] * baseline,
+        )
         print(data)
         cam2.parameters.set_fit_parameters(data.keys(), data.values())
 
     def plotEpilines(self, corresponding1, corresponding2, im1, im2):
         import cv2
         import matplotlib.pyplot as plt
+
         cam1 = self[0]
         cam2 = self[1]
-        F, mask = cv2.findFundamentalMat(corresponding1, corresponding2)#, method=cv2.FM_8POINT)
+        F, mask = cv2.findFundamentalMat(
+            corresponding1, corresponding2
+        )  # , method=cv2.FM_8POINT)
 
         lines1 = cv2.computeCorrespondEpilines(corresponding2, 2, F)[:, 0, :]
         lines2 = cv2.computeCorrespondEpilines(corresponding1, 1, F)[:, 0, :]
@@ -356,7 +435,7 @@ class CameraGroup(ClassWithParameterSet):
             if len(points) == 0:
                 return
             points = np.array(points)
-            p, = plt.plot(points[:, 0], points[:, 1], "-")
+            (p,) = plt.plot(points[:, 0], points[:, 1], "-")
             return p
 
         def drawEpilines(camA, camB, lines, points):
@@ -385,26 +464,42 @@ class CameraGroup(ClassWithParameterSet):
 
     def plotMyEpiploarLines(self, corresponding1, corresponding2, im1=None, im2=None):
         import matplotlib.pyplot as plt
+
         cam1 = self[0]
         cam2 = self[1]
 
         def drawEpilines(camA, camB, pointsA, pointsB):
             for pointA, pointB in zip(pointsA, pointsB):
-
                 origin, world_ray = camB.getRay(pointB, normed=True)
                 pixel_points = []
                 for i in np.arange(-10000, 10000, 100):
-                    pixel_points.append(camA.imageFromSpace(origin + world_ray*i, hide_backpoints=False))
+                    pixel_points.append(
+                        camA.imageFromSpace(
+                            origin + world_ray * i, hide_backpoints=False
+                        )
+                    )
                 pixel_points = np.array(pixel_points)
-                p, = plt.plot(pixel_points[:, 0], pixel_points[:, 1], "-")
+                (p,) = plt.plot(pixel_points[:, 0], pixel_points[:, 1], "-")
                 plt.plot(pointA[0], pointA[1], "o", color=p.get_color())
 
                 # find the perpendicular point from the epipolar lines to the correspondes point
-                perpendicular_point = ray.getClosestPointFromLine(pixel_points[0], pixel_points[1] - pixel_points[0], pointA)
+                perpendicular_point = ray.getClosestPointFromLine(
+                    pixel_points[0], pixel_points[1] - pixel_points[0], pointA
+                )
 
-                plt.plot(perpendicular_point[0], perpendicular_point[1], "+", color=p.get_color())
+                plt.plot(
+                    perpendicular_point[0],
+                    perpendicular_point[1],
+                    "+",
+                    color=p.get_color(),
+                )
 
-                plt.plot([pointA[0], perpendicular_point[0]], [pointA[1], perpendicular_point[1]], "--", color=p.get_color())
+                plt.plot(
+                    [pointA[0], perpendicular_point[0]],
+                    [pointA[1], perpendicular_point[1]],
+                    "--",
+                    color=p.get_color(),
+                )
 
                 # calculate the distances
                 distances = np.linalg.norm(perpendicular_point - pointA, axis=-1)
@@ -422,7 +517,9 @@ class CameraGroup(ClassWithParameterSet):
 
     def scaleSpace(self, scale):
         for cam in self:
-            cam.pos_x_m, cam.pos_y_m, cam.elevation_m = np.array([cam.pos_x_m, cam.pos_y_m, cam.elevation_m]) * scale
+            cam.pos_x_m, cam.pos_y_m, cam.elevation_m = (
+                np.array([cam.pos_x_m, cam.pos_y_m, cam.elevation_m]) * scale
+            )
 
 
 class Camera(ClassWithParameterSet):
@@ -431,6 +528,7 @@ class Camera(ClassWithParameterSet):
     (subclass of :py:class:`CameraProjection`), a spatial orientation (:py:class:`SpatialOrientation`) and optionally
     a lens distortion (subclass of :py:class:`LensDistortion`).
     """
+
     map = None
     last_extent = None
     last_scaling = None
@@ -441,7 +539,12 @@ class Camera(ClassWithParameterSet):
 
     R_earth = 6371e3
 
-    def __init__(self, projection: CameraProjection, orientation: Optional[SpatialOrientation] = None, lens: Optional[LensDistortion] = None):
+    def __init__(
+        self,
+        projection: CameraProjection,
+        orientation: Optional[SpatialOrientation] = None,
+        lens: Optional[LensDistortion] = None,
+    ):
         ClassWithParameterSet.__init__(self)
         self.projection = projection
         if orientation is None:
@@ -452,7 +555,10 @@ class Camera(ClassWithParameterSet):
         self.lens = lens
         self.lens.setProjection(projection)
 
-        params = dict(gps_lat=Parameter(0, default=0, type=TYPE_GPS), gps_lon=Parameter(0, default=0, type=TYPE_GPS))
+        params = dict(
+            gps_lat=Parameter(0, default=0, type=TYPE_GPS),
+            gps_lon=Parameter(0, default=0, type=TYPE_GPS),
+        )
         params.update(self.projection.parameters.parameters)
         params.update(self.orientation.parameters.parameters)
         params.update(self.lens.parameters.parameters)
@@ -466,7 +572,12 @@ class Camera(ClassWithParameterSet):
         string += ")"
         return string
 
-    def setGPSpos(self, lat: Union[Number, str], lon: Optional[Number] = None, elevation: Optional[Number] = None):
+    def setGPSpos(
+        self,
+        lat: Union[Number, str],
+        lon: Optional[Number] = None,
+        elevation: Optional[Number] = None,
+    ):
         """
         Provide the earth position for the camera.
 
@@ -512,8 +623,15 @@ class Camera(ClassWithParameterSet):
         if elevation is not None:
             self.elevation_m = elevation
 
-    def addObjectHeightInformation(self, points_feet: Points2D, points_head: Points2D, height: Points1D,
-                                   variation: Points1D, only_plot: bool = False, plot_color: Optional[Any] = None):
+    def addObjectHeightInformation(
+        self,
+        points_feet: Points2D,
+        points_head: Points2D,
+        height: Points1D,
+        variation: Points1D,
+        only_plot: bool = False,
+        plot_color: Optional[Any] = None,
+    ):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with the given feet and head positions and a known height and height variation.
@@ -535,8 +653,13 @@ class Camera(ClassWithParameterSet):
         if not only_plot:
             if not isinstance(variation, (float, int)):
                 self.additional_parameters += [variation]
-                def heigthInformation(points_feet=points_feet, points_head=points_head, height=height,
-                                      variation=variation):
+
+                def heigthInformation(
+                    points_feet=points_feet,
+                    points_head=points_head,
+                    height=height,
+                    variation=variation,
+                ):
                     height_distribution = stats.norm(loc=height, scale=variation.value)
 
                     # get the height of the penguins
@@ -547,7 +670,12 @@ class Camera(ClassWithParameterSet):
 
             else:
                 height_distribution = stats.norm(loc=height, scale=variation)
-                def heigthInformation(points_feet=points_feet, points_head=points_head, height_distribution=height_distribution):
+
+                def heigthInformation(
+                    points_feet=points_feet,
+                    points_head=points_head,
+                    height_distribution=height_distribution,
+                ):
                     # get the height of the penguins
                     heights = self.getObjectHeight(points_feet, points_head)
 
@@ -556,20 +684,38 @@ class Camera(ClassWithParameterSet):
 
             self.log_prob.append(heigthInformation)
 
-        def plotHeightPoints(points_feet=points_feet, points_head=points_head, color=plot_color):
+        def plotHeightPoints(
+            points_feet=points_feet, points_head=points_head, color=plot_color
+        ):
             import matplotlib.pyplot as plt
-            p, = plt.plot(points_feet[..., 0], points_feet[..., 1], "_", label="feet", color=color)
+
+            (p,) = plt.plot(
+                points_feet[..., 0], points_feet[..., 1], "_", label="feet", color=color
+            )
 
             # get the feet positions in the world
             point3D_feet = self.spaceFromImage(points_feet, Z=0)
             point3D_feet[..., 2] += height
             projected_head = self.imageFromSpace(point3D_feet)
 
-            plt.scatter(projected_head[..., 0], projected_head[..., 1], label="heads", facecolors='none',
-                        edgecolors=p.get_color())
-            plt.plot(points_head[..., 0], points_head[..., 1], "+", label="heads fitted", color=p.get_color())
+            plt.scatter(
+                projected_head[..., 0],
+                projected_head[..., 1],
+                label="heads",
+                facecolors="none",
+                edgecolors=p.get_color(),
+            )
+            plt.plot(
+                points_head[..., 0],
+                points_head[..., 1],
+                "+",
+                label="heads fitted",
+                color=p.get_color(),
+            )
 
-            data = np.concatenate(([points_head], [projected_head], [np.ones(points_head.shape)*np.nan]))
+            data = np.concatenate(
+                ([points_head], [projected_head], [np.ones(points_head.shape) * np.nan])
+            )
             if len(data.shape) == 3:
                 data = data.transpose(1, 0, 2).reshape((-1, 2))
             else:
@@ -579,9 +725,16 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHeightPoints)
 
-    def addObjectLengthInformation(self, points_front: Points2D, points_back: Points2D, length: Points1D,
-                                   variation: Points1D, Z: float = 0, only_plot: bool = False,
-                                   plot_color: Optional[Any] = None):
+    def addObjectLengthInformation(
+        self,
+        points_front: Points2D,
+        points_back: Points2D,
+        length: Points1D,
+        variation: Points1D,
+        Z: float = 0,
+        only_plot: bool = False,
+        plot_color: Optional[Any] = None,
+    ):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the objects
         with a given length lying flat on the surface. The objects are assumed to be like flat rods lying on the z=0 surface.
@@ -604,8 +757,13 @@ class Camera(ClassWithParameterSet):
             if not isinstance(variation, (float, int)):
                 self.additional_parameters += [variation]
 
-                def lengthInformation(points_front=points_front, points_back=points_back, length=length,
-                                      variation=variation, Z=Z):
+                def lengthInformation(
+                    points_front=points_front,
+                    points_back=points_back,
+                    length=length,
+                    variation=variation,
+                    Z=Z,
+                ):
                     length_distribution = stats.norm(loc=length, scale=variation.value)
 
                     # get the length of the objects
@@ -617,8 +775,12 @@ class Camera(ClassWithParameterSet):
             else:
                 length_distribution = stats.norm(loc=length, scale=variation)
 
-                def lengthInformation(points_front=points_front, points_back=points_back,
-                                      length_distribution=length_distribution, Z=Z):
+                def lengthInformation(
+                    points_front=points_front,
+                    points_back=points_back,
+                    length_distribution=length_distribution,
+                    Z=Z,
+                ):
                     # get the length of the objects
                     heights = self.getObjectLength(points_front, points_back, Z)
 
@@ -627,9 +789,18 @@ class Camera(ClassWithParameterSet):
 
             self.log_prob.append(lengthInformation)
 
-        def plotHeightPoints(points_front=points_front, points_back=points_back, Z=Z, color=plot_color):
+        def plotHeightPoints(
+            points_front=points_front, points_back=points_back, Z=Z, color=plot_color
+        ):
             import matplotlib.pyplot as plt
-            p, = plt.plot(points_front[..., 0], points_front[..., 1], "_", label="front", color=color)
+
+            (p,) = plt.plot(
+                points_front[..., 0],
+                points_front[..., 1],
+                "_",
+                label="front",
+                color=color,
+            )
 
             # get the back positions in the world
             point3D_front = self.spaceFromImage(points_front, Z=Z)
@@ -639,11 +810,28 @@ class Camera(ClassWithParameterSet):
             predicted_back = point3D_front + difference * length
             projected_back = self.imageFromSpace(predicted_back)
 
-            plt.scatter(projected_back[..., 0], projected_back[..., 1], label="back", facecolors='none',
-                        edgecolors=p.get_color())
-            plt.plot(points_back[..., 0], points_back[..., 1], "+", label="back fitted", color=p.get_color())
+            plt.scatter(
+                projected_back[..., 0],
+                projected_back[..., 1],
+                label="back",
+                facecolors="none",
+                edgecolors=p.get_color(),
+            )
+            plt.plot(
+                points_back[..., 0],
+                points_back[..., 1],
+                "+",
+                label="back fitted",
+                color=p.get_color(),
+            )
 
-            data = np.concatenate(([points_front], [projected_back], [np.ones(points_front.shape) * np.nan]))
+            data = np.concatenate(
+                (
+                    [points_front],
+                    [projected_back],
+                    [np.ones(points_front.shape) * np.nan],
+                )
+            )
             if len(data.shape) == 3:
                 data = data.transpose(1, 0, 2).reshape((-1, 2))
             else:
@@ -653,8 +841,14 @@ class Camera(ClassWithParameterSet):
 
         self.info_plot_functions.append(plotHeightPoints)
 
-    def addLandmarkInformation(self, lm_points_image: Points2D, lm_points_space: Points3D, uncertainties: Points1D,
-                               only_plot: bool = False, plot_color: Optional[Any] = None):
+    def addLandmarkInformation(
+        self,
+        lm_points_image: Points2D,
+        lm_points_space: Points3D,
+        uncertainties: Points1D,
+        only_plot: bool = False,
+        plot_color: Optional[Any] = None,
+    ):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the given
         landmarks and the specified positions in the image.
@@ -673,7 +867,7 @@ class Camera(ClassWithParameterSet):
         """
         uncertainties = np.array(uncertainties)
         offset = np.max(uncertainties)
-        sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
+        sampled_offsets = np.linspace(-2 * offset, +2 * offset, 1000)
         if len(lm_points_image.shape) == 1:
             lm_points_image = lm_points_image[None, ...]
         if len(lm_points_space.shape) == 1:
@@ -683,39 +877,81 @@ class Camera(ClassWithParameterSet):
         else:
             uncertainties = uncertainties[..., None]
 
-        def landmarkInformation(lm_points_image=lm_points_image, lm_points_space=lm_points_space, uncertainties=uncertainties):
+        def landmarkInformation(
+            lm_points_image=lm_points_image,
+            lm_points_space=lm_points_space,
+            uncertainties=uncertainties,
+        ):
             origins, lm_rays = self.getRay(lm_points_image, normed=True)
-            nearest_point = ray.getClosestPointFromLine(origins, lm_rays, lm_points_space)
-            distance_from_camera = np.linalg.norm(nearest_point-np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]), axis=-1)
+            nearest_point = ray.getClosestPointFromLine(
+                origins, lm_rays, lm_points_space
+            )
+            distance_from_camera = np.linalg.norm(
+                nearest_point
+                - np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]),
+                axis=-1,
+            )
             factor = distance_from_camera[..., None] + sampled_offsets
 
             distribution = stats.norm(lm_points_space[..., None], uncertainties)
 
-            points_on_rays = origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+            points_on_rays = (
+                origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+            )
 
             return np.sum(distribution.logpdf(points_on_rays))
 
         if not only_plot:
             self.log_prob.append(landmarkInformation)
 
-        def plotLandmarkPoints(lm_points_image=lm_points_image, lm_points_space=lm_points_space, color=plot_color):
+        def plotLandmarkPoints(
+            lm_points_image=lm_points_image,
+            lm_points_space=lm_points_space,
+            color=plot_color,
+        ):
             import matplotlib.pyplot as plt
+
             lm_projected_image = self.imageFromSpace(lm_points_space)
 
-            p, = plt.plot(lm_points_image[..., 0], lm_points_image[..., 1], "+", label="landmarks fitted", color=color)
-            plt.scatter(lm_projected_image[..., 0], lm_projected_image[..., 1], label="landmarks", facecolors='none', edgecolors=p.get_color())
+            (p,) = plt.plot(
+                lm_points_image[..., 0],
+                lm_points_image[..., 1],
+                "+",
+                label="landmarks fitted",
+                color=color,
+            )
+            plt.scatter(
+                lm_projected_image[..., 0],
+                lm_projected_image[..., 1],
+                label="landmarks",
+                facecolors="none",
+                edgecolors=p.get_color(),
+            )
 
-            data = np.concatenate(([lm_points_image], [lm_projected_image], [np.ones(lm_points_image.shape) * np.nan]))
+            data = np.concatenate(
+                (
+                    [lm_points_image],
+                    [lm_projected_image],
+                    [np.ones(lm_points_image.shape) * np.nan],
+                )
+            )
             if len(data.shape) == 3:
                 data = data.transpose(1, 0, 2).reshape((-1, 2))
             else:
                 data = data.reshape((-1, 2))
 
             plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+
         self.info_plot_functions.append(plotLandmarkPoints)
-        
-    def addLandmarkInformationGPS(self, lm_points_image: Points2D, lm_points_geo: Points3D, uncertainties: Points1D,
-                               only_plot: bool = False, plot_color: Optional[Any] = None):
+
+    def addLandmarkInformationGPS(
+        self,
+        lm_points_image: Points2D,
+        lm_points_geo: Points3D,
+        uncertainties: Points1D,
+        only_plot: bool = False,
+        plot_color: Optional[Any] = None,
+    ):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the given
         landmarks and the specified positions in the image.
@@ -734,7 +970,7 @@ class Camera(ClassWithParameterSet):
         """
         uncertainties = np.array(uncertainties)
         offset = np.max(uncertainties)
-        sampled_offsets = np.linspace(-2*offset, +2*offset, 1000)
+        sampled_offsets = np.linspace(-2 * offset, +2 * offset, 1000)
         if len(lm_points_image.shape) == 1:
             lm_points_image = lm_points_image[None, ...]
         if len(lm_points_geo.shape) == 1:
@@ -744,41 +980,82 @@ class Camera(ClassWithParameterSet):
         else:
             uncertainties = uncertainties[..., None]
 
-        def landmarkInformation(lm_points_image=lm_points_image, lm_points_geo=lm_points_geo, uncertainties=uncertainties):
+        def landmarkInformation(
+            lm_points_image=lm_points_image,
+            lm_points_geo=lm_points_geo,
+            uncertainties=uncertainties,
+        ):
             origins, lm_rays = self.getRay(lm_points_image, normed=True)
             lm_points_space = self.spaceFromGPS(lm_points_geo)
-            nearest_point = ray.getClosestPointFromLine(origins, lm_rays, lm_points_space)
-            distance_from_camera = np.linalg.norm(nearest_point-np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]), axis=-1)
+            nearest_point = ray.getClosestPointFromLine(
+                origins, lm_rays, lm_points_space
+            )
+            distance_from_camera = np.linalg.norm(
+                nearest_point
+                - np.array([self.pos_x_m, self.pos_y_m, self.elevation_m]),
+                axis=-1,
+            )
             factor = distance_from_camera[..., None] + sampled_offsets
 
             distribution = stats.norm(lm_points_space[..., None], uncertainties)
 
-            points_on_rays = origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+            points_on_rays = (
+                origins[None, :, None] + lm_rays[:, :, None] * factor[:, None, :]
+            )
 
             return np.sum(distribution.logpdf(points_on_rays))
 
         if not only_plot:
             self.log_prob.append(landmarkInformation)
 
-        def plotLandmarkPoints(lm_points_image=lm_points_image, lm_points_geo=lm_points_geo, color=plot_color):
+        def plotLandmarkPoints(
+            lm_points_image=lm_points_image,
+            lm_points_geo=lm_points_geo,
+            color=plot_color,
+        ):
             import matplotlib.pyplot as plt
+
             lm_points_space = self.spaceFromGPS(lm_points_geo)
             lm_projected_image = self.imageFromSpace(lm_points_space)
 
-            p, = plt.plot(lm_points_image[..., 0], lm_points_image[..., 1], "+", label="landmarks fitted", color=color)
-            plt.scatter(lm_projected_image[..., 0], lm_projected_image[..., 1], label="landmarks", facecolors='none', edgecolors=p.get_color())
+            (p,) = plt.plot(
+                lm_points_image[..., 0],
+                lm_points_image[..., 1],
+                "+",
+                label="landmarks fitted",
+                color=color,
+            )
+            plt.scatter(
+                lm_projected_image[..., 0],
+                lm_projected_image[..., 1],
+                label="landmarks",
+                facecolors="none",
+                edgecolors=p.get_color(),
+            )
 
-            data = np.concatenate(([lm_points_image], [lm_projected_image], [np.ones(lm_points_image.shape) * np.nan]))
+            data = np.concatenate(
+                (
+                    [lm_points_image],
+                    [lm_projected_image],
+                    [np.ones(lm_points_image.shape) * np.nan],
+                )
+            )
             if len(data.shape) == 3:
                 data = data.transpose(1, 0, 2).reshape((-1, 2))
             else:
                 data = data.reshape((-1, 2))
 
             plt.plot(data[..., 0], data[..., 1], "-", color=p.get_color())
+
         self.info_plot_functions.append(plotLandmarkPoints)
 
-    def addHorizonInformation(self, horizon: Points2D, uncertainty: Points1D,
-                              only_plot: bool = False, plot_color: Optional[Any] = None):
+    def addHorizonInformation(
+        self,
+        horizon: Points2D,
+        uncertainty: Points1D,
+        only_plot: bool = False,
+        plot_color: Optional[Any] = None,
+    ):
         """
         Add a term to the camera probability used for fitting. This term includes the probability to observe the horizon
         at the given pixel positions.
@@ -810,20 +1087,48 @@ class Camera(ClassWithParameterSet):
 
         def plotHorizonPoints(horizon=horizon, color=plot_color):
             import matplotlib.pyplot as plt
+
             image_horizon = self.getImageHorizon(horizon[..., 0])
             if 0:
-                p, = plt.plot(image_horizon[..., 0], image_horizon[..., 1], "+", label="horizon fitted", color=color)
+                (p,) = plt.plot(
+                    image_horizon[..., 0],
+                    image_horizon[..., 1],
+                    "+",
+                    label="horizon fitted",
+                    color=color,
+                )
 
-                plt.scatter(horizon[..., 0], horizon[..., 1], label="horizon", facecolors='none', edgecolors=p.get_color())
+                plt.scatter(
+                    horizon[..., 0],
+                    horizon[..., 1],
+                    label="horizon",
+                    facecolors="none",
+                    edgecolors=p.get_color(),
+                )
             else:
-                p, = plt.plot(horizon[..., 0], horizon[..., 1], "+", label="horizon", color=color)
+                (p,) = plt.plot(
+                    horizon[..., 0], horizon[..., 1], "+", label="horizon", color=color
+                )
 
-                plt.scatter(image_horizon[..., 0], image_horizon[..., 1], label="horizon fitted", facecolors='none', edgecolors=p.get_color())
+                plt.scatter(
+                    image_horizon[..., 0],
+                    image_horizon[..., 1],
+                    label="horizon fitted",
+                    facecolors="none",
+                    edgecolors=p.get_color(),
+                )
 
             image_horizon_line = self.getImageHorizon(np.arange(self.image_width_px))
-            plt.plot(image_horizon_line[..., 0], image_horizon_line[..., 1], "--", color=p.get_color())
+            plt.plot(
+                image_horizon_line[..., 0],
+                image_horizon_line[..., 1],
+                "--",
+                color=p.get_color(),
+            )
 
-            data = np.concatenate(([horizon], [image_horizon], [np.ones(horizon.shape) * np.nan]))
+            data = np.concatenate(
+                ([horizon], [image_horizon], [np.ones(horizon.shape) * np.nan])
+            )
             if len(data.shape) == 3:
                 data = data.transpose(1, 0, 2).reshape((-1, 2))
             else:
@@ -844,7 +1149,9 @@ class Camera(ClassWithParameterSet):
             the distance to the horizon.
         """
         elevation = float(self.elevation_m)  # type: ignore[arg-type]
-        return np.sqrt(2 * self.R_earth ** 2 * (1 - self.R_earth / (self.R_earth + elevation)))
+        return np.sqrt(
+            2 * self.R_earth**2 * (1 - self.R_earth / (self.R_earth + elevation))
+        )
 
     def getImageHorizon(self, pointsX: Optional[Points1D] = None) -> Points2D:
         """
@@ -863,7 +1170,7 @@ class Camera(ClassWithParameterSet):
         """
         d = self.distanceToHorizon()
         if pointsX is None:
-            pointsX = [0, self.image_width_px/2, self.image_width_px]
+            pointsX = [0, self.image_width_px / 2, self.image_width_px]
         pointsX = np.array(pointsX)
         pointsY = np.arange(0, self.image_height_px)
 
@@ -877,7 +1184,7 @@ class Camera(ClassWithParameterSet):
         # for every x-coordinate where we want to determine the horizon
         for x in pointsX:
             # test all y points of the image
-            p = np.vstack((np.ones(len(pointsY))*x, pointsY)).T
+            p = np.vstack((np.ones(len(pointsY)) * x, pointsY)).T
             # transform them to the space with a fixed distance from the camera (the distance to the horizon)
             # and select the point with the z coordinate closest to 0
             try:
@@ -907,7 +1214,10 @@ class Camera(ClassWithParameterSet):
         border : ndarray
             the border of the image in **space** coordinates, dimensions (Nx3)
         """
-        w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
+        w, h = (
+            self.projection.parameters.image_width_px,
+            self.projection.parameters.image_height_px,
+        )
         border = []
         for y in np.arange(0, h, resolution):
             border.append([0, y])
@@ -929,7 +1239,10 @@ class Camera(ClassWithParameterSet):
         cone: ndarray
             the cone of the camera in **space** coordinates, dimensions (Nx3)
         """
-        w, h = self.projection.parameters.image_width_px, self.projection.parameters.image_height_px
+        w, h = (
+            self.projection.parameters.image_width_px,
+            self.projection.parameters.image_height_px,
+        )
         if project_to_ground:
             border = []
             corner_indices = [0]
@@ -968,7 +1281,9 @@ class Camera(ClassWithParameterSet):
             border.append(border[corner_index])
         return np.array(border)
 
-    def imageFromSpace(self, points: Points3D, hide_backpoints: bool = True) -> Points2D:
+    def imageFromSpace(
+        self, points: Points3D, hide_backpoints: bool = True
+    ) -> Points2D:
         """
         Convert points (Nx3) from the **space** coordinate system to the **image** coordinate system.
 
@@ -1003,9 +1318,16 @@ class Camera(ClassWithParameterSet):
         # ensure that the points are provided as an array
         points = ensure_array_format(points, "...x3")
         # project the points from the space to the camera and from the camera to the image
-        return self.lens.distortedFromImage(self.projection.imageFromCamera(self.orientation.cameraFromSpace(points), hide_backpoints=hide_backpoints))
+        return self.lens.distortedFromImage(
+            self.projection.imageFromCamera(
+                self.orientation.cameraFromSpace(points),
+                hide_backpoints=hide_backpoints,
+            )
+        )
 
-    def getRay(self, points: Points2D, normed: bool = False) -> Tuple[Points3D, Points3D]:
+    def getRay(
+        self, points: Points2D, normed: bool = False
+    ) -> Tuple[Points3D, Points3D]:
         """
         As the transformation from the **image** coordinate system to the **space** coordinate system is not unique,
         **image** points can only be uniquely mapped to a ray in **space** coordinates.
@@ -1052,12 +1374,22 @@ class Camera(ClassWithParameterSet):
         offset = self.orientation.spaceFromCamera([0, 0, 0])
         # get the direction fo the ray from the points
         # the projection provides the ray in camera coordinates, which we convert to the space coordinates
-        direction = self.orientation.spaceFromCamera(self.projection.getRay(self.lens.imageFromDistorted(points), normed=normed), direction=True)
+        direction = self.orientation.spaceFromCamera(
+            self.projection.getRay(self.lens.imageFromDistorted(points), normed=normed),
+            direction=True,
+        )
         # return the offset point and the direction of the ray
         return offset, direction
 
-    def spaceFromImage(self, points: Points2D, X: Optional[Points1D] = None, Y: Optional[Points1D] = None, Z: Optional[Points1D] = 0,
-                       D: Optional[Points1D] = None, mesh: Optional[Mesh3D] = None) -> Points3D:
+    def spaceFromImage(
+        self,
+        points: Points2D,
+        X: Optional[Points1D] = None,
+        Y: Optional[Points1D] = None,
+        Z: Optional[Points1D] = 0,
+        D: Optional[Points1D] = None,
+        mesh: Optional[Mesh3D] = None,
+    ) -> Points3D:
         """
         Convert points (Nx2) from the **image** coordinate system to the **space** coordinate system. This is not a unique
         transformation, therefore an additional constraint has to be provided. The X, Y, or Z coordinate(s) of the target
@@ -1171,7 +1503,9 @@ class Camera(ClassWithParameterSet):
         points : ndarray
             the points in the **gps** coordinate system, dimensions (3), (Nx3)
         """
-        return gps.gpsFromSpace(points, np.array([self.gps_lat, self.gps_lon, self.elevation_m]))
+        return gps.gpsFromSpace(
+            points, np.array([self.gps_lat, self.gps_lon, self.elevation_m])
+        )
 
     def spaceFromGPS(self, points: Points3D) -> Points3D:
         """
@@ -1189,8 +1523,14 @@ class Camera(ClassWithParameterSet):
         """
         return gps.spaceFromGPS(points, np.array([self.gps_lat, self.gps_lon]))
 
-    def gpsFromImage(self, points: Points2D, X: Optional[Points1D] = None, Y: Optional[Points1D] = None, Z: Optional[Points1D] = 0,
-                     D: Optional[Points1D] = None) -> Points3D:
+    def gpsFromImage(
+        self,
+        points: Points2D,
+        X: Optional[Points1D] = None,
+        Y: Optional[Points1D] = None,
+        Z: Optional[Points1D] = 0,
+        D: Optional[Points1D] = None,
+    ) -> Points3D:
         """
         Convert points (Nx2) from the **image** coordinate system to the **gps** coordinate system.
 
@@ -1222,7 +1562,9 @@ class Camera(ClassWithParameterSet):
         """
         return self.imageFromSpace(self.spaceFromGPS(points))
 
-    def getObjectHeight(self, point_feet: Points2D, point_heads: Points2D, Z: Points1D = 0) -> Points1D:
+    def getObjectHeight(
+        self, point_feet: Points2D, point_heads: Points2D, Z: Points1D = 0
+    ) -> Points1D:
         """
         Calculate the height of objects in the image, assuming the Z position of the objects is known, e.g. they are
         assumed to stand on the Z=0 plane.
@@ -1251,7 +1593,9 @@ class Camera(ClassWithParameterSet):
         # the z difference between these two points
         return point3D_head[..., 2] - point3D_feet[..., 2]
 
-    def getObjectLength(self, point_front: Points2D, point_back: Points2D, Z: Points1D = 0) -> Points1D:
+    def getObjectLength(
+        self, point_front: Points2D, point_back: Points2D, Z: Points1D = 0
+    ) -> Points1D:
         """
         Calculate the length of objects in the image, assuming the Z position of the objects is known, e.g. they are
         assumed to lie flat on the Z=0 plane.
@@ -1288,14 +1632,20 @@ class Camera(ClassWithParameterSet):
             scaling = 1
 
         # if we have cached the map, use the cached map
-        if self.map_undistort is not None and \
-                self.last_extent_undistort == extent and \
-                self.last_scaling_undistort == scaling:
+        if (
+            self.map_undistort is not None
+            and self.last_extent_undistort == extent
+            and self.last_scaling_undistort == scaling
+        ):
             return self.map_undistort
 
         # get a mesh grid
-        mesh = np.array(np.meshgrid(np.arange(extent[0], extent[1], scaling),
-                                    np.arange(extent[2], extent[3], scaling)))
+        mesh = np.array(
+            np.meshgrid(
+                np.arange(extent[0], extent[1], scaling),
+                np.arange(extent[2], extent[3], scaling),
+            )
+        )
 
         # convert it to a list of points Nx2
         mesh_points = mesh.reshape(2, mesh.shape[1] * mesh.shape[2]).T
@@ -1304,7 +1654,9 @@ class Camera(ClassWithParameterSet):
         mesh_points_shape = self.lens.distortedFromImage(mesh_points)
 
         # reshape the map and cache it
-        self.map_undistort = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[:, ::-1, :]
+        self.map_undistort = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[
+            :, ::-1, :
+        ]
 
         self.last_extent_undistort = extent
         self.last_scaling_undistort = scaling
@@ -1312,8 +1664,15 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map_undistort
 
-    def undistortImage(self, image: ImageArray, extent: Optional[List[float]] = None, scaling: Optional[float] = None,
-                       do_plot: bool = False, alpha: Optional[float] = None, skip_size_check: bool = False) -> ImageArray:
+    def undistortImage(
+        self,
+        image: ImageArray,
+        extent: Optional[List[float]] = None,
+        scaling: Optional[float] = None,
+        do_plot: bool = False,
+        alpha: Optional[float] = None,
+        skip_size_check: bool = False,
+    ) -> ImageArray:
         """
         Applies the undistortion of the lens model to the image. The purpose of this function is mainly to check the
         sanity of a lens transformation. As CameraTransform includes the lens transformation in any calculations, it
@@ -1344,22 +1703,35 @@ class Camera(ClassWithParameterSet):
 
         # check if the size of the image matches the size of the camera
         if not skip_size_check:
-            assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
-            assert image.shape[0] == self.image_height_px, "The height of the image (%d) does not match the image height of the camera (%d)." % (image.shape[0], self.image_height_px)
+            assert image.shape[1] == self.image_width_px, (
+                "The with of the image (%d) does not match the image width of the camera (%d)"
+                % (image.shape[1], self.image_width_px)
+            )
+            assert image.shape[0] == self.image_height_px, (
+                "The height of the image (%d) does not match the image height of the camera (%d)."
+                % (image.shape[0], self.image_height_px)
+            )
 
         x, y = self._getUndistortMap(extent=extent, scaling=scaling)
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
         if len(image.shape) == 2:
             pass
         elif image.shape[2] == 3:
-            image = np.dstack((image, np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8") * 255))
-        image = cv2.remap(image, x, y,
-                          interpolation=cv2.INTER_NEAREST,
-                          borderValue=[0, 1, 0, 0])[::-1]  # , borderMode=cv2.BORDER_TRANSPARENT)
+            image = np.dstack(
+                (
+                    image,
+                    np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8")
+                    * 255,
+                )
+            )
+        image = cv2.remap(
+            image, x, y, interpolation=cv2.INTER_NEAREST, borderValue=[0, 1, 0, 0]
+        )[::-1]  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
             import matplotlib.pyplot as plt
+
             extent = self.last_extent_undistort.copy()
-            extent[2], extent[3] = extent[3]-1, extent[2]-1
+            extent[2], extent[3] = extent[3] - 1, extent[2] - 1
             plt.imshow(image, extent=extent, alpha=alpha)
         return image
 
@@ -1367,33 +1739,53 @@ class Camera(ClassWithParameterSet):
         # if no extent is given, take the maximum extent from the image border
         if extent is None:
             border = self.getImageBorder()
-            extent = [np.nanmin(border[:, 0]), np.nanmax(border[:, 0]),
-                      np.nanmin(border[:, 1]), np.nanmax(border[:, 1])]
+            extent = [
+                np.nanmin(border[:, 0]),
+                np.nanmax(border[:, 0]),
+                np.nanmin(border[:, 1]),
+                np.nanmax(border[:, 1]),
+            ]
 
         # if we have cached the map, use the cached map
-        if self.map is not None and \
-                all(self.last_extent == np.array(extent)) and \
-                (self.last_scaling == scaling):
+        if (
+            self.map is not None
+            and all(self.last_extent == np.array(extent))
+            and (self.last_scaling == scaling)
+        ):
             return self.map
 
         # if no scaling is given, scale so that the resulting image has an equal amount of pixels as the original image
         if scaling is None:
-            scaling = np.sqrt((extent[1] - extent[0]) * (extent[3] - extent[2])) / \
-                      np.sqrt((self.projection.parameters.image_width_px * self.projection.parameters.image_height_px))
+            scaling = np.sqrt(
+                (extent[1] - extent[0]) * (extent[3] - extent[2])
+            ) / np.sqrt(
+                (
+                    self.projection.parameters.image_width_px
+                    * self.projection.parameters.image_height_px
+                )
+            )
 
         # get a mesh grid
-        mesh = np.array(np.meshgrid(np.arange(extent[0], extent[1], scaling),
-                                    np.arange(extent[2], extent[3], scaling)))
+        mesh = np.array(
+            np.meshgrid(
+                np.arange(extent[0], extent[1], scaling),
+                np.arange(extent[2], extent[3], scaling),
+            )
+        )
 
         # convert it to a list of points Nx2
         mesh_points = mesh.reshape(2, mesh.shape[1] * mesh.shape[2]).T
-        mesh_points = np.hstack((mesh_points, Z*np.ones((mesh_points.shape[0], 1))))
+        mesh_points = np.hstack((mesh_points, Z * np.ones((mesh_points.shape[0], 1))))
 
         # transform the space points to the image
-        mesh_points_shape = self.imageFromSpace(mesh_points, hide_backpoints=hide_backpoints)
+        mesh_points_shape = self.imageFromSpace(
+            mesh_points, hide_backpoints=hide_backpoints
+        )
 
         # reshape the map and cache it
-        self.map = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[:, ::-1, :]
+        self.map = mesh_points_shape.T.reshape(mesh.shape).astype(np.float32)[
+            :, ::-1, :
+        ]
 
         self.last_extent = extent
         self.last_scaling = scaling
@@ -1401,9 +1793,17 @@ class Camera(ClassWithParameterSet):
         # return the calculated map
         return self.map
 
-    def getTopViewOfImage(self, image: ImageArray, extent: Optional[List[float]] = None, scaling: Optional[float] = None,
-                          do_plot: bool = False, alpha: Optional[float] = None, Z: float = 0., skip_size_check: bool = False,
-                          hide_backpoints: bool = True) -> ImageArray:
+    def getTopViewOfImage(
+        self,
+        image: ImageArray,
+        extent: Optional[List[float]] = None,
+        scaling: Optional[float] = None,
+        do_plot: bool = False,
+        alpha: Optional[float] = None,
+        Z: float = 0.0,
+        skip_size_check: bool = False,
+        hide_backpoints: bool = True,
+    ) -> ImageArray:
         """
         Project an image to a top view projection. This will be done using a grid with the dimensions of the extent
         ([x_min, x_max, y_min, y_max]) in meters and the scaling, giving a resolution. For convenience, the image can
@@ -1439,24 +1839,41 @@ class Camera(ClassWithParameterSet):
 
         # check if the size of the image matches the size of the camera
         if not skip_size_check:
-            assert image.shape[1] == self.image_width_px, "The with of the image (%d) does not match the image width of the camera (%d)" % (image.shape[1], self.image_width_px)
-            assert image.shape[0] == self.image_height_px, "The height of the image (%d) does not match the image height of the camera (%d)." % (image.shape[0], self.image_height_px)
+            assert image.shape[1] == self.image_width_px, (
+                "The with of the image (%d) does not match the image width of the camera (%d)"
+                % (image.shape[1], self.image_width_px)
+            )
+            assert image.shape[0] == self.image_height_px, (
+                "The height of the image (%d) does not match the image height of the camera (%d)."
+                % (image.shape[0], self.image_height_px)
+            )
         # get the mapping
-        x, y = self._getMap(extent=extent, scaling=scaling, Z=Z, hide_backpoints=hide_backpoints)
+        x, y = self._getMap(
+            extent=extent, scaling=scaling, Z=Z, hide_backpoints=hide_backpoints
+        )
         # ensure that the image has an alpha channel (to enable alpha for the points outside the image)
         if len(image.shape) == 2:
             pass
         elif image.shape[2] == 3:
-            image = np.dstack((image, np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8") * 255))
-        image = cv2.remap(image, x, y,
-                          interpolation=cv2.INTER_NEAREST,
-                          borderValue=[0, 1, 0, 0])  # , borderMode=cv2.BORDER_TRANSPARENT)
+            image = np.dstack(
+                (
+                    image,
+                    np.ones(shape=(image.shape[0], image.shape[1], 1), dtype="uint8")
+                    * 255,
+                )
+            )
+        image = cv2.remap(
+            image, x, y, interpolation=cv2.INTER_NEAREST, borderValue=[0, 1, 0, 0]
+        )  # , borderMode=cv2.BORDER_TRANSPARENT)
         if do_plot:
             import matplotlib.pyplot as plt
+
             plt.imshow(image, extent=self.last_extent, alpha=alpha)
         return image
 
-    def generateLUT(self, undef_value: float = 0, whole_image: bool = False) -> npt.NDArray[Any]:
+    def generateLUT(
+        self, undef_value: float = 0, whole_image: bool = False
+    ) -> npt.NDArray[Any]:
         """
         Generate LUT to calculate area covered by one pixel in the image dependent on y position in the image
 
@@ -1529,7 +1946,9 @@ class Camera(ClassWithParameterSet):
             the filename where to store the parameters.
         """
         keys = self.parameters.parameters.keys()
-        export_dict = {key: getattr(self, key) for key in keys if key != "focallength_px"}
+        export_dict = {
+            key: getattr(self, key) for key in keys if key != "focallength_px"
+        }
 
         # check projections and save
         if isinstance(self.projection, RectilinearProjection):
@@ -1568,7 +1987,9 @@ class Camera(ClassWithParameterSet):
             elif variables["projection"] == CYLINDRICAL:
                 projection = CylindricalProjection(image=(100, 50), focallength_px=100)
             elif variables["projection"] == EQUIRECTANGULAR:
-                projection = EquirectangularProjection(image=(100, 50), focallength_px=100)
+                projection = EquirectangularProjection(
+                    image=(100, 50), focallength_px=100
+                )
             variables.pop("projection")
         else:
             projection = RectilinearProjection(image=(100, 50), focallength_px=100)
@@ -1577,13 +1998,15 @@ class Camera(ClassWithParameterSet):
             if variables["lens"] == NODISTORTION:
                 lens = NoDistortion()
             elif variables["lens"] == ABCDDISTORTION:
-                lens = ABCDistortion()#variables.get("a", None), variables.get("b", None),variables.get("c", None))
+                lens = ABCDistortion()  # variables.get("a", None), variables.get("b", None),variables.get("c", None))
             elif variables["lens"] == BROWNLENSDISTORTION:
-                lens = BrownLensDistortion()#variables.get("k1", None), variables.get("k2", None),variables.get("k3", None))
+                lens = BrownLensDistortion()  # variables.get("k1", None), variables.get("k2", None),variables.get("k3", None))
             variables.pop("lens")
         else:
             lens = None
-        self.__init__(projection=projection, lens=lens, orientation=SpatialOrientation())
+        self.__init__(
+            projection=projection, lens=lens, orientation=SpatialOrientation()
+        )
         for key in variables:
             setattr(self, key, variables[key])
 
@@ -1602,6 +2025,10 @@ def load_camera(filename: str) -> Camera:
     camera : :py:class:`Camera`
         the camera with the given parameters.
     """
-    cam = Camera(RectilinearProjection(image=(100, 50), focallength_px=100), SpatialOrientation(), NoDistortion())
+    cam = Camera(
+        RectilinearProjection(image=(100, 50), focallength_px=100),
+        SpatialOrientation(),
+        NoDistortion(),
+    )
     cam.load(filename)
     return cam

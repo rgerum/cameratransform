@@ -18,13 +18,13 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import matplotlib
-matplotlib.use('agg')
+
+matplotlib.use("agg")
 import sys
 import os
 import unittest
 import numpy as np
-from hypothesis import given, reproduce_failure, strategies as st
-from hypothesis.extra import numpy as st_np
+from hypothesis import given, strategies as st
 
 import mock
 
@@ -45,12 +45,15 @@ while True:
         break
 
 sys.path.insert(0, os.path.dirname(__file__))
-import strategies as ct_st
 
 
 class TestParameterSet(unittest.TestCase):
-
-    @given(st.floats(-90, 90), st.floats(-90, 90), st.sampled_from(["%2d° %2d' %6.3f\" %s", "%2d° %2.3f' %s", "%2.3f°"]), st.floats(0, 100))
+    @given(
+        st.floats(-90, 90),
+        st.floats(-90, 90),
+        st.sampled_from(["%2d° %2d' %6.3f\" %s", "%2d° %2.3f' %s", "%2.3f°"]),
+        st.floats(0, 100),
+    )
     def test_gpsStringBackForth(self, lat, lon, format, height):
         gps_string = [" ".join(ct.formatGPS(lat, lon, format=format))]
         gps_tuple = ct.gpsFromString(gps_string)[0]
@@ -73,14 +76,22 @@ class TestParameterSet(unittest.TestCase):
 
         # test to raise an error if the format string is not valid
         self.assertRaises(ValueError, lambda: ct.formatGPS(lat, lon, ""))
-        self.assertRaises(ValueError, lambda: ct.formatGPS(lat, lon, "%2d %2d %2d %2d %2d"))
+        self.assertRaises(
+            ValueError, lambda: ct.formatGPS(lat, lon, "%2d %2d %2d %2d %2d")
+        )
         # for latex it should replace the degree symbol
         ct.formatGPS(lat, lon, asLatex=True)
 
         # try split gps
         ct.splitGPS(gps_tuple, keep_deg=True)
 
-    @given(st.floats(-89, 89), st.floats(-89, 89), st.floats(1, 1000), st.floats(-180, 180), st.floats(0, 100))
+    @given(
+        st.floats(-89, 89),
+        st.floats(-89, 89),
+        st.floats(1, 1000),
+        st.floats(-180, 180),
+        st.floats(0, 100),
+    )
     def test_gpsSpaceBackForth(self, lat, lon, distance, bearing, height):
         # without height
         gps0 = [lat, lon]
@@ -89,7 +100,11 @@ class TestParameterSet(unittest.TestCase):
 
         gps_2 = ct.gpsFromSpace(space[..., :2], gps0)
         # this has to be only exact to 1 decimal, as it neglects the curvature of the earth and therefore is not exact
-        np.testing.assert_almost_equal(min([ct.getDistance(gps, gps_2)/distance, ct.getDistance(gps, gps_2)]), 0, 0)
+        np.testing.assert_almost_equal(
+            min([ct.getDistance(gps, gps_2) / distance, ct.getDistance(gps, gps_2)]),
+            0,
+            0,
+        )
 
         np.testing.assert_almost_equal(distance, ct.getDistance(gps0, gps), 0)
 
@@ -107,7 +122,11 @@ class TestParameterSet(unittest.TestCase):
         gps_2 = ct.gpsFromSpace(space, gps0)
 
         # this has to be only exact to 1 decimal, as it neglects the curvature of the earth and therefore is not exact
-        np.testing.assert_almost_equal(min([ct.getDistance(gps, gps_2) / distance, ct.getDistance(gps, gps_2)]), 0, 0)
+        np.testing.assert_almost_equal(
+            min([ct.getDistance(gps, gps_2) / distance, ct.getDistance(gps, gps_2)]),
+            0,
+            0,
+        )
 
         np.testing.assert_almost_equal(distance, ct.getDistance(gps0, gps), 0)
 
@@ -125,15 +144,27 @@ class TestParameterSet(unittest.TestCase):
         gps_tuple = ct.gpsFromString(["66°39'56.12862''S", "140°01'20.39562''"])
         gps_tuple = ct.gpsFromString("66°39'56.12862''S  140°01'20.39562''", 13.769)
 
-        gps_tuple = ct.gpsFromString(["66°39'56.12862''S  140°01'20.39562''", "66°39'58.73922''S  140°01'09.55709''"])
+        gps_tuple = ct.gpsFromString(
+            [
+                "66°39'56.12862''S  140°01'20.39562''",
+                "66°39'58.73922''S  140°01'09.55709''",
+            ]
+        )
 
         gps_tuple = ct.gpsFromString(
-            [["66°39'56.12862''S", "140°01'20.39562''", 13.769], ["66°39'58.73922''S", "140°01'09.55709''", 13.769]])
+            [
+                ["66°39'56.12862''S", "140°01'20.39562''", 13.769],
+                ["66°39'58.73922''S", "140°01'09.55709''", 13.769],
+            ]
+        )
 
-        gps_tuple = ct.gpsFromString([["66°39'56.12862''S  140°01'20.39562''", 13.769], ["66°39'58.73922''S  140°01'09.55709''", 13.769]])
+        gps_tuple = ct.gpsFromString(
+            [
+                ["66°39'56.12862''S  140°01'20.39562''", 13.769],
+                ["66°39'58.73922''S  140°01'09.55709''", 13.769],
+            ]
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
-
-

@@ -18,12 +18,13 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import matplotlib
-matplotlib.use('agg')
+
+matplotlib.use("agg")
 import sys
 import os
 import unittest
 import numpy as np
-from hypothesis import given, settings, reproduce_failure, strategies as st, HealthCheck
+from hypothesis import given, settings, strategies as st, HealthCheck
 from hypothesis.extra import numpy as st_np
 from hypothesis.control import reject
 
@@ -70,10 +71,16 @@ def getPointInTriangle(tri, origin, p1, p2):
 
 
 class TestParameterSet(unittest.TestCase):
-
-    @given(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(0, 5)),
-           st_np.arrays(dtype="float", shape=st.tuples(st.integers(1, 3), st.just(3), st.just(3)), elements=st.floats(10, 100)),
-           st.floats(0.1, 0.9), st.floats(0.1, 0.9))
+    @given(
+        st_np.arrays(dtype="float", shape=(3,), elements=st.floats(0, 5)),
+        st_np.arrays(
+            dtype="float",
+            shape=st.tuples(st.integers(1, 3), st.just(3), st.just(3)),
+            elements=st.floats(10, 100),
+        ),
+        st.floats(0.1, 0.9),
+        st.floats(0.1, 0.9),
+    )
     def test_rayIntersectTriangle(self, origin, points, p1, p2):
         # add some offsets to make sure that the triangle is a real one (with an area > 0)
         points[..., 1, :] += np.array([1.7, 0.5, 0.3])
@@ -140,14 +147,13 @@ class TestParameterSet(unittest.TestCase):
         last_point = None
         for point in line:
             if last_point is not None:
-                distance += np.linalg.norm(point-last_point)
+                distance += np.linalg.norm(point - last_point)
             last_point = point
         area = 0
         for part in mesh:
             area += ct.ray.areaOfTriangle(part)
         self.assertAlmostEqual(distance, area, 2)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()
-
-

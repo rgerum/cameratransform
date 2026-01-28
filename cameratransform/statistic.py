@@ -24,9 +24,10 @@ import tqdm
 
 from scipy.stats import truncnorm
 
+
 def print_mean_std(x, y):
     digits = -int(floor(log10(abs(y))))
-    return str(round(x, digits)) + "±" + str(round(y, 1+digits))
+    return str(round(x, digits)) + "±" + str(round(y, 1 + digits))
 
 
 class normal(np.ndarray):
@@ -57,17 +58,37 @@ class normal_bounded(np.ndarray):
 
     def __add__(self, other):
         try:
-            return stats.truncnorm.rvs((self.min-other)/self.sigma, (self.max-other)/self.sigma, other, self.sigma, size=other.shape)
+            return stats.truncnorm.rvs(
+                (self.min - other) / self.sigma,
+                (self.max - other) / self.sigma,
+                other,
+                self.sigma,
+                size=other.shape,
+            )
         except AttributeError:
-            return stats.truncnorm.rvs((self.min-other)/self.sigma, (self.max-other)/self.sigma, other, self.sigma)
+            return stats.truncnorm.rvs(
+                (self.min - other) / self.sigma,
+                (self.max - other) / self.sigma,
+                other,
+                self.sigma,
+            )
 
     def __radd__(self, other):
         return self.__add__(other)
 
 
-def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=None, disable_bar=False, ranges=None):
+def metropolis(
+    getLogProb,
+    start,
+    step=1,
+    iterations=1e5,
+    burn=0.1,
+    prior_trace=None,
+    disable_bar=False,
+    ranges=None,
+):
     if burn < 1:
-        burn = int(iterations*burn)
+        burn = int(iterations * burn)
     else:
         burn = int(burn)
 
@@ -77,18 +98,20 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     trace = []
 
     if ranges is None:
-        ranges = np.ones((N, 1)) *np.array([-np.inf, np.inf])[None,:]
+        ranges = np.ones((N, 1)) * np.array([-np.inf, np.inf])[None, :]
     else:
         ranges = np.array(ranges, dtype=float)
-        ranges[:,0][np.isnan(ranges[:,0])] = -np.inf
-        ranges[:,1][np.isnan(ranges[:,1])] = np.inf
+        ranges[:, 0][np.isnan(ranges[:, 0])] = -np.inf
+        ranges[:, 1][np.isnan(ranges[:, 1])] = np.inf
     step = np.array(step)
 
     adaptive_scale_factor = 1
     tuning = True
 
     if prior_trace is not None:
-        next_prior_trace = list(prior_trace.loc[np.random.randint(len(prior_trace))])[:-1]
+        next_prior_trace = list(prior_trace.loc[np.random.randint(len(prior_trace))])[
+            :-1
+        ]
     else:
         next_prior_trace = []
 
@@ -99,13 +122,22 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     with tqdm.trange(int(iterations), disable=disable_bar) as t:
         for i in t:
             if prior_trace is not None:
-                next_prior_trace = list(prior_trace.loc[np.random.randint(len(prior_trace))])[:-1]
+                next_prior_trace = list(
+                    prior_trace.loc[np.random.randint(len(prior_trace))]
+                )[:-1]
             else:
                 next_prior_trace = []
 
             # draw a new position
             # next_pos = last_pos + np.random.normal(0, step*adaptive_scale_factor, N)
-            next_pos = last_pos + adaptive_scale_factor*step*truncnorm((ranges[:,0]-last_pos)/step, (ranges[:,1]-last_pos)/step).rvs()
+            next_pos = (
+                last_pos
+                + adaptive_scale_factor
+                * step
+                * truncnorm(
+                    (ranges[:, 0] - last_pos) / step, (ranges[:, 1] - last_pos) / step
+                ).rvs()
+            )
             # get the probability
             next_prob = getLogProb(list(next_pos) + next_prior_trace)
             # calculate the acceptance ratio
@@ -159,7 +191,9 @@ def metropolis(getLogProb, start, step=1, iterations=1e5, burn=0.1, prior_trace=
     return trace
 
 
-def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distributions=False, skip=1):
+def plotTrace(
+    trace, N=None, show_mean_median=True, axes=None, just_distributions=False, skip=1
+):
     from scipy.stats import gaussian_kde
     import matplotlib.pyplot as plt
 
@@ -177,10 +211,18 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distribution
                 trace_ax_dict["next_index"] += 1
                 return ax1
             if index == 0:
-                ax2 = plt.subplot(trace_ax_dict["N"], width, index * width + 2, label=name+"_B")
+                ax2 = plt.subplot(
+                    trace_ax_dict["N"], width, index * width + 2, label=name + "_B"
+                )
                 trace_ax_dict["top_left"] = ax2
             else:
-                ax2 = plt.subplot(trace_ax_dict["N"], width, index * width + 2, sharex=trace_ax_dict["top_left"], label=name+"_B")
+                ax2 = plt.subplot(
+                    trace_ax_dict["N"],
+                    width,
+                    index * width + 2,
+                    sharex=trace_ax_dict["top_left"],
+                    label=name + "_B",
+                )
             trace_ax_dict[name] = (ax1, ax2)
             trace_ax_dict["next_index"] += 1
             return ax1, ax2
@@ -199,7 +241,7 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distribution
         plt.gcf().getAxes = getAxes
 
     for index, name in enumerate(columns):
-        if index > N-1:
+        if index > N - 1:
             continue
         data = trace[name]
 
@@ -212,19 +254,19 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distribution
             if axes is None:
                 ax1, ax2 = getAxes(name, N, 2)
             else:
-                ax1, ax2 = axes[index*2:(index+1)*2]
+                ax1, ax2 = axes[index * 2 : (index + 1) * 2]
 
         plt.sca(ax1)
-        #plt.title(name)
+        # plt.title(name)
         x = np.linspace(min(data), max(data), 1000)
         try:
             y = gaussian_kde(data[::skip])(x)
             plt.plot(x, y, "-")
-            #plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
+            # plt.ylim(top=max([plt.gca().get_ylim()[0], np.max(y) * 1.1]))
         except Exception as err:
             print(err)
             pass
-        #plt.ylim(bottom=0)
+        # plt.ylim(bottom=0)
         plt.ylabel("frequency")
         plt.xlabel(name)
         if show_mean_median:
@@ -239,7 +281,7 @@ def plotTrace(trace, N=None, show_mean_median=True, axes=None, just_distribution
                 plt.axhline(data[most_probable_index], color="r")
                 plt.axhline(np.mean(data), color="k")
             plt.ylabel("sampled value")
-    #plt.tight_layout()
+    # plt.tight_layout()
     return trace
 
 
@@ -252,14 +294,17 @@ def printTraceSummary(trace, logarithmic=False):
             data = trace[name]
         print(name, print_mean_std(np.mean(data), np.std(data)))
 
+
 def get_all_pymc_parameters(par):
     import pymc
+
     parameters = []
     if isinstance(par, pymc.Stochastic):
         parameters += [par]
         for parent in par.parents.values():
             parameters += get_all_pymc_parameters(parent)
     return parameters
+
 
 class FitParameter:
     __name__ = ""
@@ -268,13 +313,23 @@ class FitParameter:
     observed = False
     dtype = float
 
-    def __init__(self, name, distribution=None, lower=None, upper=None, step=1, value=None, mean=None, std=None):
+    def __init__(
+        self,
+        name,
+        distribution=None,
+        lower=None,
+        upper=None,
+        step=1,
+        value=None,
+        mean=None,
+        std=None,
+    ):
         self.__name__ = name
         if distribution is not None:
             self.distribution = distribution
         elif lower is not None and upper is not None:
             self.parents = dict(lower=lower, upper=upper)
-            self.distribution = stats.uniform(loc=lower, scale=(upper-lower))
+            self.distribution = stats.uniform(loc=lower, scale=(upper - lower))
         elif mean is not None and std is not None:
             self.parents = dict(mean=mean, std=std)
             self.distribution = stats.norm(loc=mean, scale=std)

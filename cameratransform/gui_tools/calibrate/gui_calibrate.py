@@ -31,7 +31,9 @@ from qtpy import QtGui, QtCore, QtWidgets
 
 import cameratransform as ct
 from cameratransform.gui_tools.demonstrator import QtShortCuts
-from cameratransform.gui_tools.calibrate.QExtendedGraphicsView import QExtendedGraphicsView
+from cameratransform.gui_tools.calibrate.QExtendedGraphicsView import (
+    QExtendedGraphicsView,
+)
 
 sys.path.insert(0, os.path.dirname(__file__))
 from calibrate import processImage
@@ -55,7 +57,9 @@ class MyQTable(QtWidgets.QTableWidget):
                 widget = self.item(row_id, column_id)
                 if widget is None:
                     widget = QtWidgets.QTableWidgetItem()
-                    widget.setFlags(QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled)
+                    widget.setFlags(
+                        QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEnabled
+                    )
                     self.setItem(row_id, column_id, widget)
                 widget.setText(str(item))
 
@@ -128,8 +132,14 @@ class MyImage(QtWidgets.QWidget):
 
         pattern_size, pattern_points = self.getPatternPoints()
 
-        result = processImage(self.filename, pattern_size, None, None, pattern_points,
-                              output_directory=self.output_folder)
+        result = processImage(
+            self.filename,
+            pattern_size,
+            None,
+            None,
+            pattern_points,
+            output_directory=self.output_folder,
+        )
         if result is None:
             self.status = "Failed"
         else:
@@ -143,10 +153,13 @@ class MyImage(QtWidgets.QWidget):
 
     def getImage(self):
         import matplotlib.pyplot as plt
+
         if self.image_data is not None:
             return self.image_data
         if os.path.exists(self.output_image_corners):
-            self.image_data = (plt.imread(self.output_image_corners) * 255).astype(np.uint8)
+            self.image_data = (plt.imread(self.output_image_corners) * 255).astype(
+                np.uint8
+            )
         else:
             self.image_data = plt.imread(self.filename)
         return self.image_data
@@ -175,7 +188,10 @@ class Window(QtWidgets.QWidget):
         QtWidgets.QWidget.__init__(self)
 
         # the camera
-        self.camera = ct.Camera(ct.RectilinearProjection(image=[1920, 1080], focallength_px=1200), lens=ct.BrownLensDistortion())
+        self.camera = ct.Camera(
+            ct.RectilinearProjection(image=[1920, 1080], focallength_px=1200),
+            lens=ct.BrownLensDistortion(),
+        )
         # the list of loaded images
         self.images = []
 
@@ -207,8 +223,15 @@ class Window(QtWidgets.QWidget):
         layout.addLayout(self.button_layout)
 
         # the batch loader
-        self.input_filename = QtShortCuts.QInputFilename(self.button_layout, None, os.getcwd(), button_text="Add Images",
-                                                         file_type="Images (*.jpg *.png)", existing=True, just_button=True)
+        self.input_filename = QtShortCuts.QInputFilename(
+            self.button_layout,
+            None,
+            os.getcwd(),
+            button_text="Add Images",
+            file_type="Images (*.jpg *.png)",
+            existing=True,
+            just_button=True,
+        )
         self.input_filename.valueChanged.connect(self.loadBatch)
 
         # clear button
@@ -239,7 +262,9 @@ class Window(QtWidgets.QWidget):
 
         self.preview_pixMapItem2 = QtWidgets.QGraphicsPixmapItem(self.origin2)
 
-        self.input_display_undistorted = QtShortCuts.QInputBool(layout, "Display Corrected (D)", True)
+        self.input_display_undistorted = QtShortCuts.QInputBool(
+            layout, "Display Corrected (D)", True
+        )
         self.input_display_undistorted.valueChanged.connect(self.displayImage)
 
         self.progessBar = QtWidgets.QProgressBar()
@@ -278,18 +303,28 @@ class Window(QtWidgets.QWidget):
         layout.addLayout(self.button_layout2)
 
         # save button
-        self.button_save = QtShortCuts.QInputFilename(self.button_layout2, None, os.getcwd(),
-                                                      button_text="Save Calibration",
-                                                      file_type="Text File (*.txt)", existing=False,
-                                                      just_button=True)
+        self.button_save = QtShortCuts.QInputFilename(
+            self.button_layout2,
+            None,
+            os.getcwd(),
+            button_text="Save Calibration",
+            file_type="Text File (*.txt)",
+            existing=False,
+            just_button=True,
+        )
         self.button_save.valueChanged.connect(self.saveCalibration)
         self.button_save.setDisabled(True)
 
         # load button
-        self.button_load = QtShortCuts.QInputFilename(self.button_layout2, None, os.getcwd(),
-                                                      button_text="Load Calibration",
-                                                      file_type="Text File (*.txt)", existing=True,
-                                                      just_button=True)
+        self.button_load = QtShortCuts.QInputFilename(
+            self.button_layout2,
+            None,
+            os.getcwd(),
+            button_text="Load Calibration",
+            file_type="Text File (*.txt)",
+            existing=True,
+            just_button=True,
+        )
         self.button_load.valueChanged.connect(self.loadCalibration)
 
     def clearImages(self):
@@ -321,23 +356,25 @@ class Window(QtWidgets.QWidget):
             flags |= cv2.CALIB_FIX_K2
         if self.input_fix_k3.value() is False:
             flags |= cv2.CALIB_FIX_K3
-        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(obj_points, img_points, (self.w, self.h),
-                                                                           None, None,
-                                                                           flags=flags)
+        rms, camera_matrix, dist_coefs, rvecs, tvecs = cv2.calibrateCamera(
+            obj_points, img_points, (self.w, self.h), None, None, flags=flags
+        )
 
         # split the fitted components
         k1, k2, t1, t2, k3 = dist_coefs.ravel()
 
-        self.calibration = dict(rms=rms,
-                                image_width_px=self.w,
-                                image_height_px=self.h,
-                                focallength_x_px=camera_matrix[0, 0],
-                                focallength_y_px=camera_matrix[1, 1],
-                                center_x_px=camera_matrix[0, 2],
-                                center_y_px=camera_matrix[1, 2],
-                                k1=k1,
-                                k2=k2,
-                                k3=k3)
+        self.calibration = dict(
+            rms=rms,
+            image_width_px=self.w,
+            image_height_px=self.h,
+            focallength_x_px=camera_matrix[0, 0],
+            focallength_y_px=camera_matrix[1, 1],
+            center_x_px=camera_matrix[0, 2],
+            center_y_px=camera_matrix[1, 2],
+            k1=k1,
+            k2=k2,
+            k3=k3,
+        )
         self.newCalibration()
 
     def newCalibration(self):
@@ -346,9 +383,14 @@ class Window(QtWidgets.QWidget):
 
         # display the calibration data
         self.calibration_result.setText(
-            "\n".join(str(key) + ": " + str(value) for key, value in self.calibration.items()))
+            "\n".join(
+                str(key) + ": " + str(value) for key, value in self.calibration.items()
+            )
+        )
         # update the camera
-        self.camera.parameters.set_fit_parameters(self.calibration.keys(), self.calibration.values())
+        self.camera.parameters.set_fit_parameters(
+            self.calibration.keys(), self.calibration.values()
+        )
         # remove the cached undistort map
         self.camera.map_undistort = None
         # enable the save button
@@ -383,8 +425,12 @@ class Window(QtWidgets.QWidget):
             json.dump(self.calibration, fp)
 
         # inform the user that the data was saved
-        QtWidgets.QMessageBox.information(self, 'Saved', "The calibration has been saved to %s" % filename,
-                                          QtWidgets.QMessageBox.Ok)
+        QtWidgets.QMessageBox.information(
+            self,
+            "Saved",
+            "The calibration has been saved to %s" % filename,
+            QtWidgets.QMessageBox.Ok,
+        )
 
     def loadCalibration(self, filename):
         # load the data
@@ -409,7 +455,9 @@ class Window(QtWidgets.QWidget):
         self.process_image_index += 1
         image.processing_finished.connect(self.processNextImage)
         # start the processing in a second thread
-        self._run_thread = threading.Thread(target=image.processImage, args=(), daemon=True)
+        self._run_thread = threading.Thread(
+            target=image.processImage, args=(), daemon=True
+        )
         self._run_thread.start()
 
     def updateTable(self):
@@ -474,7 +522,9 @@ class Window(QtWidgets.QWidget):
             camera = None
 
         # start loading the image in a second thread
-        self._run_thread = threading.Thread(target=image.loadImage, args=(camera,), daemon=True)
+        self._run_thread = threading.Thread(
+            target=image.loadImage, args=(camera,), daemon=True
+        )
         self._run_thread.start()
         self.progessBar.setRange(0, 0)
 
@@ -497,14 +547,23 @@ class Window(QtWidgets.QWidget):
         # if the image data is there
         if image.image_data is not None:
             # set it to the display
-            self.preview_pixMapItem.setPixmap(QtGui.QPixmap(array2qimage(image.image_data)))
+            self.preview_pixMapItem.setPixmap(
+                QtGui.QPixmap(array2qimage(image.image_data))
+            )
 
         # if there is an undistorted image and the bock is ticked, display the undistorted in the second view
-        if self.input_display_undistorted.value() is True and image.image_data_undistorted is not None:
-            self.preview_pixMapItem2.setPixmap(QtGui.QPixmap(array2qimage(image.image_data_undistorted)))
+        if (
+            self.input_display_undistorted.value() is True
+            and image.image_data_undistorted is not None
+        ):
+            self.preview_pixMapItem2.setPixmap(
+                QtGui.QPixmap(array2qimage(image.image_data_undistorted))
+            )
         # if not, display the normal image in the second view, too
         else:
-            self.preview_pixMapItem2.setPixmap(QtGui.QPixmap(array2qimage(image.image_data)))
+            self.preview_pixMapItem2.setPixmap(
+                QtGui.QPixmap(array2qimage(image.image_data))
+            )
         # stop the progress bar
         self.progessBar.setRange(0, 1)
         self.progessBar.setValue(1)
@@ -518,7 +577,9 @@ class Window(QtWidgets.QWidget):
 
         if event.key() == QtCore.Qt.Key_D:
             # @key D: switch between display of distorted and undistorted image
-            self.input_display_undistorted.setValue(not self.input_display_undistorted.value())
+            self.input_display_undistorted.setValue(
+                not self.input_display_undistorted.value()
+            )
             self.displayImage()
 
 
@@ -530,5 +591,5 @@ def startCalibrationGUI():
     app.exec_()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     startCalibrationGUI()

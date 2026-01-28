@@ -82,6 +82,7 @@ def formatGPS(lat, lon, format=None, asLatex=False):
 
     """
     import re
+
     # default format
     if format is None:
         format = "%2d° %2d' %6.3f\" %s"
@@ -182,10 +183,10 @@ def processDegree(data) -> float:
             sign = "S"
     # add the minutes
     if min is not None:
-        value += float(min) / 60.
+        value += float(min) / 60.0
     # add the seconds
     if sec is not None:
-        value += float(sec) / 3600.
+        value += float(sec) / 3600.0
     # add the sign
     if sign is not None:
         if sign in "SW":
@@ -194,7 +195,10 @@ def processDegree(data) -> float:
     return value
 
 
-def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], height: Optional[Union[Number, List[Number]]] = None) -> Union[List, np.ndarray, float, None]:
+def gpsFromString(
+    gps_string: Union[str, List[str], List[Tuple[str, float]]],
+    height: Optional[Union[Number, List[Number]]] = None,
+) -> Union[List, np.ndarray, float, None]:
     """
     Read a gps coordinate from a text string in different formats, e.g. `70° 37’ 4.980" S 8° 9’ 26.280" W`,
     `70° 37.083 S 8° 9.438 W`, or `-70.618050° -8.157300°`.
@@ -243,7 +247,11 @@ def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], he
         if isinstance(gps_string, (float, int)):
             return gps_string
         # if it is a string and a number, interpret it as coordinates and height
-        if len(gps_string) == 2 and isinstance(gps_string[0], str) and isinstance(gps_string[1], (float, int)):
+        if (
+            len(gps_string) == 2
+            and isinstance(gps_string[0], str)
+            and isinstance(gps_string[1], (float, int))
+        ):
             return gpsFromString(gps_string[0], gps_string[1])
         # recursively process it
         data = np.array([gpsFromString(data) for data in gps_string])
@@ -252,17 +260,29 @@ def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], he
             return data
         else:
             return np.hstack((data, [height]))
-    regex_list = [r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´|′)\s*(?P<sec>[\d.]+)(''|\"| |´´|″)\s*",
-                  r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)('|′|´|′)?\s*",
-                  r"(?P<deg>[\d.+-]+)°\s*"]
+    regex_list = [
+        r"(?P<deg>[\d+-]+)°\s*(?P<min>\d+)('|′|´|′)\s*(?P<sec>[\d.]+)(''|\"| |´´|″)\s*",
+        r"(?P<deg>[\d+-]+)°\s*(?P<min>[\d.]+)('|′|´|′)?\s*",
+        r"(?P<deg>[\d.+-]+)°\s*",
+    ]
     for string in regex_list:
-        pattern = r"\s*"+string.replace("<", "<lat_")+"(?P<lat_sign>N|S)?"+r"\s*,?\s*"+string.replace("<", "<lon_")+"(?P<lon_sign>W|E)?"+r"\s*"
+        pattern = (
+            r"\s*"
+            + string.replace("<", "<lat_")
+            + "(?P<lat_sign>N|S)?"
+            + r"\s*,?\s*"
+            + string.replace("<", "<lon_")
+            + "(?P<lon_sign>W|E)?"
+            + r"\s*"
+        )
         match = re.match(pattern, gps_string)
         if match:
             data = match.groupdict()
             gps = []
             for part in ["lat", "lon"]:
-                value = processDegree({key[4:]:data[key] for key in data if key.startswith(part)})
+                value = processDegree(
+                    {key[4:]: data[key] for key in data if key.startswith(part)}
+                )
                 gps.append(value)
             if height is None:
                 return np.array(gps)
@@ -270,7 +290,7 @@ def gpsFromString(gps_string: Union[str, List[str], List[Tuple[str, float]]], he
                 return np.array(gps + [height])
     # if not, try only a single coordinate
     for string in regex_list:
-        pattern = r"\s*"+string+"(?P<sign>N|S|W|E)?"+r"\s*"
+        pattern = r"\s*" + string + "(?P<sign>N|S|W|E)?" + r"\s*"
         match = re.match(pattern, gps_string)
         if match:
             data = match.groupdict()
@@ -318,11 +338,12 @@ def getBearing(point1, point2):
     """
     lat1, lon1, h1 = splitGPS(point1)
     lat2, lon2, h2 = splitGPS(point2)
-    dL = lon2-lon1
+    dL = lon2 - lon1
     X = np.cos(lat2) * np.sin(dL)
     Y = np.cos(lat1) * np.sin(lat2) - np.sin(lat1) * np.cos(lat2) * np.cos(dL)
     beta = np.arctan2(X, Y)
     return np.rad2deg(beta)
+
 
 def splitGPS(x, keep_deg=False):
     x = np.array(x)
@@ -337,6 +358,7 @@ def splitGPS(x, keep_deg=False):
     except IndexError:
         h1 = None
     return lat1, lon1, h1
+
 
 def getDistance(point1, point2):
     r"""
@@ -383,7 +405,7 @@ def getDistance(point1, point2):
     dlon = lon2 - lon1
     dlat = lat2 - lat1
 
-    a = np.sin(dlat/2.0)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2.0)**2
+    a = np.sin(dlat / 2.0) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2.0) ** 2
 
     c = 2 * np.arcsin(np.sqrt(a))
     distance = 6371e3 * c
@@ -393,6 +415,7 @@ def getDistance(point1, point2):
         distance = np.sqrt(distance**2 + dH**2)
 
     return distance
+
 
 def moveDistance(start, distance, bearing):
     r"""
@@ -448,13 +471,19 @@ def moveDistance(start, distance, bearing):
     R = 6371e3
     if start.shape[-1] == 3:
         R += start[..., 2]
-    lat2 = np.arcsin(np.sin(lat1) * np.cos(distance / R) +
-                     np.cos(lat1) * np.sin(distance / R) * np.cos(bearing))
+    lat2 = np.arcsin(
+        np.sin(lat1) * np.cos(distance / R)
+        + np.cos(lat1) * np.sin(distance / R) * np.cos(bearing)
+    )
 
-    lon2 = lon1 + np.arctan2(np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
-                             np.cos(distance / R) - np.sin(lat1) * np.sin(lat2))
+    lon2 = lon1 + np.arctan2(
+        np.sin(bearing) * np.sin(distance / R) * np.cos(lat1),
+        np.cos(distance / R) - np.sin(lat1) * np.sin(lat2),
+    )
     if start.shape[-1] == 3:
-        return np.array([np.rad2deg(lat2), np.rad2deg(lon2), np.ones_like(lon2)*start[..., 2]]).T
+        return np.array(
+            [np.rad2deg(lat2), np.rad2deg(lon2), np.ones_like(lon2) * start[..., 2]]
+        ).T
     return np.array([np.rad2deg(lat2), np.rad2deg(lon2)]).T
 
 
@@ -465,7 +494,9 @@ def spaceFromGPS(gps, gps0):
         height = gps[..., 2]
     distance = getDistance(gps0, gps)
     bearing_rad = np.deg2rad(getBearing(gps0, gps))
-    return np.array([distance * np.sin(bearing_rad), distance * np.cos(bearing_rad), height]).T
+    return np.array(
+        [distance * np.sin(bearing_rad), distance * np.cos(bearing_rad), height]
+    ).T
 
 
 def gpsFromSpace(space, gps0):

@@ -17,7 +17,7 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-'''
+"""
 camera calibration for distorted images with chess board samples
 reads distorted images, calculates the calibration and write undistorted images
 
@@ -28,8 +28,7 @@ default values:
     --debug:    ./output/
     --square_size: 1.0
     <image mask> defaults to ../data/left*.jpg
-'''
-
+"""
 
 import os
 import sys
@@ -40,11 +39,13 @@ import cv2 as cv
 import numpy as np
 
 
-def processImage(fn, pattern_size, w=None, h=None, pattern_points=None, output_directory=None):
-    print('processing %s... ' % fn)
+def processImage(
+    fn, pattern_size, w=None, h=None, pattern_points=None, output_directory=None
+):
+    print("processing %s... " % fn)
     name = os.path.splitext(os.path.split(fn)[1])[0]
-    corners_file = os.path.join(output_directory, name + '_corners.txt')
-    output_image = os.path.join(output_directory, name + '_chess.png')
+    corners_file = os.path.join(output_directory, name + "_corners.txt")
+    output_image = os.path.join(output_directory, name + "_chess.png")
 
     # if an output directory is given
     if output_directory:
@@ -54,7 +55,10 @@ def processImage(fn, pattern_size, w=None, h=None, pattern_points=None, output_d
             corners = np.loadtxt(corners_file).astype("float32")
             print("loaded cached corners", corners_file, corners.shape)
             # check if the number of corners equals the desired count
-            if pattern_points is not None and corners.shape[0] != pattern_points.shape[0]:
+            if (
+                pattern_points is not None
+                and corners.shape[0] != pattern_points.shape[0]
+            ):
                 return None
             # return the corners
             return corners, pattern_points
@@ -71,13 +75,19 @@ def processImage(fn, pattern_size, w=None, h=None, pattern_points=None, output_d
 
     # ensure that the image has the same size as the rest of the batch
     if w is not None and not (w == img.shape[1] and h == img.shape[0]):
-        print("image size not", [w, h], "but instead", [img.shape[1], img.shape[0]], "skipping image")
+        print(
+            "image size not",
+            [w, h],
+            "but instead",
+            [img.shape[1], img.shape[0]],
+            "skipping image",
+        )
         return None
 
     # find the chessboard corners in the images
     found, corners = cv.findChessboardCorners(img, pattern_size)
     if not found:
-        print('chessboard not found')
+        print("chessboard not found")
         return None
 
     # and refine their positions
@@ -94,20 +104,22 @@ def processImage(fn, pattern_size, w=None, h=None, pattern_points=None, output_d
         cv.drawChessboardCorners(vis, pattern_size, corners, found)
         cv.imwrite(output_image, vis)
         # and save the corner positions
-        np.savetxt(os.path.join(output_directory, name + '_corners.txt'), corners)
+        np.savetxt(os.path.join(output_directory, name + "_corners.txt"), corners)
 
     # return the corners
-    print('           %s... OK' % fn)
+    print("           %s... OK" % fn)
     return corners, pattern_points
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # load the arguments
-    args, img_mask = getopt.getopt(sys.argv[1:], '', ['debug=', 'square_size=', 'threads='])
+    args, img_mask = getopt.getopt(
+        sys.argv[1:], "", ["debug=", "square_size=", "threads="]
+    )
     args = dict(args)
-    args.setdefault('--debug', './output/')
-    args.setdefault('--square_size', 1.0)
-    args.setdefault('--threads', 4)
+    args.setdefault("--debug", "./output/")
+    args.setdefault("--square_size", 1.0)
+    args.setdefault("--threads", 4)
     if not img_mask:
         print("ERROR: no image filename provided.", file=sys.stderr)
         exit()
@@ -120,11 +132,11 @@ if __name__ == '__main__':
         print("ERROR: no images found that match %s." % img_mask, file=sys.stderr)
         exit()
     # optionally create an output directory
-    debug_dir = args.get('--debug')
+    debug_dir = args.get("--debug")
     if debug_dir and not os.path.isdir(debug_dir):
         os.mkdir(debug_dir)
     # get the size of the chess board (normally not needed)
-    square_size = float(args.get('--square_size'))
+    square_size = float(args.get("--square_size"))
     print(square_size)
 
     # create the chess board pattern
@@ -137,15 +149,21 @@ if __name__ == '__main__':
     h, w = cv.imread(img_names[0], cv.IMREAD_GRAYSCALE).shape[:2]
 
     # process all images (with threads or not)
-    threads_num = int(args.get('--threads'))
+    threads_num = int(args.get("--threads"))
     if threads_num <= 1:
-        chessboards = [processImage(fn, pattern_size, w, h, pattern_points, debug_dir) for fn in img_names]
+        chessboards = [
+            processImage(fn, pattern_size, w, h, pattern_points, debug_dir)
+            for fn in img_names
+        ]
     else:
         print("Run with %d threads..." % threads_num)
         from multiprocessing.dummy import Pool as ThreadPool
 
         pool = ThreadPool(threads_num)
-        chessboards = pool.map(lambda x: processImage(x, pattern_size, w, h, pattern_points, debug_dir), img_names)
+        chessboards = pool.map(
+            lambda x: processImage(x, pattern_size, w, h, pattern_points, debug_dir),
+            img_names,
+        )
 
     # initialize lists of objects and image points
     obj_points = []
@@ -161,23 +179,34 @@ if __name__ == '__main__':
 
     # calculate camera distortion
     print("fit calibration...")
-    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv.calibrateCamera(obj_points, img_points, (w, h), None, None,
-                                                                      flags=cv.CALIB_ZERO_TANGENT_DIST)
+    rms, camera_matrix, dist_coefs, rvecs, tvecs = cv.calibrateCamera(
+        obj_points, img_points, (w, h), None, None, flags=cv.CALIB_ZERO_TANGENT_DIST
+    )
 
     # split the fitted components
     k1, k2, t1, t2, k3 = dist_coefs.ravel()
     print("\nRMS:", rms)
     print("camera matrix:\n", camera_matrix.astype("int"))
     print("distortion coefficients: ", dist_coefs.ravel())
-    print("focallength_x_px=%f, focallength_y_px=%f, center_x_px=%d, center_y_px=%d, k1=%f, k2=%f, k3=%f"
-          % (camera_matrix[0, 0], camera_matrix[1, 1], camera_matrix[0, 2], camera_matrix[1, 2], k1, k2, k3))
+    print(
+        "focallength_x_px=%f, focallength_y_px=%f, center_x_px=%d, center_y_px=%d, k1=%f, k2=%f, k3=%f"
+        % (
+            camera_matrix[0, 0],
+            camera_matrix[1, 1],
+            camera_matrix[0, 2],
+            camera_matrix[1, 2],
+            k1,
+            k2,
+            k3,
+        )
+    )
 
     # undistort the image with the calibration
-    print('')
+    print("")
     for fn in img_names if debug_dir else []:
         name = os.path.splitext(os.path.split(fn)[1])[0]
-        img_found = os.path.join(debug_dir, name + '_chess.png')
-        outfile = os.path.join(debug_dir, name + '_undistorted.png')
+        img_found = os.path.join(debug_dir, name + "_chess.png")
+        outfile = os.path.join(debug_dir, name + "_undistorted.png")
 
         img = cv.imread(img_found)
         if img is None:
@@ -193,7 +222,7 @@ if __name__ == '__main__':
         # x, y, w, h = roi
         # dst = dst[y:y+h, x:x+w]
 
-        print('Undistorted image written to: %s' % outfile)
+        print("Undistorted image written to: %s" % outfile)
         cv.imwrite(outfile, dst)
 
     cv.destroyAllWindows()

@@ -35,10 +35,16 @@ class Scene:  # pragma: no cover
 
     def plotSceneViews(self, axes=None):
         import matplotlib.pyplot as plt
+
         cone = self.camera.getCameraCone()
 
         if axes is None:
-            axes = [plt.subplot(221), plt.subplot(222), plt.subplot(223), plt.subplot(224)]
+            axes = [
+                plt.subplot(221),
+                plt.subplot(222),
+                plt.subplot(223),
+                plt.subplot(224),
+            ]
 
         plt.sca(axes[0])
         plt.xlabel("x (m)")
@@ -63,8 +69,20 @@ class Scene:  # pragma: no cover
             plt.xlabel("image x (px)")
             plt.ylabel("image y (px)")
             im = np.zeros([2, 2])
-            plt.imshow(im, extent=[0, self.camera.projection.parameters.image_width_px, self.camera.projection.parameters.image_height_px, 0], vmin=0, vmax=255)
-            horizon = self.camera.getImageHorizon(np.linspace(0, self.camera.projection.parameters.image_width_px, 100))
+            plt.imshow(
+                im,
+                extent=[
+                    0,
+                    self.camera.projection.parameters.image_width_px,
+                    self.camera.projection.parameters.image_height_px,
+                    0,
+                ],
+                vmin=0,
+                vmax=255,
+            )
+            horizon = self.camera.getImageHorizon(
+                np.linspace(0, self.camera.projection.parameters.image_width_px, 100)
+            )
             plt.plot(horizon[:, 0], horizon[:, 1], "c-")
             plt.xlim(0, self.camera.projection.parameters.image_width_px)
             plt.ylim(self.camera.projection.parameters.image_height_px, 0)
@@ -83,11 +101,21 @@ class Scene:  # pragma: no cover
 
     def renderImage(self, filename):
         import matplotlib.pyplot as plt
-        fig = plt.figure(0, (self.camera.projection.parameters.image_width_px / 100,
-                             self.camera.projection.parameters.image_height_px / 100))
+
+        fig = plt.figure(
+            0,
+            (
+                self.camera.projection.parameters.image_width_px / 100,
+                self.camera.projection.parameters.image_height_px / 100,
+            ),
+        )
         ax = plt.axes([0, 0, 1, 1])
         im = np.zeros(
-            [self.camera.projection.parameters.image_height_px, self.camera.projection.parameters.image_width_px])
+            [
+                self.camera.projection.parameters.image_height_px,
+                self.camera.projection.parameters.image_width_px,
+            ]
+        )
         plt.imshow(im)
         for object in self.objects:
             object_im = self.camera.imageFromSpace(object)
@@ -100,7 +128,7 @@ class Scene:  # pragma: no cover
     def addCube(self, pos, width):
         points = []
         x, y, z = pos
-        r = width/2
+        r = width / 2
         points.append([x + r, y + r, z - r])
         points.append([x + r, y - r, z - r])
         points.append([x - r, y - r, z - r])

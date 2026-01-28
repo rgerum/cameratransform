@@ -18,7 +18,13 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import numpy as np
-from .parameter_set import ParameterSet, Parameter, ClassWithParameterSet, TYPE_EXTRINSIC1, TYPE_EXTRINSIC2
+from .parameter_set import (
+    ParameterSet,
+    Parameter,
+    ClassWithParameterSet,
+    TYPE_EXTRINSIC1,
+    TYPE_EXTRINSIC2,
+)
 import json
 
 
@@ -79,18 +85,37 @@ class SpatialOrientation(ClassWithParameterSet):
 
     R_earth = 6371e3
 
-    def __init__(self, elevation_m=None, tilt_deg=None, roll_deg=None, heading_deg=None, pos_x_m=None, pos_y_m=None):
+    def __init__(
+        self,
+        elevation_m=None,
+        tilt_deg=None,
+        roll_deg=None,
+        heading_deg=None,
+        pos_x_m=None,
+        pos_y_m=None,
+    ):
         self.parameters = ParameterSet(
             # the extrinsic parameters if the camera will not be compared to other cameras or maps
-            elevation_m=Parameter(elevation_m, default=30, range=(0, None), type=TYPE_EXTRINSIC1),
+            elevation_m=Parameter(
+                elevation_m, default=30, range=(0, None), type=TYPE_EXTRINSIC1
+            ),
             # the elevation of the camera above sea level in m
-            tilt_deg=Parameter(tilt_deg, default=85, range=(-90, 90), type=TYPE_EXTRINSIC1),  # the tilt angle of the camera in degrees
-            roll_deg=Parameter(roll_deg, default=0, range=(-180, 180), type=TYPE_EXTRINSIC1),  # the roll angle of the camera in degrees
-
+            tilt_deg=Parameter(
+                tilt_deg, default=85, range=(-90, 90), type=TYPE_EXTRINSIC1
+            ),  # the tilt angle of the camera in degrees
+            roll_deg=Parameter(
+                roll_deg, default=0, range=(-180, 180), type=TYPE_EXTRINSIC1
+            ),  # the roll angle of the camera in degrees
             # the extrinsic parameters if the camera will be compared to other cameras or maps
-            heading_deg=Parameter(heading_deg, default=0, type=TYPE_EXTRINSIC2),  # the heading angle of the camera in degrees
-            pos_x_m=Parameter(pos_x_m, default=0, type=TYPE_EXTRINSIC2),  # the x position of the camera in m
-            pos_y_m=Parameter(pos_y_m, default=0, type=TYPE_EXTRINSIC2),  # the y position of the camera in m
+            heading_deg=Parameter(
+                heading_deg, default=0, type=TYPE_EXTRINSIC2
+            ),  # the heading angle of the camera in degrees
+            pos_x_m=Parameter(
+                pos_x_m, default=0, type=TYPE_EXTRINSIC2
+            ),  # the x position of the camera in m
+            pos_y_m=Parameter(
+                pos_y_m, default=0, type=TYPE_EXTRINSIC2
+            ),  # the y position of the camera in m
         )
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._initCameraMatrix
@@ -99,9 +124,17 @@ class SpatialOrientation(ClassWithParameterSet):
     def __str__(self):
         string = ""
         string += "  position:\n"
-        string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m)
+        string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (
+            self.parameters.pos_x_m,
+            self.parameters.pos_y_m,
+            self.parameters.elevation_m,
+        )
         string += "  orientation:\n"
-        string += "    tilt:\t\t%f°\n    roll:\t\t%f°\n    heading:\t%f°\n" % (self.parameters.tilt_deg, self.parameters.roll_deg, self.parameters.heading_deg)
+        string += "    tilt:\t\t%f°\n    roll:\t\t%f°\n    heading:\t%f°\n" % (
+            self.parameters.tilt_deg,
+            self.parameters.roll_deg,
+            self.parameters.heading_deg,
+        )
         return string
 
     def _initCameraMatrix(self, height=None, tilt_angle=None, roll_angle=None):
@@ -113,18 +146,36 @@ class SpatialOrientation(ClassWithParameterSet):
         heading = np.deg2rad(self.parameters.heading_deg)
 
         # get the translation matrix and rotate it
-        self.t = np.array([self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m])
+        self.t = np.array(
+            [
+                self.parameters.pos_x_m,
+                self.parameters.pos_y_m,
+                self.parameters.elevation_m,
+            ]
+        )
 
         # construct the rotation matrices for tilt, roll and heading
-        self.R_roll = np.array([[+np.cos(roll), np.sin(roll), 0],
-                                [-np.sin(roll), np.cos(roll), 0],
-                                [0, 0, 1]])
-        self.R_tilt = np.array([[1, 0, 0],
-                                [0, np.cos(tilt), np.sin(tilt)],
-                                [0, -np.sin(tilt), np.cos(tilt)]])
-        self.R_head = np.array([[np.cos(heading), -np.sin(heading), 0],
-                                [np.sin(heading), np.cos(heading), 0],
-                                [0, 0, 1]])
+        self.R_roll = np.array(
+            [
+                [+np.cos(roll), np.sin(roll), 0],
+                [-np.sin(roll), np.cos(roll), 0],
+                [0, 0, 1],
+            ]
+        )
+        self.R_tilt = np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(tilt), np.sin(tilt)],
+                [0, -np.sin(tilt), np.cos(tilt)],
+            ]
+        )
+        self.R_head = np.array(
+            [
+                [np.cos(heading), -np.sin(heading), 0],
+                [np.sin(heading), np.cos(heading), 0],
+                [0, 0, 1],
+            ]
+        )
 
         self.R = np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head)
         self.R_inv = np.linalg.inv(self.R)
@@ -228,18 +279,37 @@ class SpatialOrientationYawPitchRoll(SpatialOrientation):
 
     """
 
-    def __init__(self, elevation_m=None, yaw_deg=None, pitch_deg=None, roll_deg=None, pos_x_m=None, pos_y_m=None):
+    def __init__(
+        self,
+        elevation_m=None,
+        yaw_deg=None,
+        pitch_deg=None,
+        roll_deg=None,
+        pos_x_m=None,
+        pos_y_m=None,
+    ):
         self.parameters = ParameterSet(
             # the extrinsic parameters if the camera will not be compared to other cameras or maps
-            elevation_m=Parameter(elevation_m, default=30, range=(0, None), type=TYPE_EXTRINSIC1),
+            elevation_m=Parameter(
+                elevation_m, default=30, range=(0, None), type=TYPE_EXTRINSIC1
+            ),
             # the elevation of the camera above sea level in m
-            yaw_deg=Parameter(yaw_deg, default=85, range=(-90, 90), type=TYPE_EXTRINSIC1),  # the tilt angle of the camera in degrees
-            roll_deg=Parameter(roll_deg, default=0, range=(-180, 180), type=TYPE_EXTRINSIC1),  # the roll angle of the camera in degrees
-
+            yaw_deg=Parameter(
+                yaw_deg, default=85, range=(-90, 90), type=TYPE_EXTRINSIC1
+            ),  # the tilt angle of the camera in degrees
+            roll_deg=Parameter(
+                roll_deg, default=0, range=(-180, 180), type=TYPE_EXTRINSIC1
+            ),  # the roll angle of the camera in degrees
             # the extrinsic parameters if the camera will be compared to other cameras or maps
-            pitch_deg=Parameter(pitch_deg, default=0, type=TYPE_EXTRINSIC2),  # the heading angle of the camera in degrees
-            pos_x_m=Parameter(pos_x_m, default=0, type=TYPE_EXTRINSIC2),  # the x position of the camera in m
-            pos_y_m=Parameter(pos_y_m, default=0, type=TYPE_EXTRINSIC2),  # the y position of the camera in m
+            pitch_deg=Parameter(
+                pitch_deg, default=0, type=TYPE_EXTRINSIC2
+            ),  # the heading angle of the camera in degrees
+            pos_x_m=Parameter(
+                pos_x_m, default=0, type=TYPE_EXTRINSIC2
+            ),  # the x position of the camera in m
+            pos_y_m=Parameter(
+                pos_y_m, default=0, type=TYPE_EXTRINSIC2
+            ),  # the y position of the camera in m
         )
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._initCameraMatrix
@@ -248,33 +318,58 @@ class SpatialOrientationYawPitchRoll(SpatialOrientation):
     def __str__(self):
         string = ""
         string += "  position:\n"
-        string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m)
+        string += "    x:\t%f m\n    y:\t%f m\n    h:\t%f m\n" % (
+            self.parameters.pos_x_m,
+            self.parameters.pos_y_m,
+            self.parameters.elevation_m,
+        )
         string += "  orientation:\n"
-        string += "    yaw:\t\t%f°\n    pitch:\t\t%f°\n    roll:\t%f°\n" % (self.parameters.yaw_deg, self.parameters.pitch_deg, self.parameters.roll_deg)
+        string += "    yaw:\t\t%f°\n    pitch:\t\t%f°\n    roll:\t%f°\n" % (
+            self.parameters.yaw_deg,
+            self.parameters.pitch_deg,
+            self.parameters.roll_deg,
+        )
         return string
 
     def _initCameraMatrix(self):
         if self.pitch_deg < -360 or self.pitch_deg > 360:  # pragma: no cover
             self.pitch_deg = self.pitch_deg % 360
         # convert the angle to radians
-        tilt = np.pi/2+np.deg2rad(self.parameters.pitch_deg)
+        tilt = np.pi / 2 + np.deg2rad(self.parameters.pitch_deg)
         roll = -np.deg2rad(self.parameters.roll_deg)
         heading = np.deg2rad(self.parameters.yaw_deg)
 
         # get the translation matrix and rotate it
-        self.t = np.array([self.parameters.pos_x_m, self.parameters.pos_y_m, self.parameters.elevation_m])
+        self.t = np.array(
+            [
+                self.parameters.pos_x_m,
+                self.parameters.pos_y_m,
+                self.parameters.elevation_m,
+            ]
+        )
 
         # construct the rotation matrices for tilt, roll and heading
-        self.R_roll = np.array([[+np.cos(roll), np.sin(roll), 0],
-                                [-np.sin(roll), np.cos(roll), 0],
-                                [0, 0, 1]])
-        self.R_tilt = np.array([[1, 0, 0],
-                                [0, np.cos(tilt), np.sin(tilt)],
-                                [0, -np.sin(tilt), np.cos(tilt)]])
-        self.R_head = np.array([[np.cos(heading), -np.sin(heading), 0],
-                                [np.sin(heading), np.cos(heading), 0],
-                                [0, 0, 1]])
+        self.R_roll = np.array(
+            [
+                [+np.cos(roll), np.sin(roll), 0],
+                [-np.sin(roll), np.cos(roll), 0],
+                [0, 0, 1],
+            ]
+        )
+        self.R_tilt = np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(tilt), np.sin(tilt)],
+                [0, -np.sin(tilt), np.cos(tilt)],
+            ]
+        )
+        self.R_head = np.array(
+            [
+                [np.cos(heading), -np.sin(heading), 0],
+                [np.sin(heading), np.cos(heading), 0],
+                [0, 0, 1],
+            ]
+        )
 
         self.R = np.dot(np.dot(self.R_roll, self.R_tilt), self.R_head)
         self.R_inv = np.linalg.inv(self.R)
-

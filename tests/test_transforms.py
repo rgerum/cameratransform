@@ -18,15 +18,15 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import matplotlib
-matplotlib.use('agg')
+
+matplotlib.use("agg")
 
 import unittest
 import numpy as np
 import sys
 import os
 
-from hypothesis import given, reproduce_failure, assume, note, strategies as st
-from hypothesis.extra import numpy as st_np
+from hypothesis import given, assume, note, strategies as st
 import uuid
 
 import mock
@@ -62,7 +62,6 @@ class TempFile:
 
 
 class TestTransforms(unittest.TestCase):
-
     def test_init_cam(self):
         # intrinsic camera parameters
         f = 6.2
@@ -70,18 +69,36 @@ class TestTransforms(unittest.TestCase):
         image_size = (3264, 2448)
 
         # initialize the camera
-        cam = ct.Camera(ct.RectilinearProjection(focallength_mm=f, image_width_px=image_size[1], image_height_px=image_size[0],
-                                                 sensor_width_mm=sensor_size[1], sensor_height_mm=sensor_size[0]),
-                        ct.SpatialOrientation())
+        cam = ct.Camera(
+            ct.RectilinearProjection(
+                focallength_mm=f,
+                image_width_px=image_size[1],
+                image_height_px=image_size[0],
+                sensor_width_mm=sensor_size[1],
+                sensor_height_mm=sensor_size[0],
+            ),
+            ct.SpatialOrientation(),
+        )
 
-    @given(proj=ct_st.projection(),
-           use_image=st.integers(0, 6),
-           use_center=st.integers(0, 3),
-           use_focallength=st.integers(0, 3),
-           use_focallength_mm=st.integers(0, 1),
-           use_sensor=st.integers(0, 4),
-           use_viewdeg=st.integers(0, 4))
-    def test_initProjection(self, proj, use_image, use_center, use_focallength, use_sensor, use_focallength_mm, use_viewdeg):
+    @given(
+        proj=ct_st.projection(),
+        use_image=st.integers(0, 6),
+        use_center=st.integers(0, 3),
+        use_focallength=st.integers(0, 3),
+        use_focallength_mm=st.integers(0, 1),
+        use_sensor=st.integers(0, 4),
+        use_viewdeg=st.integers(0, 4),
+    )
+    def test_initProjection(
+        self,
+        proj,
+        use_image,
+        use_center,
+        use_focallength,
+        use_sensor,
+        use_focallength_mm,
+        use_viewdeg,
+    ):
         kwargs = {}
         test_args = {}
         expected_error = None
@@ -196,13 +213,12 @@ class TestTransforms(unittest.TestCase):
             if expected_error is None:
                 expected_error = ValueError, "focal"
 
-        if use_focallength_mm == 0 and \
-            use_focallength == 0 and \
-            use_viewdeg == 0:
+        if use_focallength_mm == 0 and use_focallength == 0 and use_viewdeg == 0:
             if expected_error is None:
                 expected_error = ValueError, "focal"
 
         import pytest
+
         if expected_error is not None:
             with pytest.raises(expected_error[0], match=expected_error[1]):
                 p = proj.__class__(**kwargs)
@@ -217,9 +233,15 @@ class TestTransforms(unittest.TestCase):
                 np.testing.assert_almost_equal(p.getFieldOfView()[1], test_args[key])
             elif key == "focallength_mm":
                 if kwargs.get("view_x_deg", None) and 0:
-                    np.testing.assert_almost_equal(p.focallength_x_px * p.sensor_width_mm / p.image_width_px, test_args[key])
+                    np.testing.assert_almost_equal(
+                        p.focallength_x_px * p.sensor_width_mm / p.image_width_px,
+                        test_args[key],
+                    )
                 if kwargs.get("view_y_deg", None) and 0:
-                    np.testing.assert_almost_equal(p.focallength_y_px * p.sensor_height_mm / p.image_height_px, test_args[key])
+                    np.testing.assert_almost_equal(
+                        p.focallength_y_px * p.sensor_height_mm / p.image_height_px,
+                        test_args[key],
+                    )
             else:
                 np.testing.assert_almost_equal(getattr(p, key), test_args[key])
 
@@ -228,13 +250,29 @@ class TestTransforms(unittest.TestCase):
         viewX, viewY = cam.projection.getFieldOfView()
         focalX = cam.projection.focallengthFromFOV(viewX)
         focalY = cam.projection.focallengthFromFOV(view_y=viewY)
-        np.testing.assert_almost_equal(cam.projection.focallength_x_px, focalX, 2,
-                                       err_msg="Converting focallength to view and back failed.")
-        np.testing.assert_almost_equal(cam.projection.focallength_y_px, focalY, 2,
-                                       err_msg="Converting focallength to view and back failed.")
+        np.testing.assert_almost_equal(
+            cam.projection.focallength_x_px,
+            focalX,
+            2,
+            err_msg="Converting focallength to view and back failed.",
+        )
+        np.testing.assert_almost_equal(
+            cam.projection.focallength_y_px,
+            focalY,
+            2,
+            err_msg="Converting focallength to view and back failed.",
+        )
 
-        np.testing.assert_almost_equal(cam.projection.imageFromFOV(viewX), cam.projection.image_width_px, err_msg="imageFromFOV failed for view_x")
-        np.testing.assert_almost_equal(cam.projection.imageFromFOV(view_y=viewY), cam.projection.image_height_px, err_msg="imageFromFOV failed for view_y")
+        np.testing.assert_almost_equal(
+            cam.projection.imageFromFOV(viewX),
+            cam.projection.image_width_px,
+            err_msg="imageFromFOV failed for view_x",
+        )
+        np.testing.assert_almost_equal(
+            cam.projection.imageFromFOV(view_y=viewY),
+            cam.projection.image_height_px,
+            err_msg="imageFromFOV failed for view_y",
+        )
 
     @given(ct_st.camera())
     def test_saveLoad(self, cam):
@@ -273,15 +311,20 @@ class TestTransforms(unittest.TestCase):
         else:
             lens = lens(k)
         cam = ct.Camera(projection=proj, lens=lens)
-        y = [proj.image_height_px*0.5]*100
-        x = np.linspace(0, 1, 100)*proj.image_width_px
+        y = [proj.image_height_px * 0.5] * 100
+        x = np.linspace(0, 1, 100) * proj.image_width_px
         pos0 = np.round(np.array([x, y]).T).astype(int)
         pos1 = cam.lens.distortedFromImage(pos0)
         pos2 = np.round(cam.lens.imageFromDistorted(pos1))
         # set the points that cannot be back projected (because they are nan in the distorted image) to nan
         pos0 = pos0.astype(float)
         pos0[np.isnan(pos2[:, 0])] = np.nan
-        np.testing.assert_almost_equal(pos2, pos0, 0, err_msg="Transforming from distorted to undistorted image fails.")
+        np.testing.assert_almost_equal(
+            pos2,
+            pos0,
+            0,
+            err_msg="Transforming from distorted to undistorted image fails.",
+        )
 
     @given(ct_st.camera_image_points(), st.floats(0, 100))
     def test_transWorldToCam(self, params, Z):
@@ -294,10 +337,21 @@ class TestTransforms(unittest.TestCase):
         p2 = cam.imageFromSpace(p1)
         # points behind the camera are allowed to be nan
         p[np.isnan(p2)] = np.nan
-        np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
-                                                         "the original point.")
+        np.testing.assert_almost_equal(
+            p,
+            p2,
+            1,
+            err_msg="Transforming from camera to world and back doesn't return "
+            "the original point.",
+        )
 
-    @given(ct_st.camera_down_with_world_points(projection=ct_st.projection(projection_type=st.just(ct.RectilinearProjection))))
+    @given(
+        ct_st.camera_down_with_world_points(
+            projection=ct_st.projection(
+                projection_type=st.just(ct.RectilinearProjection)
+            )
+        )
+    )
     def test_pointBehindCamera(self, params):
         cam, p = params
         cam.tilt_deg = 0
@@ -308,24 +362,36 @@ class TestTransforms(unittest.TestCase):
         p1 = cam.imageFromSpace(p)
         # points behind the camera are allowed to be nan
         p[p[..., 2] > cam.elevation_m] = np.nan
-        np.testing.assert_equal(np.isnan(p[..., :2]), np.isnan(p1),
-                                err_msg="Points behind the camera do not produce a nan value.")
+        np.testing.assert_equal(
+            np.isnan(p[..., :2]),
+            np.isnan(p1),
+            err_msg="Points behind the camera do not produce a nan value.",
+        )
 
     @given(ct_st.camera_image_points(), st.floats(1, 100))
     def test_rays(self, params, factor):
         cam, p = params
         note(cam)
         offset, rays = cam.getRay(p, normed=True)
-        np.testing.assert_almost_equal(np.linalg.norm(rays, axis=-1), np.ones(rays.shape[0]), 2)
+        np.testing.assert_almost_equal(
+            np.linalg.norm(rays, axis=-1), np.ones(rays.shape[0]), 2
+        )
         p2 = cam.imageFromSpace(offset + rays * factor)
         print(p)
         print(offset + rays * factor)
         print(p2)
         if not np.sum(np.isnan(p2)):
-            np.testing.assert_almost_equal(p, p2, 1, err_msg="Transforming from camera to world and back doesn't return "
-                                                         "the original point.")
+            np.testing.assert_almost_equal(
+                p,
+                p2,
+                1,
+                err_msg="Transforming from camera to world and back doesn't return "
+                "the original point.",
+            )
 
-    @given(ct_st.projection(), ct_st.projection(), ct_st.orientation(), ct_st.orientation())
+    @given(
+        ct_st.projection(), ct_st.projection(), ct_st.orientation(), ct_st.orientation()
+    )
     def test_cameraGroup(self, proj1, proj2, orientation1, orientation2):
         def length(obj):
             try:
@@ -351,7 +417,9 @@ class TestTransforms(unittest.TestCase):
     def test_stereoCamera(self, params):
         return
         cam, p = params
-        camGroup = ct.CameraGroup(cam.projection, (cam.orientation, ct.SpatialOrientation()))
+        camGroup = ct.CameraGroup(
+            cam.projection, (cam.orientation, ct.SpatialOrientation())
+        )
         cam1 = camGroup[0]
         cam2 = camGroup[1]
 
@@ -374,8 +442,13 @@ class TestTransforms(unittest.TestCase):
 
         p[np.isnan(p1_single)] = np.nan
         p[np.isnan(p2_single)] = np.nan
-        np.testing.assert_almost_equal(p, p3, 4, err_msg="Points from two cameras cannot be projected to the space and back")
+        np.testing.assert_almost_equal(
+            p,
+            p3,
+            4,
+            err_msg="Points from two cameras cannot be projected to the space and back",
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

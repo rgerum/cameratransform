@@ -28,8 +28,6 @@ import QtShortCuts
 from demo_includes import getClassDefinitionsDict, getClassDefinitions, Scene9Cubes
 
 
-
-
 class Window(QtWidgets.QWidget):
     def __init__(self, cam, scene):
         QtWidgets.QWidget.__init__(self)
@@ -57,12 +55,21 @@ class Window(QtWidgets.QWidget):
         self.scenes = getClassDefinitionsDict(globals(), ct.Scene)
         self.scenes = {p.__name__: p for p in self.scenes}
         print(self.scenes)
-        self.select_scene = QtShortCuts.QInputChoice(layout, "Scene", self.scene.__class__.__name__,
-                                                     values=list(self.scenes.keys()))
+        self.select_scene = QtShortCuts.QInputChoice(
+            layout,
+            "Scene",
+            self.scene.__class__.__name__,
+            values=list(self.scenes.keys()),
+        )
 
         self.projections = getClassDefinitions(ct, ct.CameraProjection)
         self.projections = {p.__name__: p for p in self.projections}
-        self.select_transformation = QtShortCuts.QInputChoice(layout, "Projection", "RectilinearProjection", values=list(self.projections.keys()))
+        self.select_transformation = QtShortCuts.QInputChoice(
+            layout,
+            "Projection",
+            "RectilinearProjection",
+            values=list(self.projections.keys()),
+        )
 
         parameters = [
             dict(name="focallength_x_px", value=cam.focallength_x_px, min=0, max=5000),
@@ -76,27 +83,38 @@ class Window(QtWidgets.QWidget):
             dict(name="image_width_px", value=cam.image_width_px, min=0, max=5000),
             dict(name="image_height_px", value=cam.image_height_px, min=0, max=5000),
             None,
-            dict(name="heading_deg", value=0., min=-180, max=180),
-            dict(name="tilt_deg", value=0., min=-180, max=180),
-            dict(name="roll_deg", value=0., min=-180, max=180),
+            dict(name="heading_deg", value=0.0, min=-180, max=180),
+            dict(name="tilt_deg", value=0.0, min=-180, max=180),
+            dict(name="roll_deg", value=0.0, min=-180, max=180),
             None,
-            dict(name="pos_x_m", value=0., min=-10, max=10),
-            dict(name="pos_y_m", value=0., min=-10, max=10),
-            dict(name="elevation_m", value=5., min=-10, max=10),
-
+            dict(name="pos_x_m", value=0.0, min=-10, max=10),
+            dict(name="pos_y_m", value=0.0, min=-10, max=10),
+            dict(name="elevation_m", value=5.0, min=-10, max=10),
         ]
         self.sliders = {}
         for param in parameters:
             if param is None:
                 QtShortCuts.QHLine(layout)
             elif "focalloc" in param:
-                self.focalloc = QtShortCuts.QInputBool(layout, param["name"], value=param["value"])
+                self.focalloc = QtShortCuts.QInputBool(
+                    layout, param["name"], value=param["value"]
+                )
                 self.focalloc.valueChanged.connect(self.updatePlot)
             elif "centerimage" in param:
-                self.center_image = QtShortCuts.QInputBool(layout, param["name"], value=param["value"])
+                self.center_image = QtShortCuts.QInputBool(
+                    layout, param["name"], value=param["value"]
+                )
                 self.center_image.valueChanged.connect(self.updatePlot)
             else:
-                slider = QtShortCuts.QInputNumber(layout, param["name"], param["value"], min=param["min"], max=param["max"], use_slider=True, float=isinstance(param["value"], float))
+                slider = QtShortCuts.QInputNumber(
+                    layout,
+                    param["name"],
+                    param["value"],
+                    min=param["min"],
+                    max=param["max"],
+                    use_slider=True,
+                    float=isinstance(param["value"], float),
+                )
                 slider.valueChanged.connect(self.updatePlot)
                 self.sliders[param["name"]] = slider
         layout.addStretch()
@@ -108,31 +126,41 @@ class Window(QtWidgets.QWidget):
 
     def updatePlot(self):
         import matplotlib.pyplot as plt
+
         if self.select_scene.value() != self.scene.__class__.__name__:
             self.scene = self.scenes[self.select_scene.value()](self.cam)
 
         if self.focalloc.value() is True:
             self.sliders["focallength_y_px"].setDisabled(True)
-            self.sliders["focallength_y_px"].setValue(self.sliders["focallength_x_px"].value())
+            self.sliders["focallength_y_px"].setValue(
+                self.sliders["focallength_x_px"].value()
+            )
         else:
             self.sliders["focallength_y_px"].setDisabled(False)
 
         self.sliders["center_x_px"].setDisabled(self.center_image.value())
         self.sliders["center_y_px"].setDisabled(self.center_image.value())
         if self.center_image.value() is True:
-            self.sliders["center_x_px"].setValue(self.sliders["image_width_px"].value()/2)
-            self.sliders["center_y_px"].setValue(self.sliders["image_height_px"].value()/2)
+            self.sliders["center_x_px"].setValue(
+                self.sliders["image_width_px"].value() / 2
+            )
+            self.sliders["center_y_px"].setValue(
+                self.sliders["image_height_px"].value() / 2
+            )
 
         if self.select_transformation.value() != self.cam.projection.__class__.__name__:
-            self.cam.projection.__class__ = self.projections[self.select_transformation.value()]
-        self.cam.parameters.set_fit_parameters(self.sliders.keys(), [s.value() for s in self.sliders.values()])
+            self.cam.projection.__class__ = self.projections[
+                self.select_transformation.value()
+            ]
+        self.cam.parameters.set_fit_parameters(
+            self.sliders.keys(), [s.value() for s in self.sliders.values()]
+        )
         print(self.cam)
         self.scene.camera = self.cam
         plt.clf()
 
         self.scene.plotSceneViews()
         plt.draw()
-
 
 
 def startDemonstratorGUI():
@@ -145,5 +173,5 @@ def startDemonstratorGUI():
     app.exec_()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     startDemonstratorGUI()

@@ -17,16 +17,14 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
-import os, sys
-import shutil
-import glob
-import fnmatch
-import re
-import zipfile
+import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "cameratransform"))
 import cameratransform
+
 current_version = cameratransform.__version__
+
 
 def CheckForUncommitedChanges(directory):
     old_dir = os.getcwd()
@@ -38,6 +36,7 @@ def CheckForUncommitedChanges(directory):
     os.system("hg pull -u")
     os.chdir(old_dir)
 
+
 def RelaceVersion(file, version_old, version_new):
     print("change in file", file)
     with open(file, "r") as fp:
@@ -45,6 +44,7 @@ def RelaceVersion(file, version_old, version_new):
     with open(file, "w") as fp:
         for line in data:
             fp.write(line.replace(version_old, version_new))
+
 
 from optparse import OptionParser
 
@@ -67,7 +67,9 @@ new_version = None
 new_version = options.version
 
 if new_version is None:
-    print("ERROR: no version number supplied. Use 'raise_version.py 0.9' to release as version 0.9")
+    print(
+        "ERROR: no version number supplied. Use 'raise_version.py 0.9' to release as version 0.9"
+    )
     sys.exit(1)
 
 # check if new version name differs
@@ -78,21 +80,21 @@ if options.release and current_version == new_version:
 print("Setting version number to", new_version)
 
 # check for uncommited changes
-#if options.release:
+# if options.release:
 #    for path in paths:
 #        CheckForUncommitedChanges(path)
 #    CheckForUncommitedChanges(path_to_website)
 
 """ Let's go """
 RelaceVersion("pyproject.toml", current_version, new_version)
-#RelaceVersion("meta.yaml", current_version, new_version)
+# RelaceVersion("meta.yaml", current_version, new_version)
 RelaceVersion("docs/source/conf.py", current_version, new_version)
 RelaceVersion("cameratransform/__init__.py", current_version, new_version)
 
 if options.release:
     # commit changes
     os.system("git add setup.py docs/conf.py cameratransform/__init__.py")
-    os.system("git commit -m \"set version to v%s\"" % new_version)
-    os.system("git tag \"v%s\"" % new_version)
+    os.system('git commit -m "set version to v%s"' % new_version)
+    os.system('git tag "v%s"' % new_version)
 
 print("version raise completed!")

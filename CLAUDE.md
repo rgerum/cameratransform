@@ -12,6 +12,11 @@ CameraTransform is a Python library for fitting camera transformations and proje
 # Install dependencies (uses uv package manager)
 uv sync --locked --all-extras --dev
 
+# formatting, linting and type checking
+uvx ruff format
+uvx ruff check
+uvx ty check
+
 # Run all tests
 uv run pytest
 

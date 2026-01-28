@@ -18,13 +18,13 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import matplotlib
-matplotlib.use('agg')
+
+matplotlib.use("agg")
 import sys
 import os
 import unittest
 import numpy as np
-from hypothesis import given, reproduce_failure, strategies as st
-from hypothesis.extra import numpy as st_np
+from hypothesis import given
 from cameratransform import RectilinearProjection
 
 import mock
@@ -50,9 +50,11 @@ import strategies as ct_st
 
 
 class TestParameterSet(unittest.TestCase):
-
     def test_parameterSet(self):
-        cam = ct.Camera(ct.RectilinearProjection(image=(100, 50), focallength_px=100), ct.SpatialOrientation())
+        cam = ct.Camera(
+            ct.RectilinearProjection(image=(100, 50), focallength_px=100),
+            ct.SpatialOrientation(),
+        )
         cam.defaults.elevation_m = 99
         assert cam.elevation_m == 99
         assert cam.defaults.elevation_m == 99
@@ -106,7 +108,5 @@ class TestParameterSet(unittest.TestCase):
             assert np.all(np.isnan(image_point))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
-
-

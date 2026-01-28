@@ -21,18 +21,16 @@ import colorsys
 import os
 import numpy as np
 from qtpy import QtCore, QtGui, QtWidgets
-#from . import HTMLColorToRGB
+# from . import HTMLColorToRGB
 
 from qtpy import API_NAME as QT_API_NAME
 
 if QT_API_NAME.startswith("PyQt4"):
     from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as Canvas
     from matplotlib.backends.backend_qt4agg import FigureManager
-    from matplotlib.backends.backend_qt4 import NavigationToolbar2QT as NavigationToolbar
 else:
     from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as Canvas
     from matplotlib.backends.backend_qt5agg import FigureManager
-    from matplotlib.backends.backend_qt5 import NavigationToolbar2QT as NavigationToolbar
 from matplotlib import _pylab_helpers
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
@@ -47,7 +45,9 @@ class MatplotlibWidget(Canvas):
         Canvas.__init__(self, self.figure)
         self.setParent(parent)
 
-        Canvas.setSizePolicy(self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        Canvas.setSizePolicy(
+            self, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         Canvas.updateGeometry(self)
 
         self.manager = FigureManager(self, 1)
@@ -67,6 +67,7 @@ class QHLine:
         line.setFrameShadow(QtWidgets.QFrame.Sunken)
         layout.addWidget(line)
 
+
 class QInput(QtWidgets.QWidget):
     """
     A base class for input widgets with a text label and a unified API.
@@ -76,8 +77,9 @@ class QInput(QtWidgets.QWidget):
     - The value of the input element get be set with setValue(value) and queried by value()
 
     """
+
     # the signal when the user has changed the value
-    valueChanged = QtCore.Signal('PyQt_PyObject')
+    valueChanged = QtCore.Signal("PyQt_PyObject")
 
     no_signal = False
 
@@ -143,8 +145,19 @@ class QInput(QtWidgets.QWidget):
 class QInputNumber(QInput):
     slider_dragged = False
 
-    def __init__(self, layout=None, name=None, value=0, min=None, max=None, use_slider=False, float=True, decimals=2,
-                 unit=None, **kwargs):
+    def __init__(
+        self,
+        layout=None,
+        name=None,
+        value=0,
+        min=None,
+        max=None,
+        use_slider=False,
+        float=True,
+        decimals=2,
+        unit=None,
+        **kwargs,
+    ):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
@@ -161,7 +174,9 @@ class QInputNumber(QInput):
             self.slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
             self.layout().addWidget(self.slider)
             self.slider.setRange(min * self.decimal_factor, max * self.decimal_factor)
-            self.slider.valueChanged.connect(lambda x: self._valueChangedEvent(x / self.decimal_factor))
+            self.slider.valueChanged.connect(
+                lambda x: self._valueChangedEvent(x / self.decimal_factor)
+            )
             self.slider.sliderPressed.connect(lambda: self._setSliderDragged(True))
             self.slider.sliderReleased.connect(lambda: self._setSliderDragged(False))
         else:
@@ -210,14 +225,15 @@ class QInputNumber(QInput):
 
 
 class QInputString(QInput):
-
     def __init__(self, layout=None, name=None, value="", **kwargs):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
         self.line_edit = QtWidgets.QLineEdit()
         self.layout().addWidget(self.line_edit)
-        self.line_edit.editingFinished.connect(lambda: self._valueChangedEvent(self.value()))
+        self.line_edit.editingFinished.connect(
+            lambda: self._valueChangedEvent(self.value())
+        )
 
         self.setValue(value)
 
@@ -229,14 +245,15 @@ class QInputString(QInput):
 
 
 class QInputBool(QInput):
-
     def __init__(self, layout=None, name=None, value=False, **kwargs):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
         self.checkbox = QtWidgets.QCheckBox()
         self.layout().addWidget(self.checkbox)
-        self.checkbox.stateChanged.connect(lambda: self._valueChangedEvent(self.value()))
+        self.checkbox.stateChanged.connect(
+            lambda: self._valueChangedEvent(self.value())
+        )
 
         self.setValue(value)
 
@@ -248,8 +265,16 @@ class QInputBool(QInput):
 
 
 class QInputChoice(QInput):
-
-    def __init__(self, layout=None, name=None, value=None, values=None, value_names=None, reference_by_index=False, **kwargs):
+    def __init__(
+        self,
+        layout=None,
+        name=None,
+        value=None,
+        values=None,
+        value_names=None,
+        reference_by_index=False,
+        **kwargs,
+    ):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
@@ -261,7 +286,9 @@ class QInputChoice(QInput):
         self.layout().addWidget(self.combobox)
 
         self.combobox.addItems(self.value_names)
-        self.combobox.currentIndexChanged.connect(lambda: self._valueChangedEvent(self.value()))
+        self.combobox.currentIndexChanged.connect(
+            lambda: self._valueChangedEvent(self.value())
+        )
 
         if value is not None:
             self.setValue(value)
@@ -283,7 +310,6 @@ class QInputChoice(QInput):
 
 
 class QInputColor(QInput):
-
     def __init__(self, layout=None, name=None, value=None, **kwargs):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
@@ -305,9 +331,13 @@ class QInputColor(QInput):
 
     def _openDialog(self):
         import matplotlib as mpl
+
         # get new color from color picker
-        color = QtWidgets.QColorDialog.getColor(QtGui.QColor(*tuple(mpl.colors.to_rgba_array(self.value())[0] * 255)),
-                                                self.parent(), self.label.text() + " choose color")
+        color = QtWidgets.QColorDialog.getColor(
+            QtGui.QColor(*tuple(mpl.colors.to_rgba_array(self.value())[0] * 255)),
+            self.parent(),
+            self.label.text() + " choose color",
+        )
         # if a color is set, apply it
         if color.isValid():
             color = mpl.colors.to_hex(color.getRgbF())
@@ -329,7 +359,19 @@ class QInputColor(QInput):
 class QInputFilename(QInput):
     last_folder = None
 
-    def __init__(self, layout=None, name=None, value=None, dialog_title="Choose File", file_type="All", button_text="choose file", filename_checker=None, existing=False, just_button=False, **kwargs):
+    def __init__(
+        self,
+        layout=None,
+        name=None,
+        value=None,
+        dialog_title="Choose File",
+        file_type="All",
+        button_text="choose file",
+        filename_checker=None,
+        existing=False,
+        just_button=False,
+        **kwargs,
+    ):
         # initialize the super widget
         QInput.__init__(self, layout, name, **kwargs)
 
@@ -358,10 +400,14 @@ class QInputFilename(QInput):
     def _openDialog(self):
         # open an new files
         if not self.existing:
-            filename = QtWidgets.QFileDialog.getSaveFileName(None, self.dialog_title, self.last_folder, self.file_type)
+            filename = QtWidgets.QFileDialog.getSaveFileName(
+                None, self.dialog_title, self.last_folder, self.file_type
+            )
         # or choose an existing file
         else:
-            filename = QtWidgets.QFileDialog.getOpenFileName(None, self.dialog_title, self.last_folder, self.file_type)
+            filename = QtWidgets.QFileDialog.getOpenFileName(
+                None, self.dialog_title, self.last_folder, self.file_type
+            )
 
         # get the string
         if isinstance(filename, tuple):  # Qt5
@@ -431,8 +477,15 @@ def AddQLineEdit(layout, text, value=None, strech=False, editwidth=None):
     return lineEdit
 
 
-def AddQSaveFileChoose(layout, text, value=None, dialog_title="Choose File", file_type="All", filename_checker=None,
-                       strech=False):
+def AddQSaveFileChoose(
+    layout,
+    text,
+    value=None,
+    dialog_title="Choose File",
+    file_type="All",
+    filename_checker=None,
+    strech=False,
+):
     horizontal_layout = QtWidgets.QHBoxLayout()
     layout.addLayout(horizontal_layout)
     text = QtWidgets.QLabel(text)
@@ -443,7 +496,9 @@ def AddQSaveFileChoose(layout, text, value=None, dialog_title="Choose File", fil
     lineEdit.setEnabled(False)
 
     def OpenDialog():
-        srcpath = QtWidgets.QFileDialog.getSaveFileName(None, dialog_title, os.getcwd(), file_type)
+        srcpath = QtWidgets.QFileDialog.getSaveFileName(
+            None, dialog_title, os.getcwd(), file_type
+        )
         if isinstance(srcpath, tuple):
             srcpath = srcpath[0]
         else:
@@ -464,8 +519,15 @@ def AddQSaveFileChoose(layout, text, value=None, dialog_title="Choose File", fil
     return lineEdit
 
 
-def AddQOpenFileChoose(layout, text, value=None, dialog_title="Choose File", file_type="All", filename_checker=None,
-                       strech=False):
+def AddQOpenFileChoose(
+    layout,
+    text,
+    value=None,
+    dialog_title="Choose File",
+    file_type="All",
+    filename_checker=None,
+    strech=False,
+):
     horizontal_layout = QtWidgets.QHBoxLayout()
     layout.addLayout(horizontal_layout)
     text = QtWidgets.QLabel(text)
@@ -476,7 +538,9 @@ def AddQOpenFileChoose(layout, text, value=None, dialog_title="Choose File", fil
     lineEdit.setEnabled(False)
 
     def OpenDialog():
-        srcpath = QtWidgets.QFileDialog.getOpenFileName(None, dialog_title, os.getcwd(), file_type)
+        srcpath = QtWidgets.QFileDialog.getOpenFileName(
+            None, dialog_title, os.getcwd(), file_type
+        )
         if isinstance(srcpath, tuple):
             srcpath = srcpath[0]
         else:
@@ -508,7 +572,9 @@ def AddQColorChoose(layout, text, value=None, strech=False):
 
     def OpenDialog():
         # get new color from color picker
-        color = QtWidgets.QColorDialog.getColor(QtGui.QColor(*HTMLColorToRGB(button.getColor())))
+        color = QtWidgets.QColorDialog.getColor(
+            QtGui.QColor(*HTMLColorToRGB(button.getColor()))
+        )
         # if a color is set, apply it
         if color.isValid():
             color = "#%02x%02x%02x" % color.getRgb()[:3]
@@ -600,8 +666,16 @@ def GetColorByIndex(index):
     colors = np.linspace(0, 1, 16, endpoint=False).tolist() * 3  # 16 different hues
     saturations = [1] * 16 + [0.5] * 16 + [1] * 16  # in two different saturations
     value = [1] * 16 + [1] * 16 + [0.5] * 16  # and two different values
-    return "#%02x%02x%02x" % tuple((np.array(
-        colorsys.hsv_to_rgb((np.array(colors[index]) * 3) % 1, saturations[index], value[index])) * 255).astype(int))
+    return "#%02x%02x%02x" % tuple(
+        (
+            np.array(
+                colorsys.hsv_to_rgb(
+                    (np.array(colors[index]) * 3) % 1, saturations[index], value[index]
+                )
+            )
+            * 255
+        ).astype(int)
+    )
 
 
 # set the standard colors for the color picker dialog
@@ -612,8 +686,14 @@ for index, (color, sat, val) in enumerate(zip(colors, saturations, value)):
     # deform the index, as the dialog fills them column wise and we want to fill them row wise
     index = index % 8 * 6 + index // 8
     # convert color from hsv to rgb, to an array, to an tuple, to a hex string then to an integer
-    color_integer = int("%02x%02x%02x" % tuple((np.array(colorsys.hsv_to_rgb(color, sat, val)) * 255).astype(int)), 16)
+    color_integer = int(
+        "%02x%02x%02x"
+        % tuple((np.array(colorsys.hsv_to_rgb(color, sat, val)) * 255).astype(int)),
+        16,
+    )
     try:
-        QtWidgets.QColorDialog.setStandardColor(index, QtGui.QColor(color_integer))  # for Qt5
+        QtWidgets.QColorDialog.setStandardColor(
+            index, QtGui.QColor(color_integer)
+        )  # for Qt5
     except TypeError:
         QtWidgets.QColorDialog.setStandardColor(index, color_integer)  # for Qt4

@@ -92,30 +92,62 @@ def sensor_sizes():
 
 
 def projection_type():
-    return st.one_of(st.just(ct.RectilinearProjection), st.just(ct.CylindricalProjection),
-                     st.just(ct.EquirectangularProjection))
+    return st.one_of(
+        st.just(ct.RectilinearProjection),
+        st.just(ct.CylindricalProjection),
+        st.just(ct.EquirectangularProjection),
+    )
 
 
 @st.composite
-def projection(draw, view_x_deg=st.floats(1, 80), width=st.integers(10, 1000), sensor=sensor_sizes(),
-               projection_type=projection_type()):
+def projection(
+    draw,
+    view_x_deg=st.floats(1, 80),
+    width=st.integers(10, 1000),
+    sensor=sensor_sizes(),
+    projection_type=projection_type(),
+):
     view_x_deg = draw(view_x_deg)
     width = draw(width)
     sensor_width, sensor_height = draw(sensor)
     height = int(width / sensor_width * sensor_height)
     projection_type = draw(projection_type)
-    return projection_type(None, image_height_px=height, image_width_px=width, sensor_height_mm=sensor_height, sensor_width_mm=sensor_width, view_x_deg=view_x_deg)
+    return projection_type(
+        None,
+        image_height_px=height,
+        image_width_px=width,
+        sensor_height_mm=sensor_height,
+        sensor_width_mm=sensor_width,
+        view_x_deg=view_x_deg,
+    )
 
 
 @st.composite
-def orientation(draw, elevation=st.floats(0, 1000), tilt_deg=st.floats(0, 90), roll_deg=st.floats(-180, 180),
-                heading_deg=st.floats(-360, 360), x_m=st.floats(-100, 100), y_m=st.floats(-100, 100)):
-    return ct.SpatialOrientation(draw(elevation), draw(tilt_deg), draw(roll_deg), draw(heading_deg), draw(x_m),
-                                 draw(y_m))
+def orientation(
+    draw,
+    elevation=st.floats(0, 1000),
+    tilt_deg=st.floats(0, 90),
+    roll_deg=st.floats(-180, 180),
+    heading_deg=st.floats(-360, 360),
+    x_m=st.floats(-100, 100),
+    y_m=st.floats(-100, 100),
+):
+    return ct.SpatialOrientation(
+        draw(elevation),
+        draw(tilt_deg),
+        draw(roll_deg),
+        draw(heading_deg),
+        draw(x_m),
+        draw(y_m),
+    )
 
 
 def lens():
-    return st.one_of(st.just(ct.NoDistortion), st.just(ct.BrownLensDistortion), st.just(ct.ABCDistortion))
+    return st.one_of(
+        st.just(ct.NoDistortion),
+        st.just(ct.BrownLensDistortion),
+        st.just(ct.ABCDistortion),
+    )
 
 
 @st.composite
@@ -129,7 +161,9 @@ def camera(draw, projection=projection(), orientation=orientation()):
 
 
 @st.composite
-def camera_image_points(draw, camera=camera(), n=st.one_of(st.integers(1, 1000), st.just(1))):
+def camera_image_points(
+    draw, camera=camera(), n=st.one_of(st.integers(1, 1000), st.just(1))
+):
     camera = draw(camera)
     width = camera.projection.image_width_px
     height = camera.projection.image_height_px
@@ -139,58 +173,87 @@ def camera_image_points(draw, camera=camera(), n=st.one_of(st.integers(1, 1000),
         points = draw(st.tuples(st.floats(0, height), st.floats(0, width)))
     else:
         pointsX = draw(
-            st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(1)), elements=st.floats(0, width)))
+            st_np.arrays(
+                dtype="float",
+                shape=st.tuples(st.just(n), st.just(1)),
+                elements=st.floats(0, width),
+            )
+        )
         pointsY = draw(
-            st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(1)), elements=st.floats(0, height)))
+            st_np.arrays(
+                dtype="float",
+                shape=st.tuples(st.just(n), st.just(1)),
+                elements=st.floats(0, height),
+            )
+        )
         points = np.hstack((pointsX, pointsY))
     return camera, points
 
+
 @st.composite
-def camera_down_with_world_points(draw, projection=projection(),  n=st.one_of(st.integers(1, 1000), st.just(1))):
+def camera_down_with_world_points(
+    draw, projection=projection(), n=st.one_of(st.integers(1, 1000), st.just(1))
+):
     camera = ct.Camera(projection=draw(projection), orientation=ct.SpatialOrientation())
     n = draw(n)
     # the points can either be
     if n == 1:
-        points = draw(st.tuples(st.floats(-100, 100), st.floats(-100, 100), st.floats(-100, 100)))
+        points = draw(
+            st.tuples(st.floats(-100, 100), st.floats(-100, 100), st.floats(-100, 100))
+        )
     else:
         points = draw(
-            st_np.arrays(dtype="float", shape=st.tuples(st.just(n), st.just(3)), elements=st.floats(-100, 100)))
+            st_np.arrays(
+                dtype="float",
+                shape=st.tuples(st.just(n), st.just(3)),
+                elements=st.floats(-100, 100),
+            )
+        )
     return camera, points
+
 
 @st.composite
 def line(draw):
-    origin = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(-100, 100)))
-    anglesTheta = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(-90, 90)))
-    anglesPhi = draw(st_np.arrays(dtype="float", shape=(3, ), elements=st.floats(0, 360)))
+    origin = draw(
+        st_np.arrays(dtype="float", shape=(3,), elements=st.floats(-100, 100))
+    )
+    anglesTheta = draw(
+        st_np.arrays(dtype="float", shape=(3,), elements=st.floats(-90, 90))
+    )
+    anglesPhi = draw(
+        st_np.arrays(dtype="float", shape=(3,), elements=st.floats(0, 360))
+    )
 
     distance = draw(st.floats(0, 10))
 
     sPhi, cPhi = np.sin(np.deg2rad(anglesPhi)), np.cos(np.deg2rad(anglesPhi))
     sTheta, cTheta = np.sin(np.deg2rad(anglesTheta)), np.cos(np.deg2rad(anglesTheta))
-    direction = np.array([sTheta*cPhi, sTheta*sPhi, cTheta]).T
+    direction = np.array([sTheta * cPhi, sTheta * sPhi, cTheta]).T
     x, y, z = direction[0]
     if np.abs(x) < 1e-20:
         reject()
     c = sPhi
     b = cPhi
-    a = (-z*c-y*b)/x
+    a = (-z * c - y * b) / x
     direction[1] = np.array([a[1], b[1], c[1]])
     direction[2] = np.array([a[2], b[2], c[2]])
     direction[1] /= np.linalg.norm(direction[1])
     direction[2] /= np.linalg.norm(direction[2])
 
-    if np.all(direction[0] - direction[1] < 1e-2) or \
-       np.all(direction[0] - direction[2] < 1e-2) or \
-       np.all(direction[1] - direction[2] < 1e-2):
+    if (
+        np.all(direction[0] - direction[1] < 1e-2)
+        or np.all(direction[0] - direction[2] < 1e-2)
+        or np.all(direction[1] - direction[2] < 1e-2)
+    ):
         reject()
 
     # origin will be the closest point between the two lines
     # p1, p2 will be the closest points of the line to each other
-    p1 = origin - 0.5*direction[0]*distance
-    p2 = origin + 0.5*direction[0]*distance
+    p1 = origin - 0.5 * direction[0] * distance
+    p2 = origin + 0.5 * direction[0] * distance
 
-    o1 = p1 + direction[1]*2
-    o2 = p2 + direction[2]*2
+    o1 = p1 + direction[1] * 2
+    o2 = p2 + direction[2] * 2
 
     return o1, direction[1], o2, direction[2], origin, distance, p1, p2
 

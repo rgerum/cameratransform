@@ -38,9 +38,26 @@ TYPE_EXTRINSIC = TYPE_EXTRINSIC1 | TYPE_EXTRINSIC2
 
 
 class Parameter(object):
-    __slots__ = ["value", "range", "state", "type", "default", "callback", "std", "mean"]
+    __slots__ = [
+        "value",
+        "range",
+        "state",
+        "type",
+        "default",
+        "callback",
+        "std",
+        "mean",
+    ]
 
-    def __init__(self, value=None, range=None, default=None, state=None, type=TYPE_INTRINSIC, callback=None):
+    def __init__(
+        self,
+        value=None,
+        range=None,
+        default=None,
+        state=None,
+        type=TYPE_INTRINSIC,
+        callback=None,
+    ):
         self.value = value
         self.mean = None
         if range is not None:
@@ -157,6 +174,7 @@ class ParameterSet(object):
 
 from typing import List, Callable, Any, Optional
 
+
 class ClassWithParameterSet(object):
     parameters: Optional["ParameterSet"] = None
 
@@ -182,10 +200,14 @@ class ClassWithParameterSet(object):
 
     def sample(self):
         if self.parameters.trace is not None:
-            parameter_set = dict(self.parameters.trace.loc[np.random.randint(len(self.parameters.trace))])
+            parameter_set = dict(
+                self.parameters.trace.loc[np.random.randint(len(self.parameters.trace))]
+            )
             prob = parameter_set["probability"]
             del parameter_set["probability"]
-            self.parameters.set_fit_parameters(parameter_set.keys(), parameter_set.values())
+            self.parameters.set_fit_parameters(
+                parameter_set.keys(), parameter_set.values()
+            )
             return prob
         else:
             callbacks = set()
@@ -199,12 +221,17 @@ class ClassWithParameterSet(object):
     def set_to_mean(self):
         if self.parameters.trace is not None:
             print(self.parameters.trace["probability"])
-            print('self.parameters.trace["probability"]', self.parameters.trace["probability"].dtype)
+            print(
+                'self.parameters.trace["probability"]',
+                self.parameters.trace["probability"].dtype,
+            )
             most_probable_index = self.parameters.trace["probability"].idxmax()
             parameter_set = dict(self.parameters.trace.loc[most_probable_index])
             if "probability" in parameter_set:
                 del parameter_set["probability"]
-            self.parameters.set_fit_parameters(parameter_set.keys(), parameter_set.values())
+            self.parameters.set_fit_parameters(
+                parameter_set.keys(), parameter_set.values()
+            )
         else:
             callbacks = set()
             for name, parameter_obj in self.parameters.parameters.items():
@@ -261,7 +288,9 @@ class ClassWithParameterSet(object):
 
         def getLogProb(position):
             self.parameters.set_fit_parameters(names, position)
-            return self.getLogProbability()#{n: p for n, p in zip(parameter_names, position)})
+            return (
+                self.getLogProbability()
+            )  # {n: p for n, p in zip(parameter_names, position)})
 
         trys = 0
         max_tries = 1000
@@ -269,11 +298,13 @@ class ClassWithParameterSet(object):
             estimates = [param.random()[()] for param in parameter]
             trys += 1
         if trys >= max_tries:
-            raise ValueError("Could not find a starting position with non-zero probability.")
+            raise ValueError(
+                "Could not find a starting position with non-zero probability."
+            )
 
-        #names = self.parameters.get_fit_parameters(param_type)
-        #ranges = self.parameters.get_parameter_ranges(names)
-        #estimates = self.parameters.get_parameter_defaults(names)
+        # names = self.parameters.get_fit_parameters(param_type)
+        # ranges = self.parameters.get_parameter_ranges(names)
+        # estimates = self.parameters.get_parameter_defaults(names)
         if "iterations" in kwargs:
             kwargs["options"] = dict(maxiter=kwargs["iterations"])
             del kwargs["iterations"]
@@ -286,7 +317,15 @@ class ClassWithParameterSet(object):
         self.parameters.set_fit_parameters(names, p["x"])
         return p
 
-    def metropolis(self, parameter, step=1, iterations=1e5, burn=0.1, disable_bar=False, print_trace=True):
+    def metropolis(
+        self,
+        parameter,
+        step=1,
+        iterations=1e5,
+        burn=0.1,
+        disable_bar=False,
+        print_trace=True,
+    ):
         start = []
         parameter_names = []
         additional_parameter_names = []
@@ -300,26 +339,47 @@ class ClassWithParameterSet(object):
             start.append(param.value[()])
             ranges.append([param.parents.get("lower"), param.parents.get("upper")])
         start = np.array(start)
-        step = step*np.array([p.step for p in parameter])
+        step = step * np.array([p.step for p in parameter])
 
         def getLogProb(position):
-            self.parameters.set_fit_parameters(parameter_names, position[:len(parameter_names)])
-            for param, value in zip(self.additional_parameters, position[len(parameter_names):]):
+            self.parameters.set_fit_parameters(
+                parameter_names, position[: len(parameter_names)]
+            )
+            for param, value in zip(
+                self.additional_parameters, position[len(parameter_names) :]
+            ):
                 param.set_value(value)
             return self.getLogProbability()
 
         trys = 0
         max_tries = 1000
         while np.isinf(getLogProb(start)) and trys < max_tries:
-            start = [param.random()[()] for param in parameter+self.additional_parameters]
+            start = [
+                param.random()[()] for param in parameter + self.additional_parameters
+            ]
             trys += 1
         if trys >= max_tries:
-            raise ValueError("Could not find a starting position with non-zero probability.")
+            raise ValueError(
+                "Could not find a starting position with non-zero probability."
+            )
 
-        trace = metropolis(getLogProb, start, step=step, iterations=iterations, burn=burn, disable_bar=disable_bar, ranges=ranges)
+        trace = metropolis(
+            getLogProb,
+            start,
+            step=step,
+            iterations=iterations,
+            burn=burn,
+            disable_bar=disable_bar,
+            ranges=ranges,
+        )
 
         # convert the trace to a pandas dataframe
-        trace = pd.DataFrame(trace, columns=list(parameter_names)+list(additional_parameter_names)+["probability"])
+        trace = pd.DataFrame(
+            trace,
+            columns=list(parameter_names)
+            + list(additional_parameter_names)
+            + ["probability"],
+        )
         if print_trace:
             print(trace)
         self.set_trace(trace)
@@ -330,12 +390,18 @@ class ClassWithParameterSet(object):
         if 1:
             import mock
             import sys
+
             # mock pymc.ZeroProbability as this is the only direct import of pymc that Bayesianfridge makes
-            sys.modules.update((mod_name, mock.MagicMock()) for mod_name in ["pymc", "pymc.ZeroProbability"])
+            sys.modules.update(
+                (mod_name, mock.MagicMock())
+                for mod_name in ["pymc", "pymc.ZeroProbability"]
+            )
             from bayesianfridge import sample
 
             # we create our own model mimicking a pymc model
-            model = Model(parameter+self.additional_parameters, self.getLogProbability)
+            model = Model(
+                parameter + self.additional_parameters, self.getLogProbability
+            )
 
         else:
             import pymc
@@ -344,9 +410,15 @@ class ClassWithParameterSet(object):
             param_dict = {str(p): p for p in parameter}
             additional_param_dict = {str(p): p for p in self.additional_parameters}
 
-            @ pymc.observed
-            def Ylike(value=1, param_dict=param_dict, additional_param_dict=additional_param_dict):
-                self.parameters.set_fit_parameters(param_dict.keys(), param_dict.values())
+            @pymc.observed
+            def Ylike(
+                value=1,
+                param_dict=param_dict,
+                additional_param_dict=additional_param_dict,
+            ):
+                self.parameters.set_fit_parameters(
+                    param_dict.keys(), param_dict.values()
+                )
                 return self._getLogProbability_raw()
 
             model = pymc.Model(parameter + self.additional_parameters + [Ylike])
@@ -358,11 +430,15 @@ class ClassWithParameterSet(object):
         data = np.array([samples[c] for c in columns]).T
         probability = []
         import tqdm
+
         for values in tqdm.tqdm(data):
             self.parameters.set_fit_parameters(columns, values)
             logprob = self.getLogProbability()
             probability.append(logprob)
-        trace = pd.DataFrame(np.hstack((data, np.array(probability)[:, None])), columns=columns + ["probability"])
+        trace = pd.DataFrame(
+            np.hstack((data, np.array(probability)[:, None])),
+            columns=columns + ["probability"],
+        )
 
         self.set_trace(trace)
         self.set_to_mean()
@@ -377,6 +453,7 @@ class ClassWithParameterSet(object):
 
     def plotFitInformation(self, image=None):
         import matplotlib.pyplot as plt
+
         if image is not None:
             plt.imshow(image)
         for func in self.info_plot_functions:

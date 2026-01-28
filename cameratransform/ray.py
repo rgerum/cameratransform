@@ -21,7 +21,7 @@ import numpy as np
 
 
 def my_inner(a, b):
-    return np.einsum('...k,...k->...', a, b)
+    return np.einsum("...k,...k->...", a, b)
 
 
 def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
@@ -68,9 +68,9 @@ def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
 
     rI = a / b
     # ray is parallel to the plane
-    rI[(b == 0.0)*(a != 0.0)] = np.nan
+    rI[(b == 0.0) * (a != 0.0)] = np.nan
     # ray is parallel and lies in the plane
-    rI[(b == 0.0)*(a == 0.0)] = 0
+    rI[(b == 0.0) * (a == 0.0)] = 0
 
     # check whether the intersection is behind the origin of the ray
     rI[rI < 0.0] = np.nan
@@ -79,10 +79,16 @@ def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
         w = origin + rI[..., None] * direction - v0[..., None, :]
         denom = my_inner(u, v) * my_inner(u, v) - my_inner(u, u) * my_inner(v, v)
 
-        si = (my_inner(u, v)[..., None] * my_inner(w, v[..., None, :]) - my_inner(v, v)[..., None] * my_inner(w, u[..., None, :])) / denom[:, None]
-        rI[((si < 0)+(si > 1.0)).astype(bool)] = np.nan
+        si = (
+            my_inner(u, v)[..., None] * my_inner(w, v[..., None, :])
+            - my_inner(v, v)[..., None] * my_inner(w, u[..., None, :])
+        ) / denom[:, None]
+        rI[((si < 0) + (si > 1.0)).astype(bool)] = np.nan
 
-        ti = (my_inner(u, v)[..., None] * my_inner(w, u[..., None, :]) - my_inner(u, u)[..., None] * my_inner(w, v[..., None, :])) / denom[:, None]
+        ti = (
+            my_inner(u, v)[..., None] * my_inner(w, u[..., None, :])
+            - my_inner(u, u)[..., None] * my_inner(w, v[..., None, :])
+        ) / denom[:, None]
         rI[((ti < 0.0) + (si + ti > 1.0)).astype(bool)] = np.nan
 
     def nanargmin(a, axis):
@@ -101,7 +107,7 @@ def ray_intersect_triangle(origin, direction, triangle, use_planes=False):
 
 
 def distanceLinePoint(p1, v1, p2):
-    return np.linalg.norm(np.cross(v1, p1-p2)) / np.linalg.norm(v1)
+    return np.linalg.norm(np.cross(v1, p1 - p2)) / np.linalg.norm(v1)
 
 
 def intersectionOfTwoLines(p1, v1, p2, v2):
@@ -127,19 +133,27 @@ def intersectionOfTwoLines(p1, v1, p2, v2):
     """
     # if we transform multiple points in one go
     if len(v1.shape) == 2:
-        a1 = np.einsum('ij,ij->i', v1, v1)
-        a2 = np.einsum('ij,ij->i', v1, v2)
-        b1 = -np.einsum('ij,ij->i', v2, v1)
-        b2 = -np.einsum('ij,ij->i', v2, v2)
-        c1 = -np.einsum('ij,j->i', v1, p1 - p2)
-        c2 = -np.einsum('ij,j->i', v2, p1 - p2)
+        a1 = np.einsum("ij,ij->i", v1, v1)
+        a2 = np.einsum("ij,ij->i", v1, v2)
+        b1 = -np.einsum("ij,ij->i", v2, v1)
+        b2 = -np.einsum("ij,ij->i", v2, v2)
+        c1 = -np.einsum("ij,j->i", v1, p1 - p2)
+        c2 = -np.einsum("ij,j->i", v2, p1 - p2)
         try:
-            res = np.linalg.solve(np.array([[a1, b1], [a2, b2]]).transpose(2, 0, 1), np.array([c1, c2]).T[..., None])
-            return np.mean([p1 + res[:, 0, 0, None] * v1, p2 + res[:, 1, 0, None] * v2], axis=0)
+            res = np.linalg.solve(
+                np.array([[a1, b1], [a2, b2]]).transpose(2, 0, 1),
+                np.array([c1, c2]).T[..., None],
+            )
+            return np.mean(
+                [p1 + res[:, 0, 0, None] * v1, p2 + res[:, 1, 0, None] * v2], axis=0
+            )
         except np.linalg.LinAlgError:
-            return [__intersectionOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(len(v1))]
+            return [
+                __intersectionOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(len(v1))
+            ]
     else:  # or just one point
         return __intersectionOfTwoLines(p1, v1, p2, v2)
+
 
 def __intersectionOfTwoLines(p1, v1, p2, v2):
     # the version for one point
@@ -155,6 +169,7 @@ def __intersectionOfTwoLines(p1, v1, p2, v2):
         return np.ones(3) * np.nan
     res = res[None, None, :]
     return np.mean([p1 + res[..., 0] * v1, p2 + res[..., 1] * v2], axis=0)[0]
+
 
 def distanceOfTwoLines(p1, v1, p2, v2):
     """
@@ -179,7 +194,9 @@ def distanceOfTwoLines(p1, v1, p2, v2):
     """
     # if we transform multiple points in one go
     if len(v1.shape) == 2:
-        return np.array([__distanceOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(v1.shape[0])])
+        return np.array(
+            [__distanceOfTwoLines(p1, v1[i], p2, v2[i]) for i in range(v1.shape[0])]
+        )
         """ TODO get the parellelized version to work
         a1 = np.einsum('ij,ij->i', v1, v1)
         a2 = np.einsum('ij,ij->i', v1, v2)
@@ -195,6 +212,7 @@ def distanceOfTwoLines(p1, v1, p2, v2):
         """
     else:  # or just one point
         return __distanceOfTwoLines(p1, v1, p2, v2)
+
 
 def __distanceOfTwoLines(p1, v1, p2, v2):
     # Calculate the vector connecting points p1 and p2
@@ -232,6 +250,7 @@ def __distanceOfTwoLines(p1, v1, p2, v2):
     distance = numerator / norm_v1_cross_v2
     return float(distance)
 
+
 def areaOfTriangle(triangle):
     """
     The area of a 2D or 3D triangle.
@@ -249,9 +268,9 @@ def areaOfTriangle(triangle):
     a = np.linalg.norm(triangle[..., 0, :] - triangle[..., 1, :])
     b = np.linalg.norm(triangle[..., 1, :] - triangle[..., 2, :])
     c = np.linalg.norm(triangle[..., 2, :] - triangle[..., 0, :])
-    s = (a+b+c)/2
+    s = (a + b + c) / 2
     # Herons formula
-    return np.sqrt(s*(s-a)*(s-b)*(s-c))
+    return np.sqrt(s * (s - a) * (s - b) * (s - c))
 
 
 def areaOfQuadrilateral(rect):
@@ -287,7 +306,10 @@ def areaOfQuadrilateral(rect):
     B = rect[..., 1, :]
     C = rect[..., 2, :]
     D = rect[..., 3, :]
-    return 0.5 * np.abs((A[..., 1] - C[..., 1]) * (D[..., 0] - B[..., 0]) + (B[..., 1] - D[..., 1]) * (A[..., 0] - C[..., 0]))
+    return 0.5 * np.abs(
+        (A[..., 1] - C[..., 1]) * (D[..., 0] - B[..., 0])
+        + (B[..., 1] - D[..., 1]) * (A[..., 0] - C[..., 0])
+    )
 
 
 def extrudeLine(points, z0, z1):
@@ -321,11 +343,11 @@ def getClosestPointFromLine(origin, ray, point):
         the points projected on the line, dimenstions: (3), (Nx3)
     """
     # calculate the difference vector
-    delta = point-origin
+    delta = point - origin
     # norm the ray
     ray /= np.linalg.norm(ray, axis=-1)[..., None]
     # calculate the scale product
-    factor = np.sum(ray*delta, axis=-1)
+    factor = np.sum(ray * delta, axis=-1)
     try:
         return origin + factor[:, None] * ray
     except IndexError:

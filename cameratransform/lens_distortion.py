@@ -18,20 +18,26 @@
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
 import numpy as np
-from .parameter_set import ClassWithParameterSet, ParameterSet, Parameter, TYPE_DISTORTION
+from .parameter_set import (
+    ClassWithParameterSet,
+    ParameterSet,
+    Parameter,
+    TYPE_DISTORTION,
+)
 import json
+
 
 def invert_function(x, func):
     from scipy import interpolate
-    from scipy.interpolate import dfitpack
+
     y = func(x)
     dy = np.concatenate(([0], np.diff(y)))
-    y = y[dy>=0]
-    x = x[dy>=0]
+    y = y[dy >= 0]
+    x = x[dy >= 0]
     try:
         inter = interpolate.InterpolatedUnivariateSpline(y, x)
     # dfitpack.error
-    except Exception: # pragma: no cover
+    except Exception:  # pragma: no cover
         inter = lambda x: x
     return inter
 
@@ -78,6 +84,7 @@ class NoDistortion(LensDistortion):
     """
     The default model for the lens distortion which does nothing.
     """
+
     pass
 
 
@@ -108,6 +115,7 @@ class BrownLensDistortion(LensDistortion):
         x_\mathrm{distorted} &= x_\mathrm{distorted}' \cdot f_x + c_x\\
         y_\mathrm{distorted} &= y_\mathrm{distorted}' \cdot f_y + c_y
     """
+
     projection = None
 
     def __init__(self, k1=None, k2=None, k3=None, projection=None):
@@ -142,20 +150,29 @@ class BrownLensDistortion(LensDistortion):
         r = np.arange(0, 2, 0.1)
         self._convert_radius_inverse = invert_function(r, self._convert_radius)
         if self.projection is not None:
-            self.scale = np.array([self.projection.focallength_x_px, self.projection.focallength_y_px])
-            self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
+            self.scale = np.array(
+                [self.projection.focallength_x_px, self.projection.focallength_y_px]
+            )
+            self.offset = np.array(
+                [self.projection.center_x_px, self.projection.center_y_px]
+            )
 
     def _convert_radius(self, r):
-        return r*(1 + self.parameters.k1*r**2 + self.parameters.k2*r**4 + self.parameters.k3*r**6)
+        return r * (
+            1
+            + self.parameters.k1 * r**2
+            + self.parameters.k2 * r**4
+            + self.parameters.k3 * r**6
+        )
 
     def imageFromDistorted(self, points):
         # ensure that the points are provided as an array
         # and rescale the points to that the center is at 0 and the border at 1
-        points = (np.array(points)-self.offset)/self.scale
+        points = (np.array(points) - self.offset) / self.scale
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             points = points / r * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
@@ -163,11 +180,11 @@ class BrownLensDistortion(LensDistortion):
     def distortedFromImage(self, points):
         # ensure that the points are provided as an array
         # and rescale the points to that the center is at 0 and the border at 1
-        points = (np.array(points)-self.offset)/self.scale
+        points = (np.array(points) - self.offset) / self.scale
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             points = points / r * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
@@ -200,6 +217,7 @@ class ABCDistortion(LensDistortion):
 
 
     """
+
     projection = None
 
     def __init__(self, a=None, b=None, c=None):
@@ -207,7 +225,7 @@ class ABCDistortion(LensDistortion):
             # the intrinsic parameters
             a=Parameter(a, default=0, type=TYPE_DISTORTION),
             b=Parameter(b, default=0, type=TYPE_DISTORTION),
-            c=Parameter(c, default=0, type=TYPE_DISTORTION)
+            c=Parameter(c, default=0, type=TYPE_DISTORTION),
         )
         for name in self.parameters.parameters:
             self.parameters.parameters[name].callback = self._init_inverse
@@ -236,8 +254,15 @@ class ABCDistortion(LensDistortion):
         self._convert_radius_inverse = invert_function(r, self._convert_radius)
 
         if self.projection is not None:
-            self.scale = np.min([self.projection.image_width_px, self.projection.image_height_px]) / 2
-            self.offset = np.array([self.projection.center_x_px, self.projection.center_y_px])
+            self.scale = (
+                np.min(
+                    [self.projection.image_width_px, self.projection.image_height_px]
+                )
+                / 2
+            )
+            self.offset = np.array(
+                [self.projection.center_x_px, self.projection.center_y_px]
+            )
 
     def _convert_radius(self, r):
         return self.d * r + self.c * r**2 + self.b * r**3 + self.a * r**4
@@ -245,11 +270,11 @@ class ABCDistortion(LensDistortion):
     def imageFromDistorted(self, points):
         # ensure that the points are provided as an array
         # and rescale the points to that the center is at 0 and the border at 1
-        points = (np.array(points)-self.offset)/self.scale
+        points = (np.array(points) - self.offset) / self.scale
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             points = points / r * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
@@ -257,11 +282,11 @@ class ABCDistortion(LensDistortion):
     def distortedFromImage(self, points):
         # ensure that the points are provided as an array
         # and rescale the points to that the center is at 0 and the border at 1
-        points = (np.array(points)-self.offset)/self.scale
+        points = (np.array(points) - self.offset) / self.scale
         # calculate the radius form the center
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
-        with np.errstate(divide='ignore', invalid='ignore'):
+        with np.errstate(divide="ignore", invalid="ignore"):
             points = points / r * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
