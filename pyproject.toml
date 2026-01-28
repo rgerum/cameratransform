@@ -57,3 +57,34 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["cameratransform"]
+
+[tool.ty.src]
+exclude = ["tests/", "development/", "cameratransform/gui_tools/", "coveralls.py", "docs/"]
+
+[tool.ty.analysis]
+# Allow imports of optional dependencies that may not be installed
+allowed-unresolved-imports = [
+    "PIL",
+    "PIL.**",
+    "cv2",
+    "cv2.**",
+    "matplotlib",
+    "matplotlib.**",
+    "requests",
+    "requests.**",
+    "mock",
+    "mock.**",
+    "bayesianfridge",
+    "bayesianfridge.**",
+    "pymc",
+    "pymc.**",
+]
+
+[tool.ty.rules]
+# Disable some strict checks that are hard to satisfy with numpy's complex typing
+no-matching-overload = "ignore"  # numpy overloads are complex and often don't match
+invalid-method-override = "ignore"  # Method override parameter variance is strict
+# The following are disabled because they relate to numpy/pandas typing issues
+# that would require substantial refactoring to address properly
+invalid-argument-type = "warn"  # Lists passed to numpy functions expecting arrays
+unsupported-operator = "warn"  # Numpy array operations on mixed types

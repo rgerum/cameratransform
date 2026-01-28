@@ -155,14 +155,16 @@ class ParameterSet(object):
         return [self.parameters[n].range for n in names]
 
 
+from typing import List, Callable, Any, Optional
+
 class ClassWithParameterSet(object):
-    parameters = None
+    parameters: Optional["ParameterSet"] = None
 
-    log_prob = None
-    additional_parameters = None
-    info_plot_functions = None
+    log_prob: List[Callable[[], float]]
+    additional_parameters: List[Any]
+    info_plot_functions: List[Callable[[], None]]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.log_prob = []
         self.additional_parameters = []
         self.info_plot_functions = []
@@ -212,8 +214,9 @@ class ClassWithParameterSet(object):
             for call in callbacks:
                 call()
 
-    def set_trace(self, trace):
-        self.parameters.trace = trace
+    def set_trace(self, trace) -> None:
+        if self.parameters is not None:
+            self.parameters.trace = trace
 
     def addCustomoLogProbability(self, logProbability, additional_parameters=None):
         """

@@ -110,6 +110,8 @@ class CameraProjection(ClassWithParameterSet):
             raise ValueError("cannot provide center tuple and center_x_px and center_y_px")
         if center is not None:
             center_x_px, center_y_px = center
+        # At this point image_width_px and image_height_px are guaranteed to be set (validation above)
+        assert image_width_px is not None and image_height_px is not None
         if center_x_px is None:
             center_x_px = image_width_px / 2
         if center_y_px is None:
@@ -219,7 +221,7 @@ class CameraProjection(ClassWithParameterSet):
         for key in variables:
             setattr(self, key, variables[key])
 
-    def imageFromCamera(self, points):  # pragma: no cover
+    def imageFromCamera(self, points, hide_backpoints: bool = True):  # pragma: no cover
         """
         Convert points (Nx3) from the **camera** coordinate system to the **image** coordinate system.
 
@@ -251,7 +253,7 @@ class CameraProjection(ClassWithParameterSet):
          [1632.78 2190.96]]
         """
         # to be overloaded by the child class.
-        raise NotImplemented
+        raise NotImplementedError("Method must be implemented in subclass")
 
     def getRay(self, points, normed=False):  # pragma: no cover
         """
@@ -286,7 +288,7 @@ class CameraProjection(ClassWithParameterSet):
          [0.18 -0.24 -1.00]]
         """
         # to be overloaded by the child class.
-        raise NotImplementedError
+        raise NotImplementedError("Method must be implemented in subclass")
 
     def getFieldOfView(self):  # pragma: no cover
         """
