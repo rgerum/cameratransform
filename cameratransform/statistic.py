@@ -198,11 +198,12 @@ def plotTrace(
     import matplotlib.pyplot as plt
 
     def getAxes(name, N, width):
+        fig = plt.gcf()
         try:
-            trace_ax_dict = plt.gcf().trace_ax_dict
+            trace_ax_dict = getattr(fig, "trace_ax_dict")
         except AttributeError:
             trace_ax_dict = dict(N=N, next_index=0)
-            plt.gcf().trace_ax_dict = trace_ax_dict
+            setattr(fig, "trace_ax_dict", trace_ax_dict)
         if name not in trace_ax_dict:
             index = trace_ax_dict["next_index"]
             ax1 = plt.subplot(trace_ax_dict["N"], width, index * width + 1, label=name)
@@ -238,7 +239,7 @@ def plotTrace(
         N = len(columns)
 
     if axes is None:
-        plt.gcf().getAxes = getAxes
+        setattr(plt.gcf(), "getAxes", getAxes)
 
     for index, name in enumerate(columns):
         if index > N - 1:

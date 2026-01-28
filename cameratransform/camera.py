@@ -156,7 +156,7 @@ def getCameraParametersFromExif(
     def get_exif(fn):
         ret = {}
         i = Image.open(fn)
-        info = i._getexif()
+        info = i._getexif()  # type: ignore[attr-defined]
         for tag, value in info.items():
             decoded = TAGS.get(tag, tag)
             ret[decoded] = value
