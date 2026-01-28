@@ -17,6 +17,8 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
+from typing import List, Callable, Any, Optional, Dict, Iterable
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -111,24 +113,33 @@ class DefaultAccess(object):
 
 
 class ParameterSet(object):
-    trace = None
-    parameters = {}
+    trace: Optional[pd.DataFrame] = None
+    parameters: Dict[str, Parameter]
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Parameter) -> None:
         self.parameters = kwargs
         self.defaults = DefaultAccess(self.parameters)
 
-    def __getattr__(self, item):
-        if item in self.parameters:
-            parameter_obj = self.parameters[item]
+    def __getattr__(self, item: str) -> Any:
+        try:
+            params = object.__getattribute__(self, "parameters")
+        except AttributeError:
+            raise AttributeError(item)
+        if item in params:
+            parameter_obj = params[item]
             if parameter_obj.value is not None:
                 return parameter_obj.value
             return parameter_obj.default
-        return object.__getattribute__(self, item)
+        raise AttributeError(item)
 
-    def __setattr__(self, key, value):
-        if key in self.parameters:
-            parameter_obj = self.parameters[key]
+    def __setattr__(self, key: str, value: Any) -> None:
+        try:
+            params = object.__getattribute__(self, "parameters")
+        except AttributeError:
+            object.__setattr__(self, key, value)
+            return
+        if key in params:
+            parameter_obj = params[key]
             if isinstance(value, tuple):
                 parameter_obj.set_stats(*value)
             else:
@@ -138,7 +149,7 @@ class ParameterSet(object):
             if parameter_obj.callback is not None:
                 parameter_obj.callback()
         else:
-            return object.__setattr__(self, key, value)
+            object.__setattr__(self, key, value)
 
     def get_fit_parameters(self, type=None):
         fit_param_names = []
@@ -150,18 +161,24 @@ class ParameterSet(object):
                 fit_param_names.append(name)
         return fit_param_names
 
-    def set_fit_parameters(self, names, values=None):
+    def set_fit_parameters(
+        self,
+        names: "dict[str, Any] | Iterable[str]",
+        values: "Iterable[Any] | None" = None,
+    ) -> None:
         if isinstance(names, dict):
             iterator = names.items()
         else:
+            assert values is not None, "values must be provided when names is a list"
             iterator = zip(names, values)
-        callbacks = set()
+        callbacks: set[Any] = set()
         for n, v in iterator:
-            if n in self.parameters:
-                self.parameters[n].value = v
-                self.parameters[n].state = STATE_FIT
-                if self.parameters[n].callback is not None:
-                    callbacks.add(self.parameters[n].callback)
+            name = str(n)
+            if name in self.parameters:
+                self.parameters[name].value = v
+                self.parameters[name].state = STATE_FIT
+                if self.parameters[name].callback is not None:
+                    callbacks.add(self.parameters[name].callback)
         for call in callbacks:
             call()
 
@@ -172,11 +189,8 @@ class ParameterSet(object):
         return [self.parameters[n].range for n in names]
 
 
-from typing import List, Callable, Any, Optional
-
-
 class ClassWithParameterSet(object):
-    parameters: Optional["ParameterSet"] = None
+    parameters: "ParameterSet"
 
     log_prob: List[Callable[[], float]]
     additional_parameters: List[Any]
@@ -187,16 +201,25 @@ class ClassWithParameterSet(object):
         self.additional_parameters = []
         self.info_plot_functions = []
 
-    def __getattr__(self, item):
-        if self.parameters is not None:
-            if item == "defaults" or item in self.parameters.parameters:
-                return getattr(self.parameters, item)
+    def __getattr__(self, item: str) -> Any:
+        try:
+            params = object.__getattribute__(self, "parameters")
+        except AttributeError:
+            return object.__getattribute__(self, item)
+        if item == "defaults" or item in params.parameters:
+            return getattr(params, item)
         return object.__getattribute__(self, item)
 
-    def __setattr__(self, key, value):
-        if self.parameters is not None and key in self.parameters.parameters:
-            return setattr(self.parameters, key, value)
-        return object.__setattr__(self, key, value)
+    def __setattr__(self, key: str, value: Any) -> None:
+        try:
+            params = object.__getattribute__(self, "parameters")
+        except AttributeError:
+            object.__setattr__(self, key, value)
+            return
+        if key in params.parameters:
+            setattr(params, key, value)
+            return
+        object.__setattr__(self, key, value)
 
     def sample(self):
         if self.parameters.trace is not None:
@@ -241,9 +264,8 @@ class ClassWithParameterSet(object):
             for call in callbacks:
                 call()
 
-    def set_trace(self, trace) -> None:
-        if self.parameters is not None:
-            self.parameters.trace = trace
+    def set_trace(self, trace: pd.DataFrame) -> None:
+        self.parameters.trace = trace
 
     def addCustomoLogProbability(self, logProbability, additional_parameters=None):
         """

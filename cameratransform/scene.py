@@ -17,17 +17,22 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
+from typing import TYPE_CHECKING, Any, List
+
 import numpy as np
+
+if TYPE_CHECKING:
+    from .camera import Camera
 
 
 class Scene:  # pragma: no cover
-    objects = []
-    camera = None
+    objects: List[Any]
+    camera: "Camera"
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.objects = []
 
-    def setCamera(self, camera):
+    def setCamera(self, camera: "Camera") -> None:
         self.camera = camera
 
     def add(self, object):

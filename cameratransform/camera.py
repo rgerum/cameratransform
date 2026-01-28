@@ -628,7 +628,7 @@ class Camera(ClassWithParameterSet):
         points_feet: Points2D,
         points_head: Points2D,
         height: Points1D,
-        variation: Points1D,
+        variation: "Points1D | Any",  # Can be FitParameter for fitting
         only_plot: bool = False,
         plot_color: Optional[Any] = None,
     ):
@@ -730,7 +730,7 @@ class Camera(ClassWithParameterSet):
         points_front: Points2D,
         points_back: Points2D,
         length: Points1D,
-        variation: Points1D,
+        variation: "Points1D | Any",  # Can be FitParameter for fitting
         Z: float = 0,
         only_plot: bool = False,
         plot_color: Optional[Any] = None,
@@ -1472,7 +1472,9 @@ class Camera(ClassWithParameterSet):
             # get the rays from the image points (in this case it has to be normed)
             offset, direction = self.getRay(points, normed=True)
             # the factor is than simple the distance
-            factor = D
+            factor: "npt.NDArray[Any] | float" = (
+                D if isinstance(D, (float, int, np.ndarray)) else np.asarray(D)
+            )
         else:
             # get the rays from the image points
             offset, direction = self.getRay(points)
@@ -1730,6 +1732,7 @@ class Camera(ClassWithParameterSet):
         if do_plot:
             import matplotlib.pyplot as plt
 
+            assert self.last_extent_undistort is not None
             extent = self.last_extent_undistort.copy()
             extent[2], extent[3] = extent[3] - 1, extent[2] - 1
             plt.imshow(image, extent=extent, alpha=alpha)
@@ -1749,7 +1752,8 @@ class Camera(ClassWithParameterSet):
         # if we have cached the map, use the cached map
         if (
             self.map is not None
-            and all(self.last_extent == np.array(extent))
+            and self.last_extent is not None
+            and np.all(np.asarray(self.last_extent) == np.array(extent))
             and (self.last_scaling == scaling)
         ):
             return self.map

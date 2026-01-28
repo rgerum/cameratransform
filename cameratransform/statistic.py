@@ -308,26 +308,25 @@ def get_all_pymc_parameters(par):
 
 
 class FitParameter:
-    __name__ = ""
-    value = None
-    distribution = None
-    observed = False
+    __name__: str = ""
+    observed: bool = False
     dtype = float
 
     def __init__(
         self,
-        name,
-        distribution=None,
-        lower=None,
-        upper=None,
-        step=1,
-        value=None,
-        mean=None,
-        std=None,
-    ):
+        name: str,
+        distribution: "stats.rv_continuous | stats.rv_frozen | None" = None,
+        lower: "float | None" = None,
+        upper: "float | None" = None,
+        step: float = 1,
+        value: "float | None" = None,
+        mean: "float | None" = None,
+        std: "float | None" = None,
+    ) -> None:
         self.__name__ = name
+        self.parents: dict[str, float] = {}
         if distribution is not None:
-            self.distribution = distribution
+            self.distribution: "stats.rv_frozen" = distribution
         elif lower is not None and upper is not None:
             self.parents = dict(lower=lower, upper=upper)
             self.distribution = stats.uniform(loc=lower, scale=(upper - lower))
@@ -337,16 +336,16 @@ class FitParameter:
         else:
             raise ValueError("No valid distribution supplied")
         self.step = step
-        self.value = np.array(value)
+        self.value: np.ndarray = np.array(value)
 
-    def random(self):
+    def random(self) -> np.ndarray:
         return self.distribution.rvs()
 
-    def set_value(self, value):
+    def set_value(self, value: float) -> None:
         self.value = np.array(value)
 
-    def logp(self):
-        return self.distribution.logpdf(self.value)
+    def logp(self) -> float:
+        return self.distribution.logpdf(self.value)  # type: ignore[return-value]
 
     def __str__(self):
         return self.__name__

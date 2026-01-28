@@ -17,7 +17,11 @@
 # You should have received a copy of the license
 # along with cameratransform. If not, see <https://opensource.org/licenses/MIT>
 
+from typing import Any
+
 import numpy as np
+import numpy.typing as npt
+
 from .parameter_set import (
     ParameterSet,
     Parameter,
@@ -78,10 +82,10 @@ class SpatialOrientation(ClassWithParameterSet):
 
     """
 
-    t = None
-    R = None
-    C = None
-    C_inv = None
+    t: npt.NDArray[Any]
+    R: npt.NDArray[Any]
+    C: npt.NDArray[Any]
+    C_inv: npt.NDArray[Any]
 
     R_earth = 6371e3
 
