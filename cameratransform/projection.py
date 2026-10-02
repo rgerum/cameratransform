@@ -395,7 +395,7 @@ class RectilinearProjection(CameraProjection):
             x_im = f_x * --- + offset_x      y_im = f_y * --- + offset_y
                           z                                z
         """
-        points = ensure_array_format(points, "...x3")
+        points = ensure_array_format(points, "...x3").copy()
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         x, y, z = points.T
@@ -472,7 +472,7 @@ class CylindricalProjection(CameraProjection):
                                  (-z )                               sqrt(x**2+z**2)
         """
         # ensure that the points are provided as an array
-        points = ensure_array_format(points, "...x3")
+        points = ensure_array_format(points, "...x3").copy()
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         x, y, z = points.T
@@ -550,7 +550,7 @@ class EquirectangularProjection(CameraProjection):
                                ( z )                                    (sqrt(x**2+z**2))
         """
         # ensure that the points are provided as an array
-        points = ensure_array_format(points, "...x3")
+        points = ensure_array_format(points, "...x3").copy()
         # set small z distances to 0
         points[np.abs(points[..., 2]) < 1e-10] = 0
         x, y, z = points.T
