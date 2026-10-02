@@ -153,6 +153,7 @@ def getCameraParametersFromExif(filename: str, verbose: bool = False, sensor_fro
     # get the focal length
     f = exif["FocalLength"][0] / exif["FocalLength"][1]
     # get the sensor size, either from a database
+    sensor_size = None
     if sensor_from_database:
         sensor_size = _getSensorFromDatabase(exif["Model"])
     # or from the exif information
