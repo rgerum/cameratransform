@@ -297,7 +297,7 @@ class ClassWithParameterSet(object):
             start.append(param.value[()])
             ranges.append([param.parents.get("lower"), param.parents.get("upper")])
         start = np.array(start)
-        step = step*np.array([p.step for p in parameter])
+        step = step*np.array([p.step for p in parameter + self.additional_parameters])
 
         def getLogProb(position):
             self.parameters.set_fit_parameters(parameter_names, position[:len(parameter_names)])
