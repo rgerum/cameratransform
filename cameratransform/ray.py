@@ -323,7 +323,7 @@ def getClosestPointFromLine(origin, ray, point):
     # calculate the difference vector
     delta = point-origin
     # norm the ray
-    ray /= np.linalg.norm(ray, axis=-1)[..., None]
+    ray = ray / np.linalg.norm(ray, axis=-1)[..., None]
     # calculate the scale product
     factor = np.sum(ray*delta, axis=-1)
     try:
