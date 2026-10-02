@@ -251,7 +251,7 @@ class CameraProjection(ClassWithParameterSet):
          [1632.78 2190.96]]
         """
         # to be overloaded by the child class.
-        raise NotImplemented
+        raise NotImplementedError
 
     def getRay(self, points, normed=False):  # pragma: no cover
         """
