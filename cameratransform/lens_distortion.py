@@ -156,7 +156,8 @@ class BrownLensDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
-            points = points / r * self._convert_radius_inverse(r)
+            directions = np.divide(points, r, out=np.zeros_like(points, dtype=float), where=r != 0)
+            points = directions * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -168,7 +169,8 @@ class BrownLensDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
-            points = points / r * self._convert_radius(r)
+            directions = np.divide(points, r, out=np.zeros_like(points, dtype=float), where=r != 0)
+            points = directions * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -250,7 +252,8 @@ class ABCDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
-            points = points / r * self._convert_radius_inverse(r)
+            directions = np.divide(points, r, out=np.zeros_like(points, dtype=float), where=r != 0)
+            points = directions * self._convert_radius_inverse(r)
         # rescale back to the image
         return points * self.scale + self.offset
 
@@ -262,6 +265,7 @@ class ABCDistortion(LensDistortion):
         r = np.linalg.norm(points, axis=-1)[..., None]
         # transform the points
         with np.errstate(divide='ignore', invalid='ignore'):
-            points = points / r * self._convert_radius(r)
+            directions = np.divide(points, r, out=np.zeros_like(points, dtype=float), where=r != 0)
+            points = directions * self._convert_radius(r)
         # rescale back to the image
         return points * self.scale + self.offset
