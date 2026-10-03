@@ -219,7 +219,7 @@ class CameraProjection(ClassWithParameterSet):
         for key in variables:
             setattr(self, key, variables[key])
 
-    def imageFromCamera(self, points):  # pragma: no cover
+    def imageFromCamera(self, points, hide_backpoints=True):  # pragma: no cover
         """
         Convert points (Nx3) from the **camera** coordinate system to the **image** coordinate system.
 
@@ -251,7 +251,7 @@ class CameraProjection(ClassWithParameterSet):
          [1632.78 2190.96]]
         """
         # to be overloaded by the child class.
-        raise NotImplemented
+        raise NotImplementedError
 
     def getRay(self, points, normed=False):  # pragma: no cover
         """
